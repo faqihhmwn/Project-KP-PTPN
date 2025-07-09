@@ -34,13 +34,30 @@
                     Dashboard
                   </p>
                 </a>
-              {{-- </li>
-              <li class="nav-item">
-                <a href="users" class="nav-link">
-                  <i class="nav-icon bi bi-person"></i>
-                  <p>User</p>
+              </li>
+              <li class="nav-item has-treeview">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-capsule"></i>
+                  <p>
+                    Farmasi
+                    <i class="right bi bi-chevron-down"></i>
+                  </p>
                 </a>
-              </li> --}}
+                <ul class="nav nav-treeview ms-3">
+                  <li class="nav-item">
+                    <a href="/farmasi/dashboard-obat" class="nav-link">
+                      <i class="bi bi-box-seam nav-icon"></i>
+                      <p>Dashboard Obat</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="/farmasi/rekapitulasi-obat" class="nav-link">
+                      <i class="bi bi-clipboard-data nav-icon"></i>
+                      <p>Rekapitulasi Obat</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
             </ul>
             <!--end::Sidebar Menu-->
           </nav>
