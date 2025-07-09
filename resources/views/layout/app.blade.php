@@ -71,7 +71,7 @@
       @include('layout.parts.header')
       <!--end::Header-->
       <!--begin::Sidebar-->
-      @include('.layout.parts.sidebar')
+      @include('layout.parts.sidebar')
       <!--end::Sidebar-->
       <!--begin::App Main-->
       <main class="app-main">
