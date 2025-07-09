@@ -68,10 +68,7 @@
                                     <th>Harga Satuan</th>
                                     <th>Satuan</th>
                                     <th>Stok Awal</th>
-                                    <th>Stok Masuk</th>
-                                    <th>Stok Keluar</th>
                                     <th>Stok Sisa</th>
-                                    <th>Status</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -79,37 +76,14 @@
                                 @forelse($obats as $index => $obat)
                                     <tr>
                                         <td>{{ $obats->firstItem() + $index }}</td>
-                                        <td>
-                                            <strong>{{ $obat->nama_obat }}</strong>
-                                            @if($obat->expired_date && $obat->expired_date->isPast())
-                                                <br><small class="text-danger">
-                                                    <i class="fas fa-exclamation-triangle"></i> Expired
-                                                </small>
-                                            @elseif($obat->expired_date && $obat->expired_date->diffInDays(now()) <= 30)
-                                                <br><small class="text-warning">
-                                                    <i class="fas fa-clock"></i> Expired {{ $obat->expired_date->diffInDays(now()) }} hari
-                                                </small>
-                                            @endif
-                                        </td>
                                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                                         <td class="text-end">Rp {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
                                         <td>{{ $obat->satuan }}</td>
                                         <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
-                                        <td class="text-center">{{ number_format($obat->stok_masuk) }}</td>
-                                        <td class="text-center">{{ number_format($obat->stok_keluar) }}</td>
                                         <td class="text-center">
                                             <span class="badge {{ $obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning' : 'bg-success') }}">
                                                 {{ number_format($obat->stok_sisa) }}
                                             </span>
-                                        </td>
-                                        <td>
-                                            @if($obat->stok_sisa <= 0)
-                                                <span class="badge bg-danger">Habis</span>
-                                            @elseif($obat->stok_sisa <= 10)
-                                                <span class="badge bg-warning">Menipis</span>
-                                            @else
-                                                <span class="badge bg-success">Aman</span>
-                                            @endif
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">

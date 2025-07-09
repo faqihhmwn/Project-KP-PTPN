@@ -108,9 +108,7 @@
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
                     <th rowspan="2">Stok Awal</th>
-                    <th rowspan="2">Stok Masuk</th>
                     <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
-                    <th rowspan="2">Total Keluar</th>
                     <th rowspan="2">Sisa Stok</th>
                     <th rowspan="2">Total Biaya</th>
                     <th rowspan="2">Aksi</th>
