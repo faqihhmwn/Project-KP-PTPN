@@ -42,7 +42,7 @@
     />
     <!--end::Third Party Plugin(Bootstrap Icons)-->
     <!--begin::Required Plugin(AdminLTE)-->
-    <link rel="stylesheet" href="assets/css/adminlte.css" />
+    <link rel="stylesheet" href="/assets/css/adminlte.css" />
     <!--end::Required Plugin(AdminLTE)-->
     <!-- apexcharts -->
     <link
@@ -58,9 +58,7 @@
       integrity="sha256-+uGLJmmTKOqBr+2E6KDYs/NRsHxSkONXFHUL0fy2O/4="
       crossorigin="anonymous"
     />
-    <link
-    rel="stylesheet"
-      href="assets/css/admin.css">
+    <link rel="stylesheet" href="/assets/css/admin.css">
   </head>
   <!--end::Head-->
   <!--begin::Body-->

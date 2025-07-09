@@ -10,6 +10,9 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Daftar Obat</h3>
                     <div class="d-flex gap-2">
+                        <a href="/farmasi/dashboard-obat" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
+                        </a>
                         <a href="{{ route('obat.dashboard') }}" class="btn btn-info btn-sm">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>

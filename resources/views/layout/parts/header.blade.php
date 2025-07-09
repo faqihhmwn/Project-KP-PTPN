@@ -28,6 +28,14 @@
             </li>
             <!--end::Fullscreen Toggle-->
             <!--begin::User Menu Dropdown-->
+            @php
+                // Sembunyikan user menu di seluruh halaman Farmasi (dashboard, tambah, daftar, rekapitulasi, dsb)
+                $hideUserMenu = (
+                    request()->is('farmasi/*') ||
+                    request()->is('obat*')
+                );
+            @endphp
+            @unless($hideUserMenu)
             <li class="nav-item dropdown user-menu">
               <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                 <img
@@ -35,7 +43,6 @@
                   class="user-image rounded-circle shadow"
                   alt="User Image"
                 />
-                <span class="d-none d-md-inline">Alexander Pierce</span>
               </a>
               <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
                 <!--begin::User Image-->
@@ -45,8 +52,8 @@
                     class="rounded-circle shadow"
                     alt="User Image"
                   />
-                  <p>
-                    Alexander Pierce - Web Developer
+                  <p class="mb-0">
+                    <span class="fw-bold">Alexander Pierce - Web Developer</span><br>
                     <small>Member since Nov. 2023</small>
                   </p>
                 </li>
@@ -70,6 +77,7 @@
                 <!--end::Menu Footer-->
               </ul>
             </li>
+            @endunless
             <!--end::User Menu Dropdown-->
           </ul>
           <!--end::End Navbar Links-->

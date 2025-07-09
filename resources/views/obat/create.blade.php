@@ -9,8 +9,8 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Tambah Obat Baru</h4>
-                    <a href="{{ route('obat.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Kembali
+                    <a href="/farmasi/dashboard-obat" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
                     </a>
                 </div>
 

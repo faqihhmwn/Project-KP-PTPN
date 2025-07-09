@@ -1,6 +1,8 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ObatController;
 
 Route::get('/', function () {
     return view('dashboard');
@@ -28,6 +30,13 @@ Route::prefix('obat')->name('obat.')->group(function () {
     // Import/Export
     Route::post('/import', [ObatController::class, 'import'])->name('import');
     Route::get('/export', [ObatController::class, 'exportExcel'])->name('export');
+});
+
+
+// Farmasi Sidebar Routes
+Route::prefix('farmasi')->group(function () {
+    Route::get('/dashboard-obat', [ObatController::class, 'dashboard']);
+    Route::get('/rekapitulasi-obat', [ObatController::class, 'rekapitulasi']);
 });
 
 // Default redirect ke dashboard obat

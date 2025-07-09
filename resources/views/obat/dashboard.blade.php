@@ -31,28 +31,28 @@
                     <h5>Quick Actions</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-2">
-                            <a href="{{ route('obat.create') }}" class="btn btn-primary w-100 mb-2">
-                                <i class="fas fa-plus"></i><br>
+                            <a href="{{ route('obat.create') }}" class="btn btn-primary w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-plus-circle mb-1" style="font-size: 1.5rem;"></i>
                                 Tambah Obat
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="{{ route('obat.index') }}" class="btn btn-info w-100 mb-2">
-                                <i class="fas fa-list"></i><br>
+                            <a href="{{ route('obat.index') }}" class="btn btn-info w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-list-ul mb-1" style="font-size: 1.5rem;"></i>
                                 Daftar Obat
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="{{ route('obat.rekapitulasi') }}" class="btn btn-warning w-100 mb-2">
-                                <i class="fas fa-chart-bar"></i><br>
+                            <a href="{{ route('obat.rekapitulasi') }}" class="btn btn-warning w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-bar-chart-line mb-1" style="font-size: 1.5rem;"></i>
                                 Rekapitulasi
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="{{ route('obat.rekapitulasi') }}?export=1&periode=1" class="btn btn-secondary w-100 mb-2">
-                                <i class="fas fa-file-export"></i><br>
+                            <a href="{{ route('obat.rekapitulasi') }}?export=1&periode=1" class="btn btn-secondary w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-box-arrow-up mb-1" style="font-size: 1.5rem;"></i>
                                 Export Excel
                             </a>
                         </div>

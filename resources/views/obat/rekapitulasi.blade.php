@@ -55,8 +55,12 @@
         }
 </style>
 
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
+    <a href="/farmasi/dashboard-obat" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
+    </a>
 </div>
 
 <!-- Controls -->
