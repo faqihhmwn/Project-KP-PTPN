@@ -45,7 +45,7 @@ public function show(Request $request)
         // ✅ VALIDASI TAHUN DAN UNIT
         $request->validate([
             'tahun' => 'required|digits:4|integer|min:2000|max:' . date('Y'),
-            'unit' => 'required|in:Kedaton,Sukarame,Way Halim',
+            'unit' => 'required'
         ]);
 
         $unit = Unit::where('name', $request->unit)->first();
