@@ -10,7 +10,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Daftar Obat</h3>
                     <div class="d-flex gap-2">
-                        <a href="/farmasi/dashboard-obat" class="btn btn-secondary btn-sm">
+                        <a href="/obat/dashboard-obat" class="btn btn-secondary btn-sm">
                             <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
                         </a>
                         <a href="{{ route('obat.dashboard') }}" class="btn btn-info btn-sm">
@@ -76,6 +76,7 @@
                                 @forelse($obats as $index => $obat)
                                     <tr>
                                         <td>{{ $obats->firstItem() + $index }}</td>
+                                        <td>{{ $obat->nama_obat ?? '-' }}</td>
                                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                                         <td class="text-end">Rp {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
                                         <td>{{ $obat->satuan }}</td>
@@ -93,11 +94,6 @@
                                                 <a href="{{ route('obat.edit', $obat) }}" class="btn btn-warning btn-sm" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <button type="button" class="btn btn-success btn-sm" 
-                                                        onclick="showTransaksiModal({{ $obat->id }}, '{{ $obat->nama_obat }}')" 
-                                                        title="Tambah Transaksi">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
                                                 <form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -106,7 +102,7 @@
                                                             title="Hapus Permanen">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
-                                                </form>
+                                                </form> 
                                             </div>
                                         </td>
                                     </tr>

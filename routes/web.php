@@ -34,13 +34,13 @@ Route::prefix('obat')->name('obat.')->group(function () {
 
 
 // Farmasi Sidebar Routes
-Route::prefix('farmasi')->group(function () {
-    Route::get('/dashboard-obat', [ObatController::class, 'dashboard']);
-    Route::get('/rekapitulasi-obat', [ObatController::class, 'rekapitulasi']);
-});
+// Route::prefix('farmasi')->group(function () {
+//     Route::get('/dashboard-obat', [ObatController::class, 'dashboard']);
+//     Route::get('/rekapitulasi-obat', [ObatController::class, 'rekapitulasi']);
+// });
 
 // Default redirect ke dashboard obat
-Route::redirect('/dashboard', '/obat/dashboard');
+// Route::redirect('/dashboard', '/obat/dashboard');
 
 
 Route::get('/login', function () {

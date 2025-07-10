@@ -36,7 +36,7 @@
                 </a>
               </li>
               <li class="nav-item has-treeview">
-                <a href="#" class="nav-link">
+                <a class="nav-link">
                   <i class="nav-icon bi bi-capsule"></i>
                   <p>
                     Farmasi
@@ -45,13 +45,13 @@
                 </a>
                 <ul class="nav nav-treeview ms-3">
                   <li class="nav-item">
-                    <a href="/farmasi/dashboard-obat" class="nav-link">
+                    <a href="obat/dashboard" class="nav-link">
                       <i class="bi bi-box-seam nav-icon"></i>
                       <p>Dashboard Obat</p>
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="/farmasi/rekapitulasi-obat" class="nav-link">
+                    <a href="obat/rekapitulasi" class="nav-link">
                       <i class="bi bi-clipboard-data nav-icon"></i>
                       <p>Rekapitulasi Obat</p>
                     </a>
