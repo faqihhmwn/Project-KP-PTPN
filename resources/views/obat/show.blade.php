@@ -78,18 +78,6 @@
                                             </div>
                                         </div>
                                         <div class="col-6 mb-3">
-                                            <div class="p-3 bg-light rounded">
-                                                <h4 class="text-success">{{ number_format($obat->stok_masuk) }}</h4>
-                                                <small class="text-muted">Stok Masuk</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="p-3 bg-light rounded">
-                                                <h4 class="text-danger">{{ number_format($obat->stok_keluar) }}</h4>
-                                                <small class="text-muted">Stok Keluar</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
                                             <div class="p-3 {{ $obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning' : 'bg-success') }} text-white rounded">
                                                 <h4>{{ number_format($obat->stok_sisa) }}</h4>
                                                 <small>Stok Sisa</small>
@@ -167,13 +155,13 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-center">
-                                                    {{ $transaksi->jumlah_masuk > 0 ? number_format($transaksi->jumlah_masuk) : '-' }}
+                                                    {{-- Kolom jumlah_masuk tidak digunakan, tampilkan '-' --}} -
                                                 </td>
                                                 <td class="text-center">
                                                     {{ $transaksi->jumlah_keluar > 0 ? number_format($transaksi->jumlah_keluar) : '-' }}
                                                 </td>
                                                 <td class="text-end">
-                                                    Rp {{ number_format($transaksi->total_biaya, 0, ',', '.') }}
+                                                    {{-- Kolom total_biaya tidak digunakan, tampilkan '-' --}} -
                                                 </td>
                                                 <td>{{ $transaksi->petugas ?? '-' }}</td>
                                                 <td>{{ $transaksi->keterangan ?? '-' }}</td>
@@ -222,7 +210,7 @@
                                 <label for="tipe_transaksi" class="form-label">Tipe Transaksi</label>
                                 <select class="form-select" name="tipe_transaksi" required>
                                     <option value="">Pilih Tipe</option>
-                                    <option value="masuk">Stok Masuk</option>
+                                    <option value="masuk">Stok Awal</option>
                                     <option value="keluar">Stok Keluar</option>
                                 </select>
                             </div>

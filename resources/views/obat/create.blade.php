@@ -9,7 +9,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Tambah Obat Baru</h4>
-                    <a href="/farmasi/dashboard-obat" class="btn btn-secondary">
+                    <a href="/obat/dashboard" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
                     </a>
                 </div>
@@ -27,7 +27,6 @@
 
                     <form action="{{ route('obat.store') }}" method="POST">
                         @csrf
-                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -39,7 +38,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="jenis_obat" class="form-label">Jenis/Kategori Obat</label>
@@ -47,6 +45,17 @@
                                            id="jenis_obat" name="jenis_obat" value="{{ old('jenis_obat') }}"
                                            placeholder="Contoh: Antibiotik, Analgesik, dll">
                                     @error('jenis_obat')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tanggal_masuk" class="form-label">Tanggal Masuk Obat <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control @error('tanggal_masuk') is-invalid @enderror" id="tanggal_masuk" name="tanggal_masuk" value="{{ old('tanggal_masuk', date('Y-m-d')) }}" required>
+                                    @error('tanggal_masuk')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

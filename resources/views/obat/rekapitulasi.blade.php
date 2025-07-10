@@ -58,7 +58,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
-    <a href="/farmasi/dashboard-obat" class="btn btn-secondary btn-sm">
+    <a href="/obat/dashboard" class="btn btn-secondary btn-sm">
         <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
     </a>
 </div>
@@ -128,6 +128,7 @@
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
                         <td>{{ $obat->stok_awal ?? 0 }}</td>
                         <td>{{ $obat->stok_masuk ?? 0 }}</td>
+                        
                         
                         @php
                             $totalKeluar = 0;
