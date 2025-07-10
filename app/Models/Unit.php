@@ -7,13 +7,13 @@ class Unit extends Model
 {
     protected $fillable = ['name'];
 
-    public function rekapBiayas()
+    public function rekapBulans()
     {
-        return $this->hasMany(RekapBiaya::class);
+        return $this->hasMany(RekapBulan::class);
     }
 
-    public function rekapJumlahs()
+    public function rekapTahuns()
     {
-        return $this->hasMany(RekapJumlah::class);
+        return $this->hasMany(RekapTahun::class);
     }
 }

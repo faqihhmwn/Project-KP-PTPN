@@ -34,6 +34,14 @@
                     Dashboard
                   </p>
                 </a>
+          
+                <li class="nav-item">
+                <a href="{{ route('rekap.show') }}" class="nav-link">
+                  <i class="nav-icon bi bi-file-earmark-bar-graph"></i>
+                  <p>Rekap Biaya Kesehatan</p>
+                </a>
+              </li>
+
               {{-- </li>
               <li class="nav-item">
                 <a href="users" class="nav-link">

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\RekapBiaya;
-use App\Models\RekapJumlah;
+use App\Models\RekapBulan;
+use App\Models\RekapTahun;
 use Illuminate\Support\Facades\Response;
 use App\Models\Unit;
 
@@ -13,22 +13,29 @@ class RekapBiayaController extends Controller
     /**
      * Tampilkan form rekap biaya
      */
-    public function index(Request $request)
-    {
-        $tahun = $request->input('tahun');
-        $unit = $request->input('unit');
+public function show(Request $request)
+{
+    $tahun = $request->input('tahun');
+    $unit = $request->input('unit');
 
-        $data = RekapBiaya::where('tahun', $tahun)
-            ->whereHas('unit', function ($query) use ($unit){
-                $query->where('name', $unit);
-            })
-            ->orderByRaw("FIELD(bulan, 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')")
-            ->get()
-            ->keyBy('bulan');
-
-        $jumlah = RekapJumlah::where('tahun', $tahun)->where('unit', $unit)->first();
-        return view('partials.rekap-biaya', compact('data', 'tahun', 'unit', 'jumlah'));
+    if (!$tahun || !$unit) {
+        return redirect()->route('rekap.form')->withErrors(['msg' => 'Tahun dan Unit wajib diisi']);
     }
+
+    $unitModel = Unit::where('name', $unit)->first();
+    if (!$unitModel) return back()->withErrors(['unit' => 'Unit tidak ditemukan']);
+    $unitId = $unitModel->id;
+
+    $data = RekapBulan::where('tahun', $tahun)
+        ->where('unit_id', $unitId)
+        ->orderByRaw("FIELD(bulan, 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')")
+        ->get()
+        ->keyBy('bulan');
+
+    $jumlah = RekapTahun::where('tahun', $tahun)->where('unit_id', $unitId)->first();
+
+    return view('rekapbiaya.rekap-biaya', compact('data', 'tahun', 'unit', 'jumlah'));
+}
 
     /**
      * Simpan data rekap biaya baru
@@ -49,7 +56,7 @@ class RekapBiayaController extends Controller
         $data = $request->input('data');
 
         foreach ($data as $row) {
-            RekapBiaya::updateOrCreate(
+            RekapBulan::updateOrCreate(
                 [
                     'bulan' => $row['bulan'],
                     'tahun' => $request->input('tahun'),
@@ -73,7 +80,7 @@ class RekapBiayaController extends Controller
         }
             //simpan rekap jumlah (manual)
             if ($request->has('jumlah')) {
-            RekapJumlah::updateOrCreate(
+            RekapTahun::updateOrCreate(
                 ['tahun' => $request->tahun, 
                 'unit_id' => $unit->id
             ],
@@ -104,7 +111,7 @@ class RekapBiayaController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $rekap = RekapBiaya::findOrFail($id);
+        $rekap = RekapBulan::findOrFail($id);
         $rekap->update($request->all());
 
         return response()->json(['message' => 'Data berhasil diperbarui']);
@@ -115,11 +122,19 @@ class RekapBiayaController extends Controller
      */
     public function destroy($id)
     {
-        $rekap = RekapBiaya::findOrFail($id);
+        $rekap = RekapBulan::findOrFail($id);
         $rekap->delete();
 
         return response()->json(['message' => 'Data berhasil dihapus']);
     }
+
+    public function filterForm()
+    {
+        $tahunList = range(2000, now()->year);
+        $units = ['Kandir','Way Lima','Way Berulu','Kedaton','Bergen','Tulungbuyut','Musilandas','Tebenan','Beringin','Padang Pelawi','Ketahun','Senabing'];
+        return view('rekapbiaya.filter-form', compact('units', 'tahunList'));
+    }
+
 
     //Export CSV
     public function export(Request $request)
@@ -127,10 +142,10 @@ class RekapBiayaController extends Controller
     $tahun = $request->input('tahun');
     $unit = $request->input('unit');
 
-    $data = RekapBiaya::where('tahun', $tahun)
+    $data = RekapBulan::where('tahun', $tahun)
     ->whereHas('unit', function ($query) use ($unit) {
         $query->where('name', $unit);
-    })    
+    })
     ->orderByRaw("FIELD(bulan, 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')")
     ->get();
 

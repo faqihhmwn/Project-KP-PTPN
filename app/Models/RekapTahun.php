@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 
-class RekapJumlah extends Model
+class RekapTahun extends Model
 {
     protected $fillable = [
         'tahun','unit_id',
