@@ -160,9 +160,9 @@ input[readonly] {
                     <tr style="background-color: #f0f0f0; font-weight:bold;">
                         <td>TOTAL 1 TAHUN</td>
                         @foreach(['gol_3_4','gol_1_2','kampanye','honor','pens_3_4','pens_1_2','direksi','dekom','pengacara','transport','hiperkes'] as $field)
-                            <td><input type="text" id="total_{{ $field }}" readonly></td>
+                            <td><input type="text" id="totalTahun{{ $field }}"  name="total_tahun[{{ $field }}]"  readonly></td>
                         @endforeach
-                        <td><input type="text" id="total_total" readonly></td>
+                        <td><input type="text" id="totalTahuntotal" name="total_tahun[total]" readonly></td>
                     </tr>
 
                     {{-- Jumlah Manual --}}
@@ -235,7 +235,7 @@ input[readonly] {
             document.querySelectorAll(`input[name^="data"][name$="[${field}]"]`).forEach(input => {
                 sum += parseRupiah(input.value);
             });
-            const totalField = document.getElementById(`total_${field}`);
+            const totalField = document.getElementById(`totalTahun${field}`);
             if (totalField) {
                 totalField.value = formatRupiah(sum);
             }

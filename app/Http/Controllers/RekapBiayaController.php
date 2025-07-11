@@ -79,26 +79,25 @@ public function show(Request $request)
             );
         }
             //simpan rekap jumlah (manual)
-            if ($request->has('jumlah')) {
+            if ($request->has('total_tahun')) {
             RekapTahun::updateOrCreate(
                 ['tahun' => $request->tahun, 
                 'unit_id' => $unit->id
             ],
 
                 [
-                    'gol_3_4'   => $this->parseRupiah($request->input('jumlah.gol_3_4') ?? 0),
-                    'gol_1_2'   => $this->parseRupiah($request->input('jumlah.gol_1_2') ?? 0),
-                    'kampanye'  => $this->parseRupiah($request->input('jumlah.kampanye') ?? 0),
-                    'honor'     => $this->parseRupiah($request->input('jumlah.honor') ?? 0),
-                    'pens_3_4'  => $this->parseRupiah($request->input('jumlah.pens_3_4') ?? 0),
-                    'pens_1_2'  => $this->parseRupiah($request->input('jumlah.pens_1_2') ?? 0),
-                    'direksi'   => $this->parseRupiah($request->input('jumlah.direksi') ?? 0),
-                    'dekom'     => $this->parseRupiah($request->input('jumlah.dekom') ?? 0),
-                    'pengacara' => $this->parseRupiah($request->input('jumlah.pengacara') ?? 0),
-                    'transport' => $this->parseRupiah($request->input('jumlah.transport') ?? 0),
-                    'hiperkes'  => $this->parseRupiah($request->input('jumlah.hiperkes') ?? 0),
-                    'total'     => $this->parseRupiah($request->input('jumlah.total') ?? 0),
-                ]
+                    'gol_3_4'   => $this->parseRupiah($request->input('total_tahun.gol_3_4') ?? 0),
+                    'gol_1_2'   => $this->parseRupiah($request->input('total_tahun.gol_1_2') ?? 0),
+                    'kampanye'  => $this->parseRupiah($request->input('total_tahun.kampanye') ?? 0),
+                    'honor'     => $this->parseRupiah($request->input('total_tahun.honor') ?? 0),
+                    'pens_3_4'  => $this->parseRupiah($request->input('total_tahun.pens_3_4') ?? 0),
+                    'pens_1_2'  => $this->parseRupiah($request->input('total_tahun.pens_1_2') ?? 0),
+                    'direksi'   => $this->parseRupiah($request->input('total_tahun.direksi') ?? 0),
+                    'dekom'     => $this->parseRupiah($request->input('total_tahun.dekom') ?? 0),
+                    'pengacara' => $this->parseRupiah($request->input('total_tahun.pengacara') ?? 0),
+                    'transport' => $this->parseRupiah($request->input('total_tahun.transport') ?? 0),
+                    'hiperkes'  => $this->parseRupiah($request->input('total_tahun.hiperkes') ?? 0),
+                    'total'     => $this->parseRupiah($request->input('total_tahun.total') ?? 0),                ]
             );
 
         }
