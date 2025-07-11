@@ -42,7 +42,7 @@
     />
     <!--end::Third Party Plugin(Bootstrap Icons)-->
     <!--begin::Required Plugin(AdminLTE)-->
-    <link rel="stylesheet" href="assets/css/adminlte.css" />
+    <link rel="stylesheet" href="{{ asset('assets/css/adminlte.css') }}" />
     <!--end::Required Plugin(AdminLTE)-->
     <!-- apexcharts -->
     <link
@@ -59,8 +59,8 @@
       crossorigin="anonymous"
     />
     <link
-    rel="stylesheet"
-      href="assets/css/admin.css">
+      rel="stylesheet"
+      href="{{ asset('assets/css/admin.css') }}" />
   </head>
   <!--end::Head-->
   <!--begin::Body-->
@@ -103,7 +103,7 @@
       crossorigin="anonymous"
     ></script>
     <!--end::Required Plugin(Bootstrap 5)--><!--begin::Required Plugin(AdminLTE)-->
-    <script src="assets/js/adminlte.js"></script>
+    <script src="{{ asset('assets/js/adminlte.js') }}"></script>
     <!--end::Required Plugin(AdminLTE)--><!--begin::OverlayScrollbars Configure-->
     <script>
       const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
@@ -332,7 +332,39 @@
       sparkline3.render();
     </script>
 
-    <script></script>
+    {{-- Script alert otomatis hilang --}}
+     {{-- Notifikasi session --}}
+     <script>
+        @if (session('success'))
+            <div id="session-alert" class="alert alert-success alert-dismissible fade show m-4" role="alert">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        {{-- Konten --}}
+        @isset($header)
+            <header class="...">
+                ...
+            </header>
+        @endisset
+
+        <main>
+           @yield('content')
+        </main>
+    </div>
+    </script>
+
+    {{-- Script alert otomatis hilang --}}
+    <script>
+        setTimeout(() => {
+            const alert = document.getElementById('session-alert');
+            if (alert) {
+                alert.classList.remove('show');
+                alert.classList.add('fade');
+                setTimeout(() => alert.remove(), 500);
+            }
+        }, 3000);
+    </script>
     <!--end::Script-->
   </body>
   <!--end::Body-->

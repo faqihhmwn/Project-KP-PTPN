@@ -1,8 +1,8 @@
 <aside class="app-sidebar bg-blue-dark shadow" data-bs-theme="dark">
   <!--begin::Sidebar Brand-->
   <div class="sidebar-brand">
-    <a href="./index.html" class="brand-link">
-      <img src="assets/img/sidebar/logo-ptpn.png" alt="AdminLTE Logo" class="brand-image opacity-75 shadow" />
+    <a href="/" class="brand-link">
+      <img src="{{ asset('assets/img/sidebar/logo-ptpn.png') }}" class="brand-image opacity-75 shadow" />
       <span class="brand-text fw-light">Puskemas PTPN</span>
     </a>
   </div>
@@ -52,11 +52,16 @@
           'penyakit-kronis' => 'Penyakit Kronis',
           'konsultasi-klinik' => 'Konsultasi Klinik',
           'cuti-sakit' => 'Cuti Sakit',
-          'pekerja-disabilitas' => 'Pekerja Disabilitas',
-          'cuti-hamil' => 'Cuti Hamil',
-          'cuti-melahirkan' => 'Cuti Melahirkan',
-          'cuti-karena-istri-melahirkan' => 'Cuti Karena Istri Melahirkan',
-          // Tambahkan kategori lainnya jika ada
+          'peserta-kb' => 'Peserta KB',
+          'metode-kb' => 'Metode KB',
+          'kehamilan' => 'Kehamilan',
+          'imunisasi' => 'Imunisasi',
+          'kematian' => 'Kematian',
+          'klaim-asuransi' => 'Klaim Asuransi',
+          'kecelakaan-kerja' => 'Kecelakaan Kerja',
+          'sakit-berkepanjangan' => 'Sakit Berkepanjangan',
+          'absensi-dokter-honorer' => 'Absensi Dokter Honorer',
+          'kategori-khusus' => 'Kategori Khusus',
         ];
       @endphp
 
