@@ -112,7 +112,7 @@ input[readonly] {
     <div style="margin-bottom: 10px; text-align:right;">
         <a href="{{ route('rekap.export', ['tahun' => request('tahun'), 'unit' => request('unit')]) }}"
             class="btn btn-success"
-            style="background-color:#0077c0; color:white; padding: 8px 16px; border-radius: 5px; text-decoration: none;">
+            style="background-color:#07c216; color:white; padding: 8px 16px; border-radius: 5px; text-decoration: none;">
             Export CSV
         </a>
     </div>
@@ -156,9 +156,9 @@ input[readonly] {
                         </tr>
                     @endforeach
 
-                    {{-- Total Baris --}}
+                    {{-- Total Baris Per Tahun --}}
                     <tr style="background-color: #f0f0f0; font-weight:bold;">
-                        <td>TOTAL PER TAHUN</td>
+                        <td>TOTAL 1 TAHUN</td>
                         @foreach(['gol_3_4','gol_1_2','kampanye','honor','pens_3_4','pens_1_2','direksi','dekom','pengacara','transport','hiperkes'] as $field)
                             <td><input type="text" id="total_{{ $field }}" readonly></td>
                         @endforeach
