@@ -99,11 +99,11 @@
                 @include('laporan.modal-laporan')
                     <tr>
                         <td>{{ $i + 1 }}</td>
-                        <td>{{ $row->subkategori->nama }}</td>
+                        <td>{{ optional($row->subkategori)->nama ?? '-' }}</td>
                         <td>{{ $row->jumlah }}</td>
                         <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
                         <td>{{ $row->tahun }}</td>
-                        <td>{{ $row->unit->nama }}</td>
+                        <td>{{ optional($row->unit)->nama ?? '-' }}</td>
                         <td>
                             <a href="{{ route('laporan.kependudukan.edit', $row->id) }}" class="btn btn-sm btn-warning"
                                 data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">
