@@ -121,26 +121,18 @@
             </thead>
             <tbody id="obatTableBody">
                 @forelse($obats as $index => $obat)
-                    <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}" data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}">
+                    <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}" data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}">
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
-                        <td>{{ $obat->stok_awal ?? 0 }}</td>
-                        <td>{{ $obat->stok_masuk ?? 0 }}</td>
-                        
-                        
-                        @php
-                            $totalKeluar = 0;
-                            $totalBiaya = 0;
-                        @endphp
-                        
+                        <td class="stok-awal" data-obat-id="{{ $obat->id }}">{{ $obat->stok_awal ?? 0 }}</td>
+                        @php $totalBiaya = 0; @endphp
                         @for($day = 1; $day <= $daysInMonth; $day++)
                             @php
                                 $tanggal = \Carbon\Carbon::create($tahun, $bulan, $day);
                                 $transaksi = $obat->transaksiObats->where('tanggal', $tanggal->format('Y-m-d'))->where('tipe_transaksi', 'keluar')->first();
                                 $jumlahKeluar = $transaksi ? $transaksi->jumlah_keluar : 0;
-                                $totalKeluar += $jumlahKeluar;
                                 $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
                             @endphp
                             <td>
@@ -149,13 +141,10 @@
                                        value="{{ $jumlahKeluar }}"
                                        data-obat-id="{{ $obat->id }}"
                                        data-tanggal="{{ $tanggal->format('Y-m-d') }}"
-                                       min="0"
-                                       onchange="updateTransaksi(this)">
+                                       min="0">
                             </td>
                         @endfor
-                        
-                        <td><strong>{{ $totalKeluar }}</strong></td>
-                        <td>{{ $obat->stok_sisa ?? 0 }}</td>
+                        <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">{{ $obat->stok_sisa ?? 0 }}</td>
                         <td><strong>Rp {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -246,7 +235,43 @@
     </div>
 </div>
 
-@push('scripts')
+
+<!-- SCRIPTS DIPINDAHKAN KE BAWAH AGAR PASTI TERLOAD -->
+<script>
+// Update sisa stok secara dinamis saat input harian berubah
+function updateSisaStok(obatId) {
+    const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
+    if (!row) return;
+    const stokAwalCell = row.querySelector('.stok-awal');
+    let stokAwal = 0;
+    if (stokAwalCell) {
+        stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+    }
+    let totalKeluar = 0;
+    row.querySelectorAll('.daily-input').forEach(input => {
+        totalKeluar += parseInt(input.value) || 0;
+    });
+    const sisaStok = stokAwal - totalKeluar;
+    const sisaStokCell = row.querySelector('.sisa-stok');
+    if (sisaStokCell) {
+        sisaStokCell.textContent = sisaStok < 0 ? 0 : sisaStok;
+    }
+}
+
+// Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('tr[data-obat-row]').forEach(row => {
+        const obatId = row.getAttribute('data-obat-row');
+        updateSisaStok(obatId);
+        row.querySelectorAll('.daily-input').forEach(input => {
+            input.addEventListener('input', function() {
+                updateSisaStok(obatId);
+            });
+        });
+    });
+});
+
+</script>
 <script>
 // Validasi export modal
 document.getElementById('start_date').addEventListener('change', function() {
@@ -334,7 +359,7 @@ function updateTransaksi(input) {
             input.style.backgroundColor = '#d4edda'; // Success green
             setTimeout(() => {
                 input.style.backgroundColor = '';
-                location.reload();
+                // Tidak reload, biarkan data tetap di kolom
             }, 500);
         } else {
             throw new Error('Network response was not ok');
@@ -343,7 +368,7 @@ function updateTransaksi(input) {
     .catch(error => {
         input.style.backgroundColor = '#f8d7da'; // Error red
         alert('Terjadi kesalahan saat menyimpan data');
-        input.value = 0;
+        // input.value = 0; // Jangan reset value agar user tahu input terakhir
         setTimeout(() => {
             input.style.backgroundColor = '';
         }, 2000);
@@ -367,7 +392,6 @@ document.querySelectorAll('.daily-input').forEach(input => {
     });
 });
 </script>
-@endpush
 
 
 @endsection

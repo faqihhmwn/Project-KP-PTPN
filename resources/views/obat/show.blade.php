@@ -14,10 +14,7 @@
                         <a href="{{ route('obat.edit', $obat) }}" class="btn btn-warning">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <button type="button" class="btn btn-success" 
-                                onclick="showTransaksiModal({{ $obat->id }}, '{{ $obat->nama_obat }}')">
-                            <i class="fas fa-plus"></i> Tambah Transaksi
-                        </button>
+                        
                     </div>
                 </div>
 
@@ -124,129 +121,13 @@
                         </div>
                     </div>
 
-                    <!-- Riwayat Transaksi -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="fas fa-list"></i> Riwayat Transaksi (10 Terakhir)</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Tanggal</th>
-                                            <th>Tipe</th>
-                                            <th>Jumlah Masuk</th>
-                                            <th>Jumlah Keluar</th>
-                                            <th>Total Biaya</th>
-                                            <th>Petugas</th>
-                                            <th>Keterangan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($obat->transaksiObats->sortByDesc('tanggal')->take(10) as $transaksi)
-                                            <tr>
-                                                <td>{{ $transaksi->tanggal->format('d/m/Y') }}</td>
-                                                <td>
-                                                    @if($transaksi->tipe_transaksi == 'masuk')
-                                                        <span class="badge bg-success">Masuk</span>
-                                                    @else
-                                                        <span class="badge bg-danger">Keluar</span>
-                                                    @endif
-                                                </td>
-                                                <td class="text-center">
-                                                    {{-- Kolom jumlah_masuk tidak digunakan, tampilkan '-' --}} -
-                                                </td>
-                                                <td class="text-center">
-                                                    {{ $transaksi->jumlah_keluar > 0 ? number_format($transaksi->jumlah_keluar) : '-' }}
-                                                </td>
-                                                <td class="text-end">
-                                                    {{-- Kolom total_biaya tidak digunakan, tampilkan '-' --}} -
-                                                </td>
-                                                <td>{{ $transaksi->petugas ?? '-' }}</td>
-                                                <td>{{ $transaksi->keterangan ?? '-' }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="7" class="text-center text-muted">Belum ada transaksi</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Transaksi -->
-<div class="modal fade" id="transaksiModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Tambah Transaksi Obat</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('obat.transaksi.store', $obat) }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nama Obat</label>
-                        <input type="text" class="form-control" value="{{ $obat->nama_obat }}" readonly>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="tanggal" class="form-label">Tanggal</label>
-                                <input type="date" class="form-control" name="tanggal" value="{{ date('Y-m-d') }}" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="tipe_transaksi" class="form-label">Tipe Transaksi</label>
-                                <select class="form-select" name="tipe_transaksi" required>
-                                    <option value="">Pilih Tipe</option>
-                                    <option value="masuk">Stok Awal</option>
-                                    <option value="keluar">Stok Keluar</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label for="jumlah" class="form-label">Jumlah</label>
-                        <input type="number" class="form-control" name="jumlah" min="1" required>
-                        <small class="text-muted">Stok tersedia: {{ $obat->stok_sisa }} {{ $obat->satuan }}</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="petugas" class="form-label">Petugas</label>
-                        <input type="text" class="form-control" name="petugas">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control" name="keterangan" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan Transaksi</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function showTransaksiModal(obatId, namaObat) {
-    const modal = new bootstrap.Modal(document.getElementById('transaksiModal'));
-    modal.show();
-}
-</script>
 
 @endsection
