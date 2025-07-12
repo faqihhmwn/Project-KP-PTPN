@@ -121,7 +121,7 @@
             </thead>
             <tbody id="obatTableBody">
                 @forelse($obats as $index => $obat)
-                    <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}" data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}">
+                    <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}" data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}" data-harga="{{ $obat->harga_satuan ?? 0 }}">
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
@@ -145,7 +145,7 @@
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">{{ $obat->stok_sisa ?? 0 }}</td>
-                        <td><strong>Rp {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
+                        <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ route('obat.show', $obat->id) }}" class="btn btn-info btn-sm" target="_blank" title="Detail">
@@ -258,14 +258,32 @@ function updateSisaStok(obatId) {
     }
 }
 
+// Update total biaya secara dinamis saat input harian berubah
+function updateTotalBiaya(obatId) {
+    const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
+    if (!row) return;
+    const harga = parseInt(row.getAttribute('data-harga')) || 0;
+    let totalBiaya = 0;
+    row.querySelectorAll('.daily-input').forEach(input => {
+        const jumlahKeluar = parseInt(input.value) || 0;
+        totalBiaya += jumlahKeluar * harga;
+    });
+    const totalBiayaCell = row.querySelector('.total-biaya');
+    if (totalBiayaCell) {
+        totalBiayaCell.innerHTML = `<strong>Rp ${totalBiaya.toLocaleString('id-ID')}</strong>`;
+    }
+}
+
 // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('tr[data-obat-row]').forEach(row => {
         const obatId = row.getAttribute('data-obat-row');
         updateSisaStok(obatId);
+        updateTotalBiaya(obatId);
         row.querySelectorAll('.daily-input').forEach(input => {
             input.addEventListener('input', function() {
                 updateSisaStok(obatId);
+                updateTotalBiaya(obatId);
             });
         });
     });
@@ -384,6 +402,12 @@ document.querySelectorAll('.daily-input').forEach(input => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
             updateTransaksi(this);
+            // Update total biaya juga saat auto-save
+            const row = input.closest('tr[data-obat-row]');
+            if (row) {
+                const obatId = row.getAttribute('data-obat-row');
+                updateTotalBiaya(obatId);
+            }
         }, doneTypingInterval);
     });
 

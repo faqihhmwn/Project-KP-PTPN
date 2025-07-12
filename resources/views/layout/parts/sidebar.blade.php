@@ -51,7 +51,7 @@
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="obat/rekapitulasi" class="nav-link">
+                    <a href="obat/rekapitulasi/bulanan" class="nav-link">
                       <i class="bi bi-clipboard-data nav-icon"></i>
                       <p>Rekapitulasi Obat</p>
                     </a>
