@@ -35,28 +35,13 @@
                   </p>
                 </a>
               </li>
-              <li class="nav-item has-treeview">
-                <a class="nav-link">
+              <li class="nav-item">
+                <a href="{{ route('obat.dashboard') }}" class="nav-link {{ request()->routeIs('obat.*') ? 'active' : '' }}">
                   <i class="nav-icon bi bi-capsule"></i>
                   <p>
                     Farmasi
-                    <i class="right bi bi-chevron-down"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview ms-3">
-                  <li class="nav-item">
-                    <a href="obat/dashboard" class="nav-link">
-                      <i class="bi bi-box-seam nav-icon"></i>
-                      <p>Dashboard Obat</p>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="obat/rekapitulasi/bulanan" class="nav-link">
-                      <i class="bi bi-clipboard-data nav-icon"></i>
-                      <p>Rekapitulasi Obat</p>
-                    </a>
-                  </li>
-                </ul>
               </li>
             </ul>
             <!--end::Sidebar Menu-->
