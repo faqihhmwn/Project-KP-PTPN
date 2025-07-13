@@ -19,13 +19,11 @@ class Obat extends Model
         'stok_masuk',
         'stok_keluar',
         'stok_sisa',
-        'expired_date',
         'keterangan'
     ];
 
     protected $casts = [
-        'harga_satuan' => 'decimal:2',
-        'expired_date' => 'date'
+        'harga_satuan' => 'decimal:2'
     ];
 
     // Relationship

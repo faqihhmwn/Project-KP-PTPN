@@ -50,17 +50,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="tanggal_masuk" class="form-label">Tanggal Masuk Obat <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control @error('tanggal_masuk') is-invalid @enderror" id="tanggal_masuk" name="tanggal_masuk" value="{{ old('tanggal_masuk', date('Y-m-d')) }}" required>
-                                    @error('tanggal_masuk')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
 
                         <div class="row">
                             <div class="col-md-6">

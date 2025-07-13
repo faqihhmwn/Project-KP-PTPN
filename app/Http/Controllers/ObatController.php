@@ -46,7 +46,6 @@ class ObatController extends Controller
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
             'stok_awal' => 'required|integer|min:0',
-            'expired_date' => 'nullable|date|after:today',
             'keterangan' => 'nullable|string'
         ]);
 
@@ -89,7 +88,6 @@ class ObatController extends Controller
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
             'stok_awal' => 'required|integer|min:0',
-            'expired_date' => 'nullable|date|after:today',
             'keterangan' => 'nullable|string'
         ]);
 
