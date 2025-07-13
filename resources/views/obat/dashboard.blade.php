@@ -50,12 +50,7 @@
                                 Rekapitulasi
                             </a>
                         </div>
-                        <div class="col-md-2">
-                            <a href="{{ route('obat.rekapitulasi') }}?export=1&periode=1" class="btn btn-secondary w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
-                                <i class="bi bi-box-arrow-up mb-1" style="font-size: 1.5rem;"></i>
-                                Export Excel
-                            </a>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -77,45 +72,10 @@
                     <ul>
                         <li>Rekapitulasi obat bulanan dengan input harian</li>
                         <li>Manajemen stok otomatis</li>
-                        <li>Export laporan CSV</li>
                         <li>Search dan filter obat</li>
                     </ul>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Import Data Obat</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('obat.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="file" class="form-label">Pilih File Excel</label>
-                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
-                        <div class="form-text">Format yang didukung: .xlsx, .xls, .csv</div>
-                    </div>
-                    <div class="alert alert-info">
-                        <strong>Format Excel:</strong><br>
-                        - Kolom A: Nama Obat<br>
-                        - Kolom B: Jenis Obat<br>
-                        - Kolom C: Harga Satuan<br>
-                        - Kolom D: Satuan<br>
-                        - Kolom E: Stok Awal
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Import</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
