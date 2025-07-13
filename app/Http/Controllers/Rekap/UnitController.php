@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Rekap;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class Unit extends Controller
+class UnitController extends Controller
 {
     public function biayaKesehatan()
     {

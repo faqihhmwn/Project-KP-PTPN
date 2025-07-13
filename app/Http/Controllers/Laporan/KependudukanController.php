@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class KependudukanController extends Controller
 {
-   public function index()
+    public function index()
 {
     $data = LaporanBulanan::with(['subkategori', 'unit'])
         ->where('kategori_id', 1)

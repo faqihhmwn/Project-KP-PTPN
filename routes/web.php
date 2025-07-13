@@ -20,9 +20,9 @@ use App\Http\Controllers\Laporan\SakitBerkepanjanganController;
 use App\Http\Controllers\Laporan\AbsensiDokterHonorController;
 use App\Http\Controllers\Laporan\KategoriKhususController;
 
-use App\Http\Controllers\Rekap\Regional;
-use App\Http\Controllers\Rekap\Kapitasi;
-use App\Http\Controllers\Rekap\Unit;
+use App\Http\Controllers\Rekap\RegionalController;
+use App\Http\Controllers\Rekap\KapitasiController;
+use App\Http\Controllers\Rekap\UnitController;
 
 
 Route::get('/', function () {
@@ -169,12 +169,14 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
     Route::delete('/destroy/{id}', [KategoriKhususController::class, 'destroy'])->name('destroy');
 });
 
-//REKAPITLASI BIAYA
+//REKAPITULASI BIAYA
 Route::prefix('rekap')->middleware('auth')->group(function () {
-    Route::get('/regional7', [Regional::class, 'index'])->name('regional7.index');
+    Route::get('/regional7', [RegionalController::class, 'index'])->name('regional7.index');
+    Route::post('/regional7/store', [RegionalController::class, 'store'])->name('regional7.store');
+    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('kapitasi.index');
 
-    Route::get('/kapitasi', [Kapitasi::class, 'index'])->name('kapitasi.index');
-
-    Route::get('/unit/biaya-kesehatan', [Unit::class, 'biayaKesehatan'])->name('unit.biaya-kesehatan');
-    Route::get('/unit/bpjs', [Unit::class, 'bpjs'])->name('unit.bpjs');
+    Route::get('/unit/biaya-kesehatan', [UnitController::class, 'biayaKesehatan'])->name('unit.biaya-kesehatan');
+    Route::get('/unit/bpjs', [UnitController::class, 'bpjs'])->name('unit.bpjs');
 });
+
+
