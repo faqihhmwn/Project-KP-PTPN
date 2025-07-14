@@ -19,6 +19,7 @@ use App\Http\Controllers\Laporan\KecelakaanKerjaController;
 use App\Http\Controllers\Laporan\SakitBerkepanjanganController;
 use App\Http\Controllers\Laporan\AbsensiDokterHonorController;
 use App\Http\Controllers\Laporan\KategoriKhususController;
+use App\Http\Controllers\ObatController;
 
 
 Route::get('/', function () {
