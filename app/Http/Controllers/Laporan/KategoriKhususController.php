@@ -95,11 +95,11 @@ class KategoriKhususController extends Controller
         return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil diperbarui.');
     }
 
-    public function destroy($id)
-    {
-        $item = InputManual::findOrFail($id);
-        $item->delete();
+    // public function destroy($id)
+    // {
+    //     $item = InputManual::findOrFail($id);
+    //     $item->delete();
 
-        return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil dihapus.');
-    }
+    //     return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil dihapus.');
+    // }
 }

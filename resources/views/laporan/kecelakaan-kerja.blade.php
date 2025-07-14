@@ -109,12 +109,12 @@
                                 data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">
                                 Edit
                             </a>
-                            <form action="{{ route('laporan.kecelakaan-kerja.destroy', $row->id) }}" method="POST"
+                            {{-- <form action="{{ route('laporan.kecelakaan-kerja.destroy', $row->id) }}" method="POST"
                                 class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                            </form>
+                            </form> --}}
                         </td>
                     </tr>
                     

@@ -67,18 +67,20 @@
         <tbody>
             @forelse ($data as $i => $item)
                 <tr>
-                    <td>{{ $i + 1 }}</td>
-                    <td>{{ $item->subkategori->nama }}</td>
-                    <td>{{ $item->nama }}</td>
-                    <td>{{ $item->status }}</td>
+                   <td>{{ $data->firstItem() + $i }}</td>
+                        <td>{{ $row->subkategori->nama }}</td>
+                        <td>{{ $row->jumlah }}</td>
+                        <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
+                        <td>{{ $row->tahun }}</td>
+                        <td>{{ $row->unit->nama }}</td>
                     <td>
                         <!-- Edit dan Hapus -->
                         <a href="{{ route('laporan.kategori-khusus.edit', $item->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        <form action="{{ route('laporan.kategori-khusus.destroy', $item->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin hapus data ini?')">
+                        {{-- <form action="{{ route('laporan.kategori-khusus.destroy', $item->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin hapus data ini?')">
                             @csrf
                             @method('DELETE')
                             <button class="btn btn-sm btn-danger">Hapus</button>
-                        </form>
+                        </form> --}}
                     </td>
                 </tr>
             @empty
@@ -86,5 +88,8 @@
             @endforelse
         </tbody>
     </table>
+     <div class="d-flex justify-content-center mt-3">
+            {{ $data->links('pagination::bootstrap-5') }}
+        </div>
 </div>
 @endsection

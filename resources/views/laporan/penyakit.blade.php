@@ -98,7 +98,7 @@
                 @forelse($data as $i => $row)
                 @include('laporan.modal-laporan')
                     <tr>
-                        <td>{{ $i + 1 }}</td>
+                       <td>{{ $data->firstItem() + $i }}</td>
                         <td>{{ $row->subkategori->nama }}</td>
                         <td>{{ $row->jumlah }}</td>
                         <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
@@ -109,12 +109,12 @@
                                 data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">
                                 Edit
                             </a>
-                            <form action="{{ route('laporan.penyakit.destroy', $row->id) }}" method="POST"
+                            {{-- <form action="{{ route('laporan.penyakit.destroy', $row->id) }}" method="POST"
                                 class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                            </form>
+                            </form> --}}
                         </td>
                     </tr>
                     
@@ -125,5 +125,8 @@
                 @endforelse
             </tbody>
         </table>
+         <div class="d-flex justify-content-center mt-3">
+            {{ $data->links('pagination::bootstrap-5') }}
+        </div>
     </div>
 @endsection
