@@ -1,229 +1,151 @@
 @extends('layout.app')
 
 @section('content')
-
 <div class="container mt-4">
-    <h3 class="mb-4">Rekapitulasi Biaya Kesehatan - PTPN Regional 7</h3>
+    <h3 class="mb-4">Rekapitulasi Biaya Kesehatan - PTPN I Regional </h3>
 
     @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     @endif
 
-    <!-- Filter Tahun -->
-    <form method="GET" class="row mb-4">
-        <div class="col-md-2">
-        <label for="tahun" class="form-label">Tahun</label>
-        <select name="tahun" id="tahun" class="form-select" required>
-            <option value="">-- Pilih Tahun --</option>
-            @foreach($tahunList as $tahun)
-            <option value="{{ $tahun }}" {{ request('tahun') == $tahun ? 'selected' : '' }}>{{ $tahun }}</option>
-            @endforeach
-            </select>
-        </div>
+    <!-- Form Edit Jumlah -->
+    @isset($editItem)
+        <div class="card mb-4">
+            <div class="card-header">Edit Jumlah untuk Kategori Biaya: <strong>{{ $editItem->subkategori->nama }}</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('rekap.regional.update', $editItem->id) }}">
+                    @csrf
+                    @method('PUT')
 
-        <div class="col-md-3 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary">Tampilkan</button>
-        </div>
-    </form>
+                    <div class="mb-3">
+                        <label for="jumlah" class="form-label">Jumlah</label>
+                        <input type="number" name="jumlah" class="form-control" value="{{ $editItem->jumlah }}" required>
+                    </div>
 
-    <!-- Form Input -->
-    <form method="POST" action="{{ route('regional7.store') }}">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <a href="{{ route('rekap.regional.index') }}" class="btn btn-secondary">Batal</a>
+                </form>
+            </div>
+        </div>
+    @endisset
+
+    <!-- Form Pilih Tahun dan Bulan -->
+    <form method="POST" action="{{ route('rekap.regional.store') }}">
         @csrf
         <div class="row mb-3">
             <div class="col-md-3">
-                <label for="bulan_id" class="form-label">Bulan</label>
-                <select name="bulan_id" class="form-select" required>
+                <label for="tahun" class="form-label">Tahun</label>
+                <select name="tahun" id="tahun" class="form-select" required>
+                    <option value="">-- Pilih Tahun --</option>
+                    @for ($tahun = date('Y'); $tahun >= 2000; $tahun--)
+                        <option value="{{ $tahun }}">{{ $tahun }}</option>
+                    @endfor
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="bulan" class="form-label">Bulan</label>
+                <select name="bulan" id="bulan" class="form-select" required>
                     <option value="">-- Pilih Bulan --</option>
-                    @foreach ($bulans as $bulan)
-                        <option value="{{ $bulan->id }}">{{ $bulan->nama }}</option>
+                    @foreach ($bulan as $b)
+                        <option value="{{ $b->id }}">{{ $b->nama }}</option>
                     @endforeach
                 </select>
             </div>
+
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-auto">Tampilkan</button>
+            </div>
         </div>
-
-        @php
-            $fields = [
-                'gol_3_4' => 'Gol. III-IV',
-                'gol_1_2' => 'Gol. I-II',
-                'kampanye' => 'Kampanye',
-                'honor_ila_os' => 'Honor + ILA + OS',
-                'pens_3_4' => 'Pens. III-IV',
-                'pens_1_2' => 'Pens. I-II',
-                'direksi' => 'Direksi',
-                'dekom' => 'Dekom',
-                'pengacara' => 'Pengacara',
-                'transport' => 'Transport',
-                'hiperkes' => 'Hiperkes',
-            ];
-        @endphp
-
-        <div class="row">
-            @foreach ($fields as $key => $label)
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">{{ $label }}</label>
-                    <input type="text" name="{{ $key }}" class="form-control rupiah" required>
-                </div>
-            @endforeach
-        </div>
-
-        <button type="submit" class="btn btn-success">Simpan</button>
     </form>
 
-    <!-- Rekap Tabel -->
-    <hr class="my-4">
-    <div class="table-responsive position-relative" style="overflow-x: auto;">
-    <table class="table table-bordered w-auto" id="rekapTableRegional">
-        <thead class="table-primary text-center">
+    <!-- Form Input Jumlah (Setelah Tahun & Bulan Dipilih) -->
+    {{-- @if ($selectedTahun && $selectedBulan)
+        <form method="POST" action="{{ route('rekap.regional.store') }}">
+            @csrf --}}
+            <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
+            <input type="hidden" name="bulan_id" value="{{ $selectedBulan }}">
+
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Kategori Biaya</th>
+                        <th>Jumlah Rp.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($kategori as $k)
+                        <tr>
+                            <td>{{ $k->nama }}</td>
+                            <td>
+                                <input type="number" name="jumlah[{{ $k->id }}]" class="form-control" min="0" required>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <button type="submit" class="btn btn-primary w-auto">Simpan</button>
+        </form>
+    {{-- @endif --}}
+
+    <!-- Tabel Data Tersimpan -->
+    <hr class="my-5">
+    <h5>Data Tersimpan</h5>
+    <table class="table table-striped table-bordered text-nowrap">
+        <thead>
             <tr>
-                <th>Rekap Bulan</th>
-                @foreach ($fields as $label)
-                    <th>{{ $label }}</th>
-                @endforeach
-                <th>Total Biaya Kesehatan</th>
-                <th>Aksi</th>
+                <th rowspan="2" class="text-center align-middle">Rekap Bulan</th>
+                <th colspan="9" class="group-header text-center">REAL BIAYA</th>
+                <th rowspan="2" class="align-middle">Transport</th>
+                <th rowspan="2" class="align-middle"> Jml. Biaya Hiperkes</th>
+                <th rowspan="2" class="bg-warning text-dark text-center align-middle">TOTAL BIAYA KESEHATAN</th>
+                <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
+                <th rowspan="2" class="text-center align-middle">Aksi</th>
+            </tr>
+            <tr>
+                <th>Gol. III-IV</th>
+                <th>Gol. I-II</th>
+                <th>Kampanye</th>
+                <th>Honor + ILA + OS</th>
+                <th>Pens. III-IV</th>
+                <th>Pens. I-II</th>
+                <th>Direksi</th>
+                <th>Dekom</th>
+                <th>Pengacara</th>
             </tr>
         </thead>
         <tbody>
-            @php
-                $totalTahun = array_fill_keys(array_keys($fields), 0);
-                $totalTahun['total'] = 0;
-            @endphp
-            @foreach ($bulans as $bulan)
+            @foreach ($grouped as $row)
                 <tr>
-                    <td>{{ substr($bulan->nama, 0, 3) }}</td>
-                    @php
-                        $row = $data[$bulan->id][0] ?? null;
-                        $subtotal = 0;
-                        $isValidated = $row?->is_validated ?? false;
-                    @endphp
-                    @foreach ($fields as $key => $label)
-                        @php
-                            $value = $row ? $row->$key : 0;
-                            $subtotal += $value;
-                            $totalTahun[$key] += $value;
-                        @endphp
-                        <td class="text-end">{{ number_format($value, 0, ',', '.') }}</td>
-                    @endforeach
-                    <td class="text-end fw-bold">{{ number_format($subtotal, 0, ',', '.') }}</td>
-                    
-                    <!-- Kolom Validasi -->
-                    <td class="text-center">
-                        @if($row)
-                            @if($isValidated)
-                                <span class="badge bg-success">Tervalidasi</span>
-                            @else
-                                <form method="POST" action="{{ route('rekap.validate', ['bulan_id' => $bulan->id, 'tahun' => $tahun]) }}" onsubmit="return confirm('Yakin ingin validasi bulan ini? Setelah divalidasi tidak bisa diedit.')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">Validasi</button>
-                                </form>
-                            @endif
-                        @else
-                            <span class="text-muted">Belum Tervalidasi</span>
-                        @endif
+                    <td>{{ $row['bulan'] }} {{ $row['tahun'] }}</td>
+                    <td>{{ number_format($row['kategori'][1] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][2] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][3] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][4] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][5] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][6] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][7] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][8] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][9] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][10] ?? 0, 0, ',', '.') }}</td>
+                    <td>{{ number_format($row['kategori'][11] ?? 0, 0, ',', '.') }}</td>
+                    <td class="bg-warning fw-bold">{{ number_format(collect($row['kategori'])->sum(), 0, ',', '.') }}</td>
+                    <td class="text-center">{{ $row['validasi'] ?? '-' }}</td>
+                    <td>
+                        {{-- <a href="#" class="btn btn-sm btn-warning">Edit</a> --}}
+                        {{-- <form action="{{ route('rekap.regional.destroy', $row['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')"> --}}
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                        </form>
                     </td>
-                    
-                    @php $totalTahun['total'] += $subtotal; 
-                    @endphp
                 </tr>
             @endforeach
-
-            <!-- Total 1 Tahun -->
-            <tr class="table-warning">
-                <td><strong>Total 1 Tahun</strong></td>
-                @foreach ($fields as $key => $label)
-                    <td class="text-end fw-bold">{{ number_format($totalTahun[$key], 0, ',', '.') }}</td>
-                @endforeach
-                <td class="text-end fw-bold">{{ number_format($totalTahun['total'], 0, ',', '.') }}</td>
-            </tr>
-
-            <!-- Biaya Tersedia -->
-            <tr class="table-info">
-                <td><strong>Biaya Tersedia</strong></td>
-                @foreach ($fields as $key => $label)
-                    <td>
-                        <input type="text" name="biaya_tersedia[{{ $key }}]" class="form-control rupiah biaya-terseida-input" data-kolom="{{ $key }}">
-                    </td>
-                @endforeach
-                <td>
-                    <input type="text" id="biayaTersediaTotal" class="form-control rupiah">
-                </td>
-            </tr>
-
-            <!-- Rekap Persentase -->
-            <tr class="table-light">
-                <td><strong>Rekap Persentase</strong></td>
-                @foreach ($fields as $key => $label)
-                <td class="text-end"><span id="persentase-{{ $key }}">0%</span></td>
-                @endforeach
-                <td class="text-end"><span id="persentase-total">0%</span></td>
-            </tr>        
         </tbody>
     </table>
 </div>
-
-<div id="custom-scrollbar" style="overflow-x: auto; width: 100%;">
-    <div style="width: 1800px; height: 20px;"></div>
-</div>
-
 @endsection
-
-@push('scripts')
-<script>
-    const customScrollbar = document.getElementById('custom-scrollbar');
-    customScrollbar.addEventListener('scroll', function () {
-        tableContainer.scrollLeft = this.scrollLeft;
-    });
-
-    const tableContainer = document.querySelector('.table-responsive');
-    document.getElementById('scrollLeft').addEventListener('click', () => {
-        tableContainer.scrollBy({ left: -300, behavior: 'smooth' });
-    });
-
-    document.getElementById('scrollRight').addEventListener('click', () => {
-        tableContainer.scrollBy({ left: 300, behavior: 'smooth' });
-    });
-
-    function updatePersentase(kolom, tersedia, terpakai) {
-        let persen = tersedia > 0 ? (terpakai / tersedia * 100).toFixed(2) : 0;
-        document.getElementById(`persentase-${kolom}`).innerText = persen + '%';
-    }
-
-    function updateTotalPersentase() {
-        let tersedia = parseInt(document.getElementById('biayaTersediaTotal').value.replace(/\D/g, '')) || 0;
-        let total = {{ $totalTahun['total'] ?? 0 }};
-        let persen = tersedia > 0 ? (total / tersedia * 100).toFixed(2) : 0;
-        document.getElementById('persentase-total').innerText = persen + '%';
-    }
-
-    // Format semua input rupiah
-    document.querySelectorAll('.rupiah').forEach(input => {
-        input.addEventListener('input', function () {
-            let val = this.value.replace(/\D/g, '');
-            this.value = new Intl.NumberFormat('id-ID').format(val);
-        });
-    });
-
-    // Hitung persentase per kolom
-    document.querySelectorAll('.biaya-tersedia-input').forEach(input => {
-        input.addEventListener('input', function () {
-            let kolom = this.dataset.kolom;
-            let tersedia = parseInt(this.value.replace(/\D/g, '')) || 0;
-            let terpakai = {{ Js::from($totalTahun) }}[kolom];
-            updatePersentase(kolom, tersedia, terpakai);
-        });
-    });
-
-    // Hitung total persentase saat total biaya tersedia berubah
-    document.getElementById('biayaTersediaTotal')?.addEventListener('input', function () {
-        updateTotalPersentase();
-    });
-
-    function formatRupiah(angka) {
-        return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    }
-
-    function parseRupiah(rp) {
-        return parseInt(rp.replace(/\./g, '')) || 0;
-    }
-</script>
-@endpush

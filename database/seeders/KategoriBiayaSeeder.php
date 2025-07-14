@@ -8,29 +8,33 @@ use Carbon\Carbon;
 
 class KategoriBiayaSeeder extends Seeder
 {
-    public function run(): void
-    {
-        $kategoriBiayas = [
-            'gol_3_4',
-            'gol_1_2',
-            'kampanye',
-            'honor_ila_os',
-            'pens_3_4',
-            'pens_1_2',
-            'direksi',
-            'dekom',
-            'pengacara',
-            'transport',
-            'hiperkes',
-            'pensiunan',
-            'honorer',
-        ];
 
-        foreach ($kategoriBiayas as $nama) {
-            DB::table('kategori_biayas')->updateOrInsert(
-                ['nama' => $nama],
-                ['created_at' => Carbon::now(), 'updated_at' => Carbon::now()]
-            );
-        }
-    }
+public function run()
+{
+    // Nonaktifkan foreign key checks sementara
+    DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+    // Hapus semua data
+    DB::table('kategori_biayas')->delete();
+
+    // Aktifkan lagi foreign key checks
+    DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+    // Insert ulang data baru
+    DB::table('kategori_biayas')->insert([
+        ['nama' => 'Gol. III-IV'],
+        ['nama' => 'Gol. I-II'],
+        ['nama' => 'Kampanye'],
+        ['nama' => 'Kampanye'],
+        ['nama' => 'Honor, ILA, OS'],
+        ['nama' => 'Pens. III-IV'],
+        ['nama' => 'Pens. I-II'],
+        ['nama' => 'Direksi'],
+        ['nama' => 'Dekom'],
+        ['nama' => 'Pengacara'],
+        ['nama' => 'Transport'],
+        ['nama' => 'Jml. Biaya Hiperkes'],
+    ]);
 }
+}
+

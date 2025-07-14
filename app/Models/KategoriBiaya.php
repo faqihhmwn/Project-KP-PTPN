@@ -13,4 +13,5 @@ class KategoriBiaya extends Model
     {
         return $this->hasMany(RekapBiayaKesehatan::class);
     }
+
 }

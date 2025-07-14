@@ -5,14 +5,9 @@ namespace App\Http\Controllers\Rekap;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-class UnitController extends Controller
+class BpjsController extends Controller
 {
-    public function biayaKesehatan()
-    {
-        return view('rekap.biaya-kesehatan');
-    }
-
-    public function bpjs()
+    public function index()
     {
         return view('rekap.iuran-bpjs');
     }

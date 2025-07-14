@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Rekap\BpjsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Laporan\KependudukanController;
 use App\Http\Controllers\Laporan\KonsultasiKlinikController;
@@ -171,12 +172,12 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
 
 //REKAPITULASI BIAYA
 Route::prefix('rekap')->middleware('auth')->group(function () {
-    Route::get('/regional7', [RegionalController::class, 'index'])->name('regional7.index');
-    Route::post('/regional7/store', [RegionalController::class, 'store'])->name('regional7.store');
-    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('kapitasi.index');
+    Route::get('/regional/index', [RegionalController::class, 'index'])->name('rekap.regional.index');
+    Route::post('/regional/store', [RegionalController::class, 'store'])->name('rekap.regional.store');
+    Route::get('/regional/show', [RegionalController::class, 'show'])->name('rekap.regional.show');
+    Route::put('/regional/update', [RegionalController::class, 'update'])->name('rekap.regional.update');
+    Route::delete('/regional/destroy', [RegionalController::class, 'destroy'])->name('rekap.regional.destroy');
 
-    Route::get('/unit/biaya-kesehatan', [UnitController::class, 'biayaKesehatan'])->name('unit.biaya-kesehatan');
-    Route::get('/unit/bpjs', [UnitController::class, 'bpjs'])->name('unit.bpjs');
+    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('rekap.kapitasi.index');
+    Route::get('/bpjs', [BpjsController::class, 'index'])->name('rekap.bpjs.index');
 });
-
-

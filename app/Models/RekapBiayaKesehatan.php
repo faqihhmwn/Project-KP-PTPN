@@ -12,7 +12,6 @@ class RekapBiayaKesehatan extends Model
     protected $fillable = [
         'tahun',
         'bulan_id',
-        'unit_id',
         'kategori_biaya_id',
         'total_biaya_kesehatan',
         'cakupan_semua_unit',
@@ -24,11 +23,6 @@ class RekapBiayaKesehatan extends Model
     public function bulan()
     {
         return $this->belongsTo(Bulan::class);
-    }
-
-    public function unit()
-    {
-        return $this->belongsTo(Unit::class);
     }
 
     public function kategoriBiaya()
