@@ -90,8 +90,6 @@
             
         </div>
     </div>
-
-    <!-- ...existing code... -->
 </div>
 
     <!-- Table Container -->
@@ -176,63 +174,18 @@
                 @endforelse
             </tbody>
         </table>
-
-    <!-- Tombol Validasi Data & Export Excel di bawah tabel -->
-    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-        <button id="validasiBulanBtn" class="btn btn-success">
-            <i class="fas fa-lock"></i> Validasi Data Bulan Ini
-        </button>
-        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-            <i class="fas fa-file-excel"></i> Export Excel
-        </button>
+        <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+            <button id="validasiBulanBtn" class="btn btn-success">
+                <i class="fas fa-lock"></i> Validasi Data Bulan Ini
+            </button>
+            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </div>
+        <div id="validasiInfo" class="alert alert-success mt-3 d-none">
+            <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus dinonaktifkan untuk menjaga integritas laporan.
+        </div>
     </div>
-
-    <script>
-    // Validasi Bulan: Kunci semua input dan nonaktifkan edit/hapus
-    document.addEventListener('DOMContentLoaded', function() {
-        const validasiBtn = document.getElementById('validasiBulanBtn');
-        if (validasiBtn) {
-            validasiBtn.addEventListener('click', function() {
-                if (confirm('Setelah divalidasi, data bulan ini akan dikunci dan tidak bisa diubah lagi. Lanjutkan?')) {
-                    // Kunci semua input
-                    document.querySelectorAll('.daily-input').forEach(input => {
-                        input.setAttribute('readonly', true);
-                        input.classList.add('bg-light');
-                    });
-                    // Nonaktifkan tombol edit & hapus
-                    document.querySelectorAll('.btn-warning, .btn-danger').forEach(btn => {
-                        btn.setAttribute('disabled', true);
-                        btn.classList.add('disabled');
-                    });
-                    // Kunci tombol validasi
-                    validasiBtn.setAttribute('disabled', true);
-                    validasiBtn.innerHTML = '<i class="fas fa-lock"></i> Bulan Terkunci';
-                    // Simpan status validasi di localStorage (per bulan/tahun)
-                    const bulan = '{{ $bulan }}';
-                    const tahun = '{{ $tahun }}';
-                    localStorage.setItem('validasi_obat_' + bulan + '_' + tahun, '1');
-                }
-            });
-        }
-        // Saat load, cek status validasi
-        const bulan = '{{ $bulan }}';
-        const tahun = '{{ $tahun }}';
-        if (localStorage.getItem('validasi_obat_' + bulan + '_' + tahun) === '1') {
-            document.querySelectorAll('.daily-input').forEach(input => {
-                input.setAttribute('readonly', true);
-                input.classList.add('bg-light');
-            });
-            document.querySelectorAll('.btn-warning, .btn-danger').forEach(btn => {
-                btn.setAttribute('disabled', true);
-                btn.classList.add('disabled');
-            });
-            if (validasiBtn) {
-                validasiBtn.setAttribute('disabled', true);
-                validasiBtn.innerHTML = '<i class="fas fa-lock"></i> Bulan Terkunci';
-            }
-        }
-    });
-    </script>
 
 <!-- Export Modal -->
 <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
@@ -344,6 +297,53 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // --- VALIDASI BULAN (LOCKING) ---
+    const bulan = {{ $bulan }};
+    const tahun = {{ $tahun }};
+    const lockKey = `obat_validasi_${tahun}_${bulan}`;
+    const isLocked = localStorage.getItem(lockKey) === '1';
+    const validasiBtn = document.getElementById('validasiBulanBtn');
+    const validasiInfo = document.getElementById('validasiInfo');
+
+    function setLockedState(locked) {
+        // Set all daily inputs to readonly
+        document.querySelectorAll('.daily-input').forEach(input => {
+            input.readOnly = locked;
+        });
+        // Disable edit & delete buttons
+        document.querySelectorAll('a.btn-warning, form .btn-danger').forEach(btn => {
+            btn.disabled = locked;
+            if (locked) {
+                btn.classList.add('disabled');
+                btn.setAttribute('tabindex', '-1');
+                btn.setAttribute('aria-disabled', 'true');
+            } else {
+                btn.classList.remove('disabled');
+                btn.removeAttribute('tabindex');
+                btn.removeAttribute('aria-disabled');
+            }
+        });
+        // Hide or show validasi button/info
+        if (locked) {
+            if (validasiBtn) validasiBtn.classList.add('d-none');
+            if (validasiInfo) validasiInfo.classList.remove('d-none');
+        } else {
+            if (validasiBtn) validasiBtn.classList.remove('d-none');
+            if (validasiInfo) validasiInfo.classList.add('d-none');
+        }
+    }
+
+    setLockedState(isLocked);
+
+    if (validasiBtn) {
+        validasiBtn.addEventListener('click', function() {
+            if (confirm('Setelah divalidasi, semua data bulan ini akan dikunci dan tidak dapat diubah. Lanjutkan?')) {
+                localStorage.setItem(lockKey, '1');
+                setLockedState(true);
+            }
+        });
+    }
 });
 
 </script>
