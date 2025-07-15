@@ -10,20 +10,42 @@ use Illuminate\Support\Facades\Auth;
 
 class KonsultasiKlinikController extends Controller
 {
-   public function index()
-{
-    $data = LaporanBulanan::with(['subkategori', 'unit'])
-            ->where('kategori_id', 5)
-            ->where('unit_id', Auth::user()->unit_id)
-            ->orderBy('tahun', 'desc')
-            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-            ->orderBy('subkategori_id')
-            ->paginate(8);
-
+    public function index(Request $request)
+    {
         $subkategori = SubKategori::where('kategori_id', 5)->get();
 
-    return view('laporan.konsultasi-klinik', compact('data', 'subkategori'));
-}
+        $query = LaporanBulanan::with(['subkategori', 'unit'])
+            ->where('kategori_id', 5)
+            ->where('unit_id', Auth::user()->unit_id);
+        
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('subkategori', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter bulan
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        $data = $query
+            ->orderBy('tahun', 'desc')
+            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
+            ->orderBy(SubKategori::select('nama')
+                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
+            ->paginate(10);
+
+        return view('laporan.kependudukan', compact('data', 'subkategori'));
+    }
+
 
 public function create()
 {

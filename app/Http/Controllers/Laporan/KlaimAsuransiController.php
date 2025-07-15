@@ -10,17 +10,38 @@ use Illuminate\Support\Facades\Auth;
 
 class KlaimAsuransiController extends Controller
 {
-   public function index()
-{
-     $data = LaporanBulanan::with(['subkategori', 'unit'])
+    public function index(Request $request)
+    {
+        $subkategori = SubKategori::where('kategori_id', 12)->get();
+
+        $query = LaporanBulanan::with(['subkategori', 'unit'])
             ->where('kategori_id', 12)
-            ->where('unit_id', Auth::user()->unit_id)
+            ->where('unit_id', Auth::user()->unit_id);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('subkategori', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter bulan
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        $data = $query
             ->orderBy('tahun', 'desc')
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-            ->orderBy('subkategori_id')
-            ->paginate(4);
-
-        $subkategori = SubKategori::where('kategori_id', 12)->get();
+            ->orderBy(SubKategori::select('nama')
+                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
+            ->paginate(8);
 
     return view('laporan.klaim-asuransi', compact('data', 'subkategori'));
 }

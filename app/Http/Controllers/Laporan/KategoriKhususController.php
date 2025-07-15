@@ -34,6 +34,9 @@ class KategoriKhususController extends Controller
             'subkategori_id' => 'required|exists:subkategori,id',
             'nama' => 'required|string|max:255',
             'status' => 'required|string|max:255',
+            'jenis_disabilitas' => 'nullable|string|max:255',
+            'keterangan' => 'nullable|string|max:255',
+
         ]);
 
         $unitId = Auth::user()->unit_id;
@@ -46,6 +49,8 @@ class KategoriKhususController extends Controller
             'nama' => $request->nama,
             'status' => $request->status,
             'subkategori_id' => $request->subkategori_id,
+            'jenis_disabilitas' => $request->jenis_disabilitas,
+            'keterangan' => $request->keterangan,
             'unit_id' => $unitId,
             'user_id' => $userId,
             'bulan' => $bulan,
@@ -83,6 +88,9 @@ class KategoriKhususController extends Controller
             'subkategori_id' => 'required|exists:subkategori,id',
             'nama' => 'required|string|max:255',
             'status' => 'required|string|max:255',
+            'jenis_disabilitas' => 'nullable|string|max:255',
+            'keterangan' => 'nullable|string|max:500',
+
         ]);
 
         $item = InputManual::findOrFail($id);
@@ -90,6 +98,9 @@ class KategoriKhususController extends Controller
             'subkategori_id' => $request->subkategori_id,
             'nama' => $request->nama,
             'status' => $request->status,
+            'jenis_disabilitas' => $request->jenis_disabilitas,
+            'keterangan' => $request->keterangan,
+
         ]);
 
         return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil diperbarui.');

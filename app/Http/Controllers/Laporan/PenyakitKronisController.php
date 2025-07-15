@@ -10,27 +10,49 @@ use Illuminate\Support\Facades\Auth;
 
 class PenyakitKronisController extends Controller
 {
-   public function index()
-{
-   $data = LaporanBulanan::with(['subkategori', 'unit'])
+    public function index(Request $request)
+    {
+        $subkategori = SubKategori::where('kategori_id', 4)->get();
+
+        $query = LaporanBulanan::with(['subkategori', 'unit'])
             ->where('kategori_id', 4)
-            ->where('unit_id', Auth::user()->unit_id)
+            ->where('unit_id', Auth::user()->unit_id);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('subkategori', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter bulan
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        $data = $query
             ->orderBy('tahun', 'desc')
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-            ->orderBy('subkategori_id')
-            ->paginate(4);
-    $subkategori = SubKategori::where('kategori_id', 4)->get();
+            ->orderBy(SubKategori::select('nama')
+                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
+            ->paginate(10);
 
-    return view('laporan.penyakit-kronis', compact('data', 'subkategori'));
-}
+        return view('laporan.penyakit-kronis', compact('data', 'subkategori'));
+    }
 
-public function create()
-{
-    $subkategoris = SubKategori::where('kategori_id', 4)->get();
-    return view('laporan.penyakit-kronis', compact('subkategoris'));
-}
+    public function create()
+    {
+        $subkategoris = SubKategori::where('kategori_id', 4)->get();
+        return view('laporan.penyakit-kronis', compact('subkategoris'));
+    }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'bulan' => 'required|integer|min:1|max:12',
@@ -68,7 +90,7 @@ public function create()
         return redirect()->route('laporan.penyakit-kronis.index')->with('success', 'Laporan berhasil ditambahkan');
     }
 
-        public function edit($id)
+    public function edit($id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
         $subkategoris = SubKategori::where('kategori_id', 4)->get();
