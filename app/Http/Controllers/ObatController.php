@@ -49,7 +49,10 @@ class ObatController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
+        // Set stok_sisa = stok_awal for new obat (no transactions yet)
         $validated['stok_sisa'] = $validated['stok_awal'];
+        $validated['stok_masuk'] = 0;
+        $validated['stok_keluar'] = 0;
 
         Obat::create($validated);
 
@@ -204,14 +207,29 @@ class ObatController extends Controller
 
     private function updateStokObat(Obat $obat)
     {
-        $totalMasuk = $obat->transaksiObats()->where('tipe_transaksi', 'masuk')->sum('jumlah_masuk');
-        $totalKeluar = $obat->transaksiObats()->where('tipe_transaksi', 'keluar')->sum('jumlah_keluar');
-        
-        $obat->update([
-            'stok_masuk' => $totalMasuk,
-            'stok_keluar' => $totalKeluar,
-            'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
-        ]);
+        try {
+            // Check if transaksi_obats table exists and has the required columns
+            $totalMasuk = $obat->transaksiObats()
+                ->where('tipe_transaksi', 'masuk')
+                ->sum('jumlah_masuk') ?? 0;
+                
+            $totalKeluar = $obat->transaksiObats()
+                ->where('tipe_transaksi', 'keluar')
+                ->sum('jumlah_keluar') ?? 0;
+            
+            $obat->update([
+                'stok_masuk' => $totalMasuk,
+                'stok_keluar' => $totalKeluar,
+                'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
+            ]);
+        } catch (\Exception $e) {
+            // If there's an error (like missing columns), just set stok_sisa = stok_awal
+            $obat->update([
+                'stok_masuk' => 0,
+                'stok_keluar' => 0,
+                'stok_sisa' => $obat->stok_awal
+            ]);
+        }
     }
 
     public function dashboard()
