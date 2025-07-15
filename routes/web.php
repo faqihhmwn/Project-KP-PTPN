@@ -203,4 +203,4 @@ Route::prefix('obat')->name('obat.')->group(function () {
 
 Route::get('/login', function () {
     return view('login');
-});
+})->name('login');

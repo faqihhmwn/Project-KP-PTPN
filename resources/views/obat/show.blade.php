@@ -11,9 +11,6 @@
                         <a href="{{ route('obat.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
-                        <a href="{{ route('obat.edit', $obat) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
                         
                     </div>
                 </div>

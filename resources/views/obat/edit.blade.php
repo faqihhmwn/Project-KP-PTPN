@@ -143,9 +143,7 @@
                                 <i class="fas fa-times"></i> Batal
                             </a>
                             <div>
-                                <a href="{{ route('obat.show', $obat) }}" class="btn btn-info me-2">
-                                    <i class="fas fa-eye"></i> Lihat Detail
-                                </a>
+                               
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Update Obat
                                 </button>
