@@ -181,6 +181,9 @@
             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
                 <i class="fas fa-file-excel"></i> Export Excel
             </button>
+            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
+                <i class="fas fa-save"></i> Simpan Rekapitulasi
+            </button>
         </div>
         <div id="validasiInfo" class="alert alert-success mt-3 d-none">
             <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus dinonaktifkan untuk menjaga integritas laporan.
@@ -413,9 +416,7 @@ function searchObat() {
 function updateTransaksi(input) {
     const obatId = input.getAttribute('data-obat-id');
     const tanggal = input.getAttribute('data-tanggal');
-    const jumlahKeluar = input.value;
-
-    // Validasi stok awal
+    const jumlahKeluar = parseInt(input.value) || 0;
     const row = input.closest('tr[data-obat-row]');
     const stokAwalCell = row.querySelector('.stok-awal');
     let stokAwal = 0;
@@ -430,22 +431,37 @@ function updateTransaksi(input) {
         alert('Input melebihi kapasitas stok awal!');
         return;
     }
-    fetch(`/obat/${obatId}/transaksi-harian`, {
+    // Hitung sisa stok dan total biaya
+    const sisaStok = stokAwal - totalKeluar;
+    const harga = parseInt(row.getAttribute('data-harga')) || 0;
+    let totalBiaya = 0;
+    row.querySelectorAll('.daily-input').forEach(inp => {
+        totalBiaya += (parseInt(inp.value) || 0) * harga;
+    });
+    // Kirim data ke endpoint rekapitulasi
+    fetch('/obat/rekapitulasi-obat/input-harian', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
         },
         body: JSON.stringify({
+            obat_id: obatId,
             tanggal: tanggal,
-            jumlah_keluar: parseInt(jumlahKeluar) || 0
+            jumlah_keluar: jumlahKeluar,
+            stok_awal: stokAwal,
+            sisa_stok: sisaStok < 0 ? 0 : sisaStok,
+            total_biaya: totalBiaya,
+            bulan: {{ $bulan }},
+            tahun: {{ $tahun }}
         })
     })
-    .then(response => {
-        // Tidak ada perubahan warna apapun
+    .then(response => response.json())
+    .then(data => {
+        // Data tersimpan
     })
     .catch(error => {
-        // Tidak ada perubahan warna apapun
+        // Error
     });
 }
 
