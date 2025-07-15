@@ -88,14 +88,10 @@
                 </form>
             </div>
             
-            <!-- Export -->
-            <div class="col-md-6 text-end">
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-                    <i class="fas fa-file-excel"></i> Export Excel
-                </button>
-            </div>
         </div>
     </div>
+
+    <!-- ...existing code... -->
 </div>
 
     <!-- Table Container -->
@@ -130,18 +126,23 @@
                         @php $totalBiaya = 0; @endphp
                         @for($day = 1; $day <= $daysInMonth; $day++)
                             @php
+                                $jumlahKeluar = 0;
                                 $tanggal = \Carbon\Carbon::create($tahun, $bulan, $day);
                                 $transaksi = $obat->transaksiObats->where('tanggal', $tanggal->format('Y-m-d'))->where('tipe_transaksi', 'keluar')->first();
-                                $jumlahKeluar = $transaksi ? $transaksi->jumlah_keluar : 0;
+                                if ($transaksi && isset($transaksi->jumlah_keluar)) {
+                                    $jumlahKeluar = $transaksi->jumlah_keluar;
+                                }
                                 $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
                             @endphp
                             <td>
                                 <input type="number" 
-                                       class="daily-input" 
+                                       class="daily-input"
+                                       type="text"
+                                       inputmode="numeric"
+                                       pattern="[0-9]*"
                                        value="{{ $jumlahKeluar }}"
                                        data-obat-id="{{ $obat->id }}"
-                                       data-tanggal="{{ $tanggal->format('Y-m-d') }}"
-                                       min="0">
+                                       data-tanggal="{{ $tanggal->format('Y-m-d') }}">
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">{{ $obat->stok_sisa ?? 0 }}</td>
@@ -175,7 +176,63 @@
                 @endforelse
             </tbody>
         </table>
+
+    <!-- Tombol Validasi Data & Export Excel di bawah tabel -->
+    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+        <button id="validasiBulanBtn" class="btn btn-success">
+            <i class="fas fa-lock"></i> Validasi Data Bulan Ini
+        </button>
+        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
     </div>
+
+    <script>
+    // Validasi Bulan: Kunci semua input dan nonaktifkan edit/hapus
+    document.addEventListener('DOMContentLoaded', function() {
+        const validasiBtn = document.getElementById('validasiBulanBtn');
+        if (validasiBtn) {
+            validasiBtn.addEventListener('click', function() {
+                if (confirm('Setelah divalidasi, data bulan ini akan dikunci dan tidak bisa diubah lagi. Lanjutkan?')) {
+                    // Kunci semua input
+                    document.querySelectorAll('.daily-input').forEach(input => {
+                        input.setAttribute('readonly', true);
+                        input.classList.add('bg-light');
+                    });
+                    // Nonaktifkan tombol edit & hapus
+                    document.querySelectorAll('.btn-warning, .btn-danger').forEach(btn => {
+                        btn.setAttribute('disabled', true);
+                        btn.classList.add('disabled');
+                    });
+                    // Kunci tombol validasi
+                    validasiBtn.setAttribute('disabled', true);
+                    validasiBtn.innerHTML = '<i class="fas fa-lock"></i> Bulan Terkunci';
+                    // Simpan status validasi di localStorage (per bulan/tahun)
+                    const bulan = '{{ $bulan }}';
+                    const tahun = '{{ $tahun }}';
+                    localStorage.setItem('validasi_obat_' + bulan + '_' + tahun, '1');
+                }
+            });
+        }
+        // Saat load, cek status validasi
+        const bulan = '{{ $bulan }}';
+        const tahun = '{{ $tahun }}';
+        if (localStorage.getItem('validasi_obat_' + bulan + '_' + tahun) === '1') {
+            document.querySelectorAll('.daily-input').forEach(input => {
+                input.setAttribute('readonly', true);
+                input.classList.add('bg-light');
+            });
+            document.querySelectorAll('.btn-warning, .btn-danger').forEach(btn => {
+                btn.setAttribute('disabled', true);
+                btn.classList.add('disabled');
+            });
+            if (validasiBtn) {
+                validasiBtn.setAttribute('disabled', true);
+                validasiBtn.innerHTML = '<i class="fas fa-lock"></i> Bulan Terkunci';
+            }
+        }
+    });
+    </script>
 
 <!-- Export Modal -->
 <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
@@ -358,9 +415,21 @@ function updateTransaksi(input) {
     const tanggal = input.getAttribute('data-tanggal');
     const jumlahKeluar = input.value;
 
-    // Show loading
-    input.style.backgroundColor = '#fff3cd';
-
+    // Validasi stok awal
+    const row = input.closest('tr[data-obat-row]');
+    const stokAwalCell = row.querySelector('.stok-awal');
+    let stokAwal = 0;
+    if (stokAwalCell) {
+        stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+    }
+    let totalKeluar = 0;
+    row.querySelectorAll('.daily-input').forEach(inp => {
+        totalKeluar += parseInt(inp.value) || 0;
+    });
+    if (totalKeluar > stokAwal) {
+        alert('Input melebihi kapasitas stok awal!');
+        return;
+    }
     fetch(`/obat/${obatId}/transaksi-harian`, {
         method: 'POST',
         headers: {
@@ -373,23 +442,10 @@ function updateTransaksi(input) {
         })
     })
     .then(response => {
-        if (response.ok) {
-            input.style.backgroundColor = '#d4edda'; // Success green
-            setTimeout(() => {
-                input.style.backgroundColor = '';
-                // Tidak reload, biarkan data tetap di kolom
-            }, 500);
-        } else {
-            throw new Error('Network response was not ok');
-        }
+        // Tidak ada perubahan warna apapun
     })
     .catch(error => {
-        input.style.backgroundColor = '#f8d7da'; // Error red
-        alert('Terjadi kesalahan saat menyimpan data');
-        // input.value = 0; // Jangan reset value agar user tahu input terakhir
-        setTimeout(() => {
-            input.style.backgroundColor = '';
-        }, 2000);
+        // Tidak ada perubahan warna apapun
     });
 }
 
