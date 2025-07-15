@@ -49,12 +49,23 @@ class ObatController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
+        // Format nama obat menjadi kapital semua
+        $validated['nama_obat'] = strtoupper($validated['nama_obat']);
+
+        // Cek apakah nama obat sudah ada (case-insensitive)
+        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])->exists();
+        if ($obatExists) {
+            return back()
+                ->withInput()
+                ->withErrors(['nama_obat' => 'Obat sudah ada!']);
+        }
+
         // Set stok_sisa = stok_awal for new obat (no transactions yet)
         $validated['stok_sisa'] = $validated['stok_awal'];
         $validated['stok_masuk'] = 0;
         $validated['stok_keluar'] = 0;
 
-        Obat::create($validated);
+        \App\Models\Obat::create($validated);
 
         return redirect()->route('obat.index')
             ->with('success', 'Obat berhasil ditambahkan.');
