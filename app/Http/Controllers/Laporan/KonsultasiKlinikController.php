@@ -43,7 +43,7 @@ class KonsultasiKlinikController extends Controller
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
             ->paginate(10);
 
-        return view('laporan.kependudukan', compact('data', 'subkategori'));
+        return view('laporan.konsultasi-klinik', compact('data', 'subkategori'));
     }
 
 
