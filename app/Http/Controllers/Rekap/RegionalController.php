@@ -126,7 +126,7 @@ class RegionalController extends Controller
         }
 
         //simpan data baru per kategori
-        foreach ($request->input('jumlah') as $kategori => $jumlah) {
+        foreach ($request->input('jumlah') as $kategoriId => $jumlah) {
             // Bersihkan input rupiah, buang titik
             $jumlahBersih = (int) str_replace(['.', ','], '', $jumlah);
 

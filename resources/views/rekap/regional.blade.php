@@ -32,32 +32,35 @@
         </div>
     @endisset
 
-    <!-- Form Pilih Tahun dan Bulan -->
     <!-- Form Pilih Tahun dulu -->
     <form method="GET" action="{{ route('rekap.regional.index') }}">
         {{-- @csrf --}}
         <div class="row mb-3">
             <div class="col-md-3">
-                {{-- @if ($selectedTahun && $selectedBulan) --}}
-                    {{-- tampilkan form input --}}
-                {{-- @else --}}
+                @if (!$selectedTahun)
                     <div class="alert alert-info">
                         Silakan pilih Tahun terlebih dahulu untuk mengisi rekap biaya.
                     </div>
-                {{-- @endif --}}
+                @endif
 
                 <label for="tahun" class="form-label">Tahun</label>
-                <select name="tahun" id="tahun" class="form-select" required>
+                <select name="tahun" id="tahun" class="form-select" {{ $selectedTahun ? 'disabled' : '' }} required>
                     <option value="">-- Pilih Tahun --</option>
-                    @for ($tahun = date('Y'); $tahun >= 2000; $tahun--)
-                        <option value="{{ $tahun }}">{{ $tahun }}</option>
-                    @endfor
+                    @foreach ($tahun as $t)
+                        <option value="{{ $t }}" {{ $selectedTahun == $t ? 'selected' : '' }}>{{ $t }}</option>
+                    @endforeach
+                    </select>
                 </select>
             </div>
 
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">Tampilkan</button>
-            </div>
+            {{-- Jika tahun belum dipilih, tampilkan tombol --}}
+            @unless ($selectedTahun)
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Tampilkan</button>
+                </div>
+            @endunless
+        </div>
+    </form>
 
     @if ($selectedTahun)
         <form method="POST" action="{{ route('rekap.regional.store') }}">
@@ -67,7 +70,7 @@
             <div class="row mb-3">
                 <div class="col-md-3">
                     <label for="bulan" class="form-label">Bulan</label>
-                    <select name="bulan" id="bulan" class="form-select" required>
+                    <select name="bulan_id" id="bulan" class="form-select" required>
                         <option value="">-- Pilih Bulan --</option>
                         @foreach ($bulan as $b)
                             <option value="{{ $b->id }}">{{ $b->nama }}</option>
