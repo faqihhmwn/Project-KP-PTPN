@@ -31,7 +31,7 @@
                 </div>
             </div>
         @endisset
-        
+
         <!-- Form Input Laporan -->
         <form method="POST" action="{{ route('laporan.peserta-kb.store') }}">
             @csrf
@@ -82,6 +82,46 @@
         <!-- Tabel Data yang Sudah Diinputkan -->
         <hr class="my-5">
         <h5>Data Tersimpan</h5>
+
+        {{-- Fitur Search --}}
+        <form method="GET" action="{{ route('laporan.peserta-kb.index') }}" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Cari Subkategori"
+                    value="{{ request('search') }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Cari</button>
+            </div>
+        </form>
+
+        {{-- Fitur Filter --}}
+        <form method="GET" class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select name="bulan" class="form-select">
+                        <option value="">-- Filter Bulan --</option>
+                        @foreach (range(1, 12) as $b)
+                            <option value="{{ $b }}" {{ request('bulan') == $b ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="tahun" class="form-select">
+                        <option value="">-- Filter Tahun --</option>
+                        @for ($y = date('Y'); $y >= 2020; $y--)
+                            <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>
+                                {{ $y }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+            </div>
+        </form>
+
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -96,7 +136,7 @@
             </thead>
             <tbody>
                 @forelse($data as $i => $row)
-                @include('laporan.modal-laporan')
+                    @include('laporan.modal.modal-peserta-kb')
                     <tr>
                         <td>{{ $data->firstItem() + $i }}</td>
                         <td>{{ $row->subkategori->nama }}</td>
@@ -117,7 +157,7 @@
                             </form> --}}
                         </td>
                     </tr>
-                    
+
                 @empty
                     <tr>
                         <td colspan="7" class="text-center">Belum ada data</td>
@@ -125,7 +165,7 @@
                 @endforelse
             </tbody>
         </table>
-         <div class="d-flex justify-content-center mt-3">
+        <div class="d-flex justify-content-center mt-3">
             {{ $data->links('pagination::bootstrap-5') }}
         </div>
     </div>

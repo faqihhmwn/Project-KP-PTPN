@@ -32,6 +32,7 @@
             </div>
         @endisset
 
+
         <!-- Form Input Laporan -->
         <form method="POST" action="{{ route('laporan.kependudukan.store') }}">
             @csrf
@@ -79,9 +80,58 @@
             <button type="submit" class="btn btn-primary">Simpan</button>
         </form>
 
+
         <!-- Tabel Data yang Sudah Diinputkan -->
         <hr class="my-5">
         <h5>Data Tersimpan</h5>
+
+        {{-- Fitur Search --}}
+        <form method="GET" action="{{ route('laporan.kependudukan.index') }}" class="row g-3 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Cari Subkategori"
+                    value="{{ request('search') }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Cari</button>
+            </div>
+        </form>
+
+
+        {{-- Fitur Filter --}}
+        <form method="GET" action="{{ route('laporan.kependudukan.index') }}" class="row g-2 mb-3 align-items-end">
+
+            <!-- Filter Bulan -->
+            <div class="col-md-3">
+                <label for="bulan" class="form-label">Filter Bulan</label>
+                <select name="bulan" class="form-select">
+                    <option value="">-- Filter Bulan --</option>
+                    @foreach (range(1, 12) as $m)
+                        <option value="{{ $m }}" {{ request('bulan') == $m ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($m)->format('F') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filter Tahun -->
+            <div class="col-md-3">
+                <label for="tahun" class="form-label">Filter Tahun</label>
+                <select name="tahun" class="form-select">
+                    <option value="">-- Filter Tahun --</option>
+                    @foreach (range(now()->year, 2020) as $y)
+                        <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>
+                            {{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Button -->
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+
+
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -96,7 +146,7 @@
             </thead>
             <tbody>
                 @forelse($data as $i => $row)
-                    @include('laporan.modal-laporan')
+                    @include('laporan.modal.modal-kependudukan')
                     <tr>
                         <td>{{ $data->firstItem() + $i }}</td>
                         <td>{{ $row->subkategori->nama }}</td>

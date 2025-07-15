@@ -10,20 +10,42 @@ use Illuminate\Support\Facades\Auth;
 
 class KependudukanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $data = LaporanBulanan::with(['subkategori', 'unit'])
+        $subkategori = SubKategori::where('kategori_id', 1)->get();
+
+        $query = LaporanBulanan::with(['subkategori', 'unit'])
             ->where('kategori_id', 1)
-            ->where('unit_id', Auth::user()->unit_id)
+            ->where('unit_id', Auth::user()->unit_id);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('subkategori', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter bulan
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        $data = $query
             ->orderBy('tahun', 'desc')
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-            ->orderBy('subkategori_id')
-            ->paginate(8);
-
-        $subkategori = SubKategori::where('kategori_id', 1)->get();
+            ->orderBy(SubKategori::select('nama')
+                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
+            ->paginate(10);
 
         return view('laporan.kependudukan', compact('data', 'subkategori'));
     }
+
 
     public function create()
     {
