@@ -33,10 +33,19 @@
     @endisset
 
     <!-- Form Pilih Tahun dan Bulan -->
-    <form method="POST" action="{{ route('rekap.regional.store') }}">
-        @csrf
+    <!-- Form Pilih Tahun dulu -->
+    <form method="GET" action="{{ route('rekap.regional.index') }}">
+        {{-- @csrf --}}
         <div class="row mb-3">
             <div class="col-md-3">
+                {{-- @if ($selectedTahun && $selectedBulan) --}}
+                    {{-- tampilkan form input --}}
+                {{-- @else --}}
+                    <div class="alert alert-info">
+                        Silakan pilih Tahun terlebih dahulu untuk mengisi rekap biaya.
+                    </div>
+                {{-- @endif --}}
+
                 <label for="tahun" class="form-label">Tahun</label>
                 <select name="tahun" id="tahun" class="form-select" required>
                     <option value="">-- Pilih Tahun --</option>
@@ -46,28 +55,34 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
-                <label for="bulan" class="form-label">Bulan</label>
-                <select name="bulan" id="bulan" class="form-select" required>
-                    <option value="">-- Pilih Bulan --</option>
-                    @foreach ($bulan as $b)
-                        <option value="{{ $b->id }}">{{ $b->nama }}</option>
-                    @endforeach
-                </select>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Tampilkan</button>
             </div>
 
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-auto">Tampilkan</button>
+    @if ($selectedTahun)
+        <form method="POST" action="{{ route('rekap.regional.store') }}">
+            @csrf
+            <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="bulan" class="form-label">Bulan</label>
+                    <select name="bulan" id="bulan" class="form-select" required>
+                        <option value="">-- Pilih Bulan --</option>
+                        @foreach ($bulan as $b)
+                            <option value="{{ $b->id }}">{{ $b->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-        </div>
-    </form>
+        {{-- </form> --}}
 
     <!-- Form Input Jumlah (Setelah Tahun & Bulan Dipilih) -->
     {{-- @if ($selectedTahun && $selectedBulan)
         <form method="POST" action="{{ route('rekap.regional.store') }}">
-            @csrf --}}
+            @csrf 
             <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
-            <input type="hidden" name="bulan_id" value="{{ $selectedBulan }}">
+            <input type="hidden" name="bulan_id" value="{{ $selectedBulan }}"> --}}
 
             <table class="table table-bordered">
                 <thead>
@@ -80,8 +95,7 @@
                     @foreach ($kategori as $k)
                         <tr>
                             <td>{{ $k->nama }}</td>
-                            <td>
-                                <input type="number" name="jumlah[{{ $k->id }}]" class="form-control" min="0" required>
+                            <td><input type="number" name="jumlah[{{ $k->id }}]" class="form-control" min="0" required>
                             </td>
                         </tr>
                     @endforeach
@@ -90,7 +104,7 @@
 
             <button type="submit" class="btn btn-primary w-auto">Simpan</button>
         </form>
-    {{-- @endif --}}
+    @endif
 
     <!-- Tabel Data Tersimpan -->
     <hr class="my-5">
@@ -223,4 +237,31 @@
         </tbody>
     </table>
 </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputs = document.querySelectorAll('input[name^="jumlah"]');
+
+            inputs.forEach(input => {
+                input.addEventListener('input', function (e) {
+                    let value = this.value.replace(/\./g, '');
+                    if (!isNaN(value) && value !== '') {
+                        this.value = parseInt(value).toLocaleString('id-ID');
+                    } else {
+                        this.value = '';
+                    }
+                });
+
+                // Saat submit, hilangkan format agar tidak kacau
+                input.form.addEventListener('submit', function () {
+                    inputs.forEach(i => {
+                        i.value = i.value.replace(/\./g, '');
+                    });
+                });
+            });
+        });
+    </script>
+@endpush
+
 @endsection

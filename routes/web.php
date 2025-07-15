@@ -175,8 +175,8 @@ Route::prefix('rekap')->middleware('auth')->group(function () {
     Route::get('/regional/index', [RegionalController::class, 'index'])->name('rekap.regional.index');
     Route::post('/regional/store', [RegionalController::class, 'store'])->name('rekap.regional.store');
     Route::get('/regional/show', [RegionalController::class, 'show'])->name('rekap.regional.show');
-    Route::put('/regional/update', [RegionalController::class, 'update'])->name('rekap.regional.update');
-    Route::delete('/regional/destroy', [RegionalController::class, 'destroy'])->name('rekap.regional.destroy');
+    Route::put('/regional/update/{id}', [RegionalController::class, 'update'])->name('rekap.regional.update');
+    Route::delete('/regional/destroy{id}', [RegionalController::class, 'destroy'])->name('rekap.regional.destroy');
     // web.php
     Route::put('/regional/validate/{id}', [RegionalController::class, 'validate'])->name('rekap.regional.validate');
 
@@ -184,3 +184,14 @@ Route::prefix('rekap')->middleware('auth')->group(function () {
     Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('rekap.kapitasi.index');
     Route::get('/bpjs', [BpjsController::class, 'index'])->name('rekap.bpjs.index');
 });
+
+// web.php
+
+    Route::prefix('rekap/regional')->name('rekap.regional.')->group(function () {
+    Route::get('/', [RegionalController::class, 'index'])->name('index');
+    Route::post('/', [RegionalController::class, 'store'])->name('store');
+    Route::put('/{id}', [RegionalController::class, 'update'])->name('update');
+    Route::delete('/{id}', [RegionalController::class, 'destroy'])->name('destroy');
+    Route::put('/validasi/{id}', [RegionalController::class, 'validateRekap'])->name('validate');
+});
+

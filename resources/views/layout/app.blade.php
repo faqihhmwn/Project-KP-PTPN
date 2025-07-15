@@ -364,6 +364,7 @@
                 setTimeout(() => alert.remove(), 500);
             }
         }, 3000);
+        
     </script>
     <!--end::Script-->
   </body>

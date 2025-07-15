@@ -15,32 +15,60 @@ class RegionalController extends Controller
 {
     public function index(Request $request)
     {
-        $tahun = range(date('Y'), 2000); 
-        $selectedTahun = request('tahun') ?? date('Y'); // default ke tahun ini 
-        $bulan = Bulan::orderBy('id')->get(); // Ambil semua bulan
+        $tahun = range(date('Y'), 2000);
+        $selectedTahun = $request->tahun ?? null;
 
-        $selectedBulan = $request->bulan;
+        $bulan = Bulan::orderBy('id')->get();
+        $kategori = KategoriBiaya::orderBy('id')->get();
+        $selectedBulan = null;
 
-        if ($selectedBulan) {
+        $grouped = [];
+
+        if ($selectedTahun) {
             $rawData = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan'])
                 ->where('tahun', $selectedTahun)
-                ->where('bulan_id', $selectedBulan)
                 ->get();
-        } else {
-            $rawData = collect(); // kosong
-        }
+        foreach ($rawData as $row) {
+            $bulanId = $row->bulan_id;
+            $kategoriId = $row->kategori_biaya_id;
 
-        $kategori = KategoriBiaya::orderBy('id')->get(); // Ambil semua kategori
-        $data = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan']) // atau ->with('subkategori') jika kamu pakai subkategori
-            ->where('tahun', $selectedTahun)
-            ->orderBy('bulan_id')
-            ->orderBy('kategori_biaya_id')
-            ->get();
+            if (!isset($grouped[$bulanId]['id'])) {
+                $grouped[$bulanId]['id'] = $row->id;
+            }
+
+            $grouped[$bulanId]['bulan'] = $row->bulan->nama;
+            $grouped[$bulanId]['tahun'] = $row->tahun;
+            $grouped[$bulanId]['kategori'][$kategoriId] = $row->jumlah;
+            $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
+        }
+    }
+
+        // $tahun = range(date('Y'), 2000); 
+        // $selectedTahun = request('tahun') ?? date('Y'); // default ke tahun ini 
+        // $bulan = Bulan::orderBy('id')->get(); // Ambil semua bulan
+
+        // $selectedBulan = $request->bulan;
+
+        // if ($selectedBulan) {
+        //     $rawData = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan'])
+        //         ->where('tahun', $selectedTahun)
+        //         ->where('bulan_id', $selectedBulan)
+        //         ->get();
+        // } else {
+        //     $rawData = collect(); // kosong
+        // }
+
+        // $kategori = KategoriBiaya::orderBy('id')->get(); // Ambil semua kategori
+        // $data = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan']) // atau ->with('subkategori') jika kamu pakai subkategori
+        //     ->where('tahun', $selectedTahun)
+        //     ->orderBy('bulan_id')
+        //     ->orderBy('kategori_biaya_id')
+        //     ->get();
         
         // Ambil semua data rekap untuk tahun terpilih
-        $rawData = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan'])
-        ->where('tahun', $selectedTahun)
-        ->get();
+        // $rawData = RekapBiayaKesehatan::with(['kategoriBiaya', 'bulan'])
+        // ->where('tahun', $selectedTahun)
+        // ->get();
 
         // Transform ke format: [$bulan_id][$kategori_id] = jumlah
         // // $grouped = [];
@@ -55,58 +83,107 @@ class RegionalController extends Controller
         //     $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
         // }
 
-        $grouped = [];
+    //     $grouped = [];
 
-        foreach ($rawData as $row) {
-            $bulanId = $row->bulan_id;
-            $kategoriId = $row->kategori_biaya_id;
+    //     foreach ($rawData as $row) {
+    //         $bulanId = $row->bulan_id;
+    //         $kategoriId = $row->kategori_biaya_id;
 
-            // ✅ Simpan hanya satu ID per bulan, gunakan ID dari salah satu entri
-            if (!isset($grouped[$bulanId]['id'])) {
-                $grouped[$bulanId]['id'] = $row->id;
-            }
+    //         // ✅ Simpan hanya satu ID per bulan, gunakan ID dari salah satu entri
+    //         if (!isset($grouped[$bulanId]['id'])) {
+    //             $grouped[$bulanId]['id'] = $row->id;
+    //         }
 
-            $grouped[$bulanId]['bulan'] = $row->bulan->nama;
-            $grouped[$bulanId]['tahun'] = $row->tahun;
-            $grouped[$bulanId]['kategori'][$kategoriId] = $row->jumlah;
-            $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
-        }
+    //         $grouped[$bulanId]['bulan'] = $row->bulan->nama;
+    //         $grouped[$bulanId]['tahun'] = $row->tahun;
+    //         $grouped[$bulanId]['kategori'][$kategoriId] = $row->jumlah;
+    //         $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
+    //     }
+    // }
 
-
-
-    return view('rekap.regional', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'data'));
-
+    return view('rekap.regional', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped'));
     }
 
     public function store(Request $request)
-{
-    
-    $request->validate([
-        'bulan_id' => 'required|exists:bulans,id', // gunakan bulan_id dari tabel bulans
-        'tahun' => 'required|integer|min:2000|max:' . date('Y'),
-        'jumlah' => 'required|array',
-        'jumlah.*' => 'required|string', // karena input berupa string (rupiah dengan titik)
-    ]);
+    {
+        $request->validate([
+            'bulan_id' => 'required|exists:bulans,id', // gunakan bulan_id dari tabel bulans
+            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
+            'jumlah' => 'required|array',
+            'jumlah.*' => 'required|numeric|min:0', 
+        ]);
 
-    foreach ($request->input('jumlah') as $kategori => $jumlah) {
-        // Bersihkan input rupiah, buang titik
-        $jumlahBersih = (int) str_replace(['.', ','], '', $jumlah);
+         // Cek apakah data sudah pernah diinputkan
+        $existing = RekapBiayaKesehatan::where('tahun', $request->tahun)
+            ->where('bulan_id', $request->bulan_id)
+            ->exists();
 
-        RekapBiayaKesehatan::updateOrCreate(
-            [
-                'kategori_biaya_id' => $kategori, // disesuaikan dengan kategori tertentu
-                'bulan_id' => $request->bulan, // ini adalah bulan_id
+        if ($existing) {
+            return redirect()->route('rekap.regional.index', [
                 'tahun' => $request->tahun,
-            ],
-            [
-                'jumlah' => $jumlahBersih,
-            ]
-        );
+                'bulan' => $request->bulan_id,
+            ])->with('success', '⚠️ Data input sudah pernah diinputkan, silakan cek tabel kembali.');
+        }
+
+        //simpan data baru per kategori
+        foreach ($request->input('jumlah') as $kategori => $jumlah) {
+            // Bersihkan input rupiah, buang titik
+            $jumlahBersih = (int) str_replace(['.', ','], '', $jumlah);
+
+        RekapBiayaKesehatan::create([
+                    'kategori_biaya_id' => $kategoriId,
+                    'bulan_id' => $request->bulan_id,
+                    'tahun' => $request->tahun,
+                    'jumlah' => $jumlahBersih,
+                    'validasi' => null,
+                ]);
+            }
+            return redirect()->route('rekap.regional.index', [
+            'tahun' => $request->tahun,
+            'bulan' => $request->bulan_id,
+        ])->with('success', 'Data berhasil disimpan!');
     }
 
-    return redirect()->route('rekap.regional.index')
-        ->with('success', 'Laporan berhasil ditambahkan');
-}
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+        'jumlah' => 'required|array',
+        'jumlah.*' => 'required|numeric|min:0',
+    ]);
+
+        $rekap = RekapBiayaKesehatan::findOrFail($id);
+
+        // Cegah update jika data sudah tervalidasi
+        if ($rekap->validasi !== null) {
+            return redirect()->route('rekap.regional.index', [
+                'tahun' => $rekap->tahun,
+                'bulan' => $rekap->bulan_id,
+            ])->with('success', '⚠️ Data sudah tervalidasi dan tidak bisa diedit.');
+        }
+
+        foreach ($request->input('jumlah') as $kategoriId => $jumlah) {
+            $jumlahBersih = (int) str_replace(['.', ','], '', $jumlah); // format rupiah
+
+            RekapBiayaKesehatan::updateOrCreate(
+                [
+                    'kategori_biaya_id' => $kategoriId,
+                    'bulan_id' => $rekap->bulan_id,
+                    'tahun' => $rekap->tahun,
+                ],
+                [
+                    'jumlah' => $jumlahBersih,
+                ]
+            );
+        }
+
+        return redirect()->route('rekap.regional.index', [
+            'tahun' => $rekap->tahun,
+            'bulan' => $rekap->bulan_id,
+        ])->with('success', '✅ Data berhasil diperbarui!');
+    }
+
+
+
 
     public function destroy($id)
     {
