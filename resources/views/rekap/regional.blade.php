@@ -136,15 +136,90 @@
                     <td class="bg-warning fw-bold">{{ number_format(collect($row['kategori'])->sum(), 0, ',', '.') }}</td>
                     <td class="text-center">{{ $row['validasi'] ?? '-' }}</td>
                     <td>
+                        {{-- Tombol Edit --}}
+                        @if (empty($row['validasi']))
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row['id'] }}">
+                                Edit
+                            </button>
+
+                            {{-- Tombol Validasi --}}
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#validasiModal{{ $row['id'] }}">
+                                Validasi
+                            </button>
                         {{-- <a href="#" class="btn btn-sm btn-warning">Edit</a> --}}
                         {{-- <form action="{{ route('rekap.regional.destroy', $row['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')"> --}}
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
                         </form>
+                        @else
+                            <span class="badge bg-success">Tervalidasi</span>
+                        @endif
                     </td>
                 </tr>
             @endforeach
+            
+            @foreach ($grouped as $row)
+                @if (empty($row['validasi']))
+                <!-- Modal Edit -->
+                <div class="modal fade" id="editModal{{ $row['id'] }}" tabindex="-1" aria-labelledby="editModalLabel{{ $row['id'] }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ route('rekap.regional.update', $row['id']) }}">
+                                @csrf
+                                @method('PUT')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="editModalLabel{{ $row['id'] }}">Edit Data - {{ $row['bulan'] }} {{ $row['tahun'] }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    @foreach ($kategori as $k)
+                                        <div class="mb-3">
+                                            <label class="form-label">{{ $k->nama }}</label>
+                                            <input type="number" name="jumlah[{{ $k->id }}]" class="form-control" min="0"
+                                                value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            @endforeach
+
+            @foreach ($grouped as $row)
+                @if (empty($row['validasi']))
+                <!-- Modal Validasi -->
+                <div class="modal fade" id="validasiModal{{ $row['id'] }}" tabindex="-1" aria-labelledby="validasiModalLabel{{ $row['id'] }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ route('rekap.regional.validate', $row['id']) }}">
+                                @csrf
+                                @method('PUT')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="validasiModalLabel{{ $row['id'] }}">Konfirmasi Validasi</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Apakah Anda yakin data untuk <strong>{{ $row['bulan'] }} {{ $row['tahun'] }}</strong> sudah selesai diisi dan ingin menyimpannya secara permanen?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-success">Ya, Validasi</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tidak</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            @endforeach
+
+
         </tbody>
     </table>
 </div>

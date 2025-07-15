@@ -43,14 +43,35 @@ class RegionalController extends Controller
         ->get();
 
         // Transform ke format: [$bulan_id][$kategori_id] = jumlah
+        // // $grouped = [];
+        // foreach ($rawData as $row) {
+        //     $bulanId = $row->bulan_id;
+        //     $kategoriId = $row->kategori_biaya_id;
+
+        //     //menyimpan 1 i per kombinasi bulan
+        //     $grouped[$bulanId]['bulan'] = $row->bulan->nama;
+        //     $grouped[$bulanId]['tahun'] = $row->tahun;
+        //     $grouped[$bulanId]['kategori'][$kategoriId] = $row->jumlah;
+        //     $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
+        // }
+
         $grouped = [];
+
         foreach ($rawData as $row) {
             $bulanId = $row->bulan_id;
             $kategoriId = $row->kategori_biaya_id;
+
+            // ✅ Simpan hanya satu ID per bulan, gunakan ID dari salah satu entri
+            if (!isset($grouped[$bulanId]['id'])) {
+                $grouped[$bulanId]['id'] = $row->id;
+            }
+
             $grouped[$bulanId]['bulan'] = $row->bulan->nama;
             $grouped[$bulanId]['tahun'] = $row->tahun;
             $grouped[$bulanId]['kategori'][$kategoriId] = $row->jumlah;
+            $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
         }
+
 
 
     return view('rekap.regional', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'data'));
@@ -94,6 +115,17 @@ class RegionalController extends Controller
 
         return redirect()->route('rekap.regional.index')->with('success', 'Data berhasil dihapus.');
     }
+
+    // RekapRegionalController.php
+    public function validateRekap($id)
+    {
+        $rekap = RekapBiayaKesehatan::findOrFail($id);
+        $rekap->validasi = 'Tervalidasi'; // atau true
+        $rekap->save();
+
+        return redirect()->route('rekap.regional.index')->with('success', 'Data berhasil divalidasi.');
+    }
+
 
 
 }

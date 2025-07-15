@@ -177,6 +177,9 @@ Route::prefix('rekap')->middleware('auth')->group(function () {
     Route::get('/regional/show', [RegionalController::class, 'show'])->name('rekap.regional.show');
     Route::put('/regional/update', [RegionalController::class, 'update'])->name('rekap.regional.update');
     Route::delete('/regional/destroy', [RegionalController::class, 'destroy'])->name('rekap.regional.destroy');
+    // web.php
+    Route::put('/regional/validate/{id}', [RegionalController::class, 'validate'])->name('rekap.regional.validate');
+
 
     Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('rekap.kapitasi.index');
     Route::get('/bpjs', [BpjsController::class, 'index'])->name('rekap.bpjs.index');
