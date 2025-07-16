@@ -8,7 +8,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Detail Obat: {{ $obat->nama_obat }}</h3>
                     <div class="btn-group">
-                        <a href="{{ route('obat.index') }}" class="btn btn-secondary">
+                        <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
                         <a href="{{ route('obat.edit', $obat) }}" class="btn btn-warning">

@@ -272,4 +272,45 @@ class ObatController extends Controller
             return redirect()->back()->with('error', 'Gagal mengexport data: ' . $e->getMessage());
         }
     }
+
+    public function storeRekapitulasi(Request $request)
+    {
+        try {
+            \DB::beginTransaction();
+            
+            $data = $request->all();
+            $bulk = $data['bulk'];
+
+            foreach ($bulk as $item) {
+                TransaksiObat::updateOrCreate(
+                    [
+                        'obat_id' => $item['obat_id'],
+                        'tanggal' => $item['tanggal']
+                    ],
+                    [
+                        'jumlah_keluar' => $item['jumlah_keluar'],
+                        'stok_awal' => $item['stok_awal'],
+                        'sisa_stok' => $item['sisa_stok'] ?? 0,
+                        'total_biaya' => $item['total_biaya'] ?? 0
+                    ]
+                );
+            }
+
+            \DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berhasil disimpan'
+            ]);
+
+        } catch (\Exception $e) {
+            \DB::rollback();
+            \Log::error('Error saving rekapitulasi: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
