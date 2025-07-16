@@ -154,10 +154,19 @@
                             <td class="fw-bold">{{ number_format($biayaTersedia[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
                         <td class="bg-info fw-bold">
-                            {{ number_format($biayaTersedia['all_kategoris_total'] ?? 0, 0, ',', '.') }}
+                            {{ number_format(array_sum(array_intersect_key($biayaTersedia, array_flip(array_keys($annualTotals)))) ?? 0, 0, ',', '.') }}                        </td>
                         </td>
-                        <td></td>
-                        <td></td>
+                        <td></td> {{-- Kolom Validasi --}} 
+                        <td> {{-- Kolom Aksi --}}
+                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editBiayaTersediaModal">
+                                Edit
+                            </button>
+                            <form action="{{ route('rekap.regional.biayaTersedia.destroy', ['tahun' => $selectedTahun]) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus semua data BIAYA TERSEDIA untuk tahun {{ $selectedTahun }}?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                            </form>
+                        </td>
                     </tr>
 
                     {{-- Baris: PERSENTASE --}}
@@ -246,8 +255,40 @@
                 </div>
             @endif
         @endforeach
+
+        {{-- +++ AWAL DARI MODAL BARU UNTUK BIAYA TERSEDIA +++ --}}
+            <div class="modal fade" id="editBiayaTersediaModal" tabindex="-1" aria-labelledby="editBiayaTersediaModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ route('rekap.regional.biayaTersedia.storeOrUpdate') }}">
+                            @csrf
+                            <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editBiayaTersediaModalLabel">Edit Biaya Tersedia - Tahun {{ $selectedTahun }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Masukkan nilai anggaran biaya yang tersedia untuk masing-masing kategori di tahun {{ $selectedTahun }}.</p>
+                                @foreach ($kategori as $k)
+                                    <div class="mb-3">
+                                        <label class="form-label">{{ $k->nama }}</label>
+                                        {{-- Gunakan nilai dari $biayaTersedia untuk mengisi value --}}
+                                        <input type="text" name="total_tersedia[{{ $k->id }}]" class="form-control rupiah-input" min="0" inputmode="numeric" pattern="[0-9]*" value="{{ $biayaTersedia[$k->id] ?? 0 }}" required>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
     @endif {{-- End of @if ($selectedTahun) --}}
 </div>
+
+
 
 @push('scripts')
     <script>

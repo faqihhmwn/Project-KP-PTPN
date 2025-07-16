@@ -83,13 +83,12 @@ class RegionalController extends Controller
             $rawBiayaTersedia = BiayaTersedia::where('tahun', $selectedTahun)->get();
             foreach ($rawBiayaTersedia as $bt) {
                 if ($bt->kategori_biaya_id === null) {
-                    $biayaTersedia['all_kategoris_total'] = $bt->total_biaya_kesehatan;
+                    $biayaTersedia['all_kategoris_total'] = $bt->total_tersedia;
                 } else {
-                    $biayaTersedia[$bt->kategori_biaya_id] = $bt->total_biaya_kesehatan;
+                    $biayaTersedia[$bt->kategori_biaya_id] = $bt->total_tersedia;
                 }
             }
         }
-
         return view('rekap.regional', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals', 'biayaTersedia'));
     }
 
@@ -251,5 +250,60 @@ class RegionalController extends Controller
             'tahun' => $tahun,
             'bulan' => $bulan_id,
         ])->with('success', '✅ Data berhasil divalidasi!');
+    }
+
+
+    //Controller Biaya Tersedia
+    public function storeOrUpdateBiayaTersedia(Request $request)
+    {
+        $request->validate([
+            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
+            'total_tersedia' => 'required|array',
+            'total_tersedia.*' => 'required|numeric|min:0',
+        ]);
+
+        $tahun = $request->tahun;
+        $totalBiayaTersedia = 0;
+
+        // Simpan atau update biaya per kategori
+        foreach ($request->input('total_tersedia') as $kategoriId => $valueInput) {
+            $nilaiBiaya = (int) str_replace(['.', ','], '', $valueInput);
+
+            BiayaTersedia::updateOrCreate(
+                [
+                    'tahun' => $tahun,
+                    'kategori_biaya_id' => $kategoriId,
+                ],
+                [
+                    'total_tersedia' => $nilaiBiaya,
+                ]
+            );
+            $totalBiayaTersedia += $nilaiBiaya;
+        }
+
+        // Simpan atau update total biaya tersedia (dimana kategori_biaya_id adalah null)
+        BiayaTersedia::updateOrCreate(
+            [
+                'tahun' => $tahun,
+                'kategori_biaya_id' => null,
+            ],
+            [
+                'total_tersedia' => $totalBiayaTersedia,
+            ]
+        );
+
+    return redirect()->route('rekap.regional.index', ['tahun' => $tahun])
+                    ->with('success', '✅ Data Biaya Tersedia berhasil diperbarui!');
+    }
+
+    /**
+     * Menghapus semua data Biaya Tersedia untuk satu tahun.
+     */
+    public function destroyBiayaTersedia($tahun)
+    {
+        BiayaTersedia::where('tahun', $tahun)->delete();
+
+        return redirect()->route('rekap.regional.index', ['tahun' => $tahun])
+                        ->with('success', '🗑️ Data Biaya Tersedia berhasil dihapus.');
     }
 }

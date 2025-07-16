@@ -9,13 +9,13 @@ class BiayaTersedia extends Model
 {
     use HasFactory;
 
-    protected $table = 'biaya_tersedia';
-
     protected $fillable = [
         'tahun',
         'kategori_biaya_id',
-        'jumlah',
+        'total_tersedia'
     ];
+
+    // Relasi
 
     public function kategoriBiaya()
     {

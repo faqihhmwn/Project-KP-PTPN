@@ -180,6 +180,10 @@ Route::prefix('rekap')->middleware('auth')->group(function () {
         Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update');
         Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
+
+        // TAMBAHKAN DUA ROUTE INI:
+        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate');
+        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy');
     });
 
     // Rute untuk Rekap Kapitasi
