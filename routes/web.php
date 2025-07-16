@@ -179,7 +179,9 @@ Route::prefix('obat')->name('obat.')->group(function () {
     Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
     
     // Rekapitulasi
+    Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
+    
     
     // Transaksi
     Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');

@@ -78,11 +78,7 @@
                         @endfor
                     </select>
                     <select name="tahun" class="form-select">
-                        @php
-                            $startYear = 2025;
-                            $endYear = 2025 + 10;
-                        @endphp
-                        @for($year = $startYear; $year <= $endYear; $year++)
+                        @for($year = 2020; $year <= \Carbon\Carbon::now()->year + 1; $year++)
                             <option value="{{ $year }}" {{ $tahun == $year ? 'selected' : '' }}>
                                 {{ $year }}
                             </option>
