@@ -154,18 +154,13 @@
                             <td class="fw-bold">{{ number_format($biayaTersedia[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
                         <td class="bg-info fw-bold">
-                            {{ number_format(array_sum(array_intersect_key($biayaTersedia, array_flip(array_keys($annualTotals)))) ?? 0, 0, ',', '.') }}                        </td>
+                            {{ number_format($biayaTersedia['all_kategoris_total'] ?? 0, 0, ',', '.') }}
                         </td>
                         <td></td> {{-- Kolom Validasi --}} 
                         <td> {{-- Kolom Aksi --}}
                             <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editBiayaTersediaModal">
                                 Edit
                             </button>
-                            <form action="{{ route('rekap.regional.biayaTersedia.destroy', ['tahun' => $selectedTahun]) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus semua data BIAYA TERSEDIA untuk tahun {{ $selectedTahun }}?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                            </form>
                         </td>
                     </tr>
 
@@ -285,107 +280,152 @@
                     </div>
                 </div>
             </div>
-    @endif {{-- End of @if ($selectedTahun) --}}
+        @endif 
 </div>
-
-
+@endsection
 
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
-            // Menggunakan fungsi formatRupiah dari referensi Anda
+            // Fungsi untuk memformat angka menjadi format rupiah (dengan titik pemisah ribuan, tanpa koma desimal)
             function formatRupiah(angka) {
                 if (angka === null || angka === undefined || angka === '') {
                     return '';
                 }
-                // Pastikan input adalah angka atau string angka bersih
-                angka = String(angka).replace(/\D/g, ''); // Hapus semua non-digit
-                if (angka === '') return '';
+                // Pastikan angka adalah string, lalu hapus semua karakter non-digit kecuali tanda minus
+                let cleanAngka = String(angka).replace(/[^0-9-]/g, '');
 
-                // Gunakan toLocaleString untuk format yang lebih konsisten dan handling kasus besar
-                return parseInt(angka).toLocaleString('id-ID');
+                // Konversi ke Number, lalu pastikan itu integer (gunakan Math.floor/ceil atau parseInt)
+                // Ini akan menghilangkan bagian desimal jika ada (misal: 10000.00 akan jadi 10000)
+                let num = parseInt(cleanAngka, 10);
+
+                if (isNaN(num)) {
+                    return ''; // Kembalikan string kosong jika bukan angka yang valid
+                }
+
+                // Gunakan toLocaleString untuk format ribuan yang lebih baik dan penanganan negatif
+                // options: { minimumFractionDigits: 0, maximumFractionDigits: 0 } memastikan tidak ada desimal
+                return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             }
 
-            // Menggunakan fungsi parseRupiah dari referensi Anda
-            function parseRupiah(rp) {
-                if (rp === null || rp === undefined || rp === '') {
+            // Fungsi untuk membersihkan format rupiah menjadi angka murni (tanpa titik, tanpa koma desimal)
+            function parseRupiah(formattedRp) {
+                if (formattedRp === null || formattedRp === undefined || formattedRp === '') {
                     return 0;
                 }
-                // Hapus semua karakter non-digit (termasuk titik pemisah ribuan)
-                const cleanString = String(rp).replace(/\D/g, '');
+                // Hapus semua karakter non-digit (termasuk titik pemisah ribuan dan koma desimal)
+                // Hati-hati dengan tanda minus jika angka bisa negatif
+                const cleanString = String(formattedRp).replace(/[^0-9-]/g, '');
                 return parseInt(cleanString) || 0; // Kembalikan 0 jika tidak valid
-            }
-
-            function unformatRupiah(formattedRp) {
-                if (formattedRp === null || formattedRp === undefined || formattedRp === '') {
-                    return '';
-                }
-                return String(formattedRp).replace(/\D/g, ''); // Hapus semua karakter non-digit
             }
 
             const rupiahInputs = document.querySelectorAll('.rupiah-input');
 
             rupiahInputs.forEach(input => {
-                // Initial formatting when page loads or modal opens (if value is already there)
-                // Pastikan nilai awal juga diformat
+                // Initial formatting when page loads (for main form)
                 if (input.value) {
                     input.value = formatRupiah(input.value);
                 }
 
-                // *** PENCEGAHAN INPUT HURUF (KEYDOWN) ***
-                input.addEventListener('keydown', function(e) {
-                    // Pastikan hanya angka (0-9 dari keyboard biasa atau numpad)
-                    // dan tidak ada shiftKey (untuk mencegah simbol di atas angka)
-                    if ((e.shiftKey || e.keyCode < 48 || e.keyCode > 57) && (e.keyCode < 96 || e.keyCode > 105)) {
-                        e.preventDefault(); // Hentikan input jika bukan angka
-                    }
-                });
-
-                // *** FORMATTING SAAT INPUT (INPUT EVENT) ***
+                // Event listener saat input berubah (real-time formatting)
                 input.addEventListener('input', function(e) {
-                    let cursorPosition = this.selectionStart; // Simpan posisi kursor
-                    let originalValue = this.value;
-
-                    let cleanValue = unformatRupiah(originalValue);
-                    let formattedValue = formatRupiah(cleanValue);
-
-                    this.value = formattedValue;
-
-                    // Sesuaikan posisi kursor setelah formatting
-                    // Ini adalah bagian yang tricky. Cara paling aman untuk pengalaman yang baik:
-                    // Hitung jumlah titik di originalValue
-                    const dotCountBefore = (originalValue.match(/\./g) || []).length;
-                    // Hitung jumlah titik di formattedValue
-                    const dotCountAfter = (formattedValue.match(/\./g) || []).length;
-
-                    // Perbedaan jumlah titik akan mempengaruhi posisi kursor
-                    const diffDot = dotCountAfter - dotCountBefore;
-                    this.setSelectionRange(cursorPosition + diffDot, cursorPosition + diffDot);
+                    let cleanValue = parseRupiah(this.value);
+                    this.value = formatRupiah(cleanValue);
                 });
 
-                // *** UNFORMAT SAAT FOKUS (opsional, untuk memudahkan edit angka mentah) ***
-                input.addEventListener('focus', function() {
-                    this.value = unformatRupiah(this.value);
-                });
-
-                // *** REFORMAT SAAT BLUR (opsional, untuk menampilkan format setelah selesai edit) ***
+                // Event listener saat input kehilangan fokus (blur)
                 input.addEventListener('blur', function() {
-                    this.value = formatRupiah(this.value);
+                    this.value = formatRupiah(parseRupiah(this.value));
                 });
 
-                // *** UNFORMAT SAAT FORM SUBMIT (PENTING untuk backend) ***
-                input.closest('form').addEventListener('submit', function() {
-                    const formRupiahInputs = this.querySelectorAll('.rupiah-input');
-                    formRupiahInputs.forEach(i => {
-                        // Pastikan hanya input di form ini yang di-unformat
-                        if (this.contains(i)) {
-                            i.value = unformatRupiah(i.value);
+                // Event listener saat input mendapatkan fokus (focus)
+                input.addEventListener('focus', function() {
+                    // Ketika fokus, ubah ke angka mentah agar user mudah mengedit
+                    this.value = parseRupiah(this.value);
+                    // Select all text when focused for easier full replacement
+                    // this.select(); // Optional: uncomment if you want to select all text on focus
+                });
+
+                // ==========================================================
+                // Tambahkan ini untuk membersihkan nilai sebelum submit
+                // ==========================================================
+                const formStore = document.querySelector('form[action="{{ route('rekap.regional.store') }}"]');
+                if (formStore) {
+                    formStore.addEventListener('submit', function(event) {
+                        // Iterasi semua input rupiah di dalam form ini
+                        this.querySelectorAll('.rupiah-input').forEach(input => {
+                            input.value = parseRupiah(input.value);
+                        });
+                    });
+                }
+            });
+
+            // Event listener untuk setiap modal Edit Data (per bulan/tahun)
+            document.querySelectorAll('[id^="editModal"]').forEach(modalElement => {
+                modalElement.addEventListener('show.bs.modal', function (event) {
+                    // Dapatkan semua input dengan class 'rupiah-input' di dalam modal ini
+                    const modalRupiahInputs = modalElement.querySelectorAll('.rupiah-input');
+                    modalRupiahInputs.forEach(input => {
+                        if (input.value) {
+                            // Penting: parse dulu untuk menghilangkan format, lalu format lagi
+                            input.value = formatRupiah(parseRupiah(input.value));
                         }
                     });
+
+                    // Tambahkan event listener submit untuk form di dalam modal
+                    const modalForm = modalElement.querySelector('form');
+                    if (modalForm) {
+                        modalForm.addEventListener('submit', function(event) {
+                            this.querySelectorAll('.rupiah-input').forEach(input => {
+                                input.value = parseRupiah(input.value);
+                            });
+                        });
+                    }
                 });
             });
+
+            // Event listener untuk modal Edit Biaya Tersedia
+            const editBiayaTersediaModal = document.getElementById('editBiayaTersediaModal');
+            if (editBiayaTersediaModal) {
+                editBiayaTersediaModal.addEventListener('show.bs.modal', function (event) {
+                    const modalRupiahInputs = editBiayaTersediaModal.querySelectorAll('.rupiah-input');
+                    modalRupiahInputs.forEach(input => {
+                        if (input.value) {
+                            input.value = formatRupiah(parseRupiah(input.value));
+                        }
+                    });
+
+                    const modalForm = editBiayaTersediaModal.querySelector('form');
+                    if (modalForm) {
+                        modalForm.addEventListener('submit', function(event) {
+                            this.querySelectorAll('.rupiah-input').forEach(input => {
+                                input.value = parseRupiah(input.value);
+                            });
+                        });
+                    }
+
+                });
+            }
+
+
+            // Handling pesan sukses/error (sesuai kode Anda sebelumnya)
+            const alertSuccess = document.querySelector('.alert-success');
+            const alertError = document.querySelector('.alert-danger');
+            if (alertSuccess) {
+                setTimeout(() => {
+                    alertSuccess.classList.remove('show');
+                    alertSuccess.classList.add('fade');
+                    alertSuccess.remove();
+                }, 5000);
+            }
+            if (alertError) {
+                setTimeout(() => {
+                    alertError.classList.remove('show');
+                    alertError.classList.add('fade');
+                    alertError.remove();
+                }, 5000);
+            }
         });
     </script>
 @endpush
-@endsection

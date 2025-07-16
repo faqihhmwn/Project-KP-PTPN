@@ -333,8 +333,8 @@
     </script>
 
     {{-- Script alert otomatis hilang --}}
-     {{-- Notifikasi session --}}
-     <script>
+    {{-- Notifikasi session --}}
+    <script>
         @if (session('success'))
             <div id="session-alert" class="alert alert-success alert-dismissible fade show m-4" role="alert">
                 {{ session('success') }}
@@ -349,7 +349,7 @@
         @endisset
 
         <main>
-           @yield('content')
+          @yield('content')
         </main>
     </div>
     </script>
@@ -367,6 +367,7 @@
         
     </script>
     <!--end::Script-->
+  @stack('scripts')
   </body>
   <!--end::Body-->
 </html>
