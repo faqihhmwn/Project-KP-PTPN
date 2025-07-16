@@ -94,6 +94,7 @@
 
     <!-- Table Container -->
     <div class="table-container">
+        <div id="rekapNotif" class="alert d-none mb-3"></div>
         <table>
             <thead>
                 <tr>
@@ -348,6 +349,68 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+// --- SIMPAN REKAPITULASI (MANUAL SAVE, BULK) ---
+document.getElementById('simpanRekapBtn').addEventListener('click', function() {
+    const notif = document.getElementById('rekapNotif');
+    notif.classList.add('d-none');
+    notif.classList.remove('alert-success', 'alert-danger');
+
+    // Kumpulkan data dari seluruh baris obat
+    const rows = document.querySelectorAll('tr[data-obat-row]');
+    const bulk = [];
+    rows.forEach(row => {
+        const obatId = row.getAttribute('data-obat-row');
+        const harga = parseInt(row.getAttribute('data-harga')) || 0;
+        const stokAwalCell = row.querySelector('.stok-awal');
+        let stokAwal = 0;
+        if (stokAwalCell) {
+            stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+        }
+        let totalKeluar = 0;
+        // Untuk setiap input harian
+        row.querySelectorAll('.daily-input').forEach(input => {
+            const tanggal = input.getAttribute('data-tanggal');
+            const jumlahKeluar = parseInt(input.value) || 0;
+            totalKeluar += jumlahKeluar;
+            bulk.push({
+                obat_id: obatId,
+                tanggal: tanggal,
+                jumlah_keluar: jumlahKeluar,
+                stok_awal: stokAwal,
+                sisa_stok: stokAwal - totalKeluar < 0 ? 0 : stokAwal - totalKeluar,
+                total_biaya: jumlahKeluar * harga,
+                bulan: {{ $bulan }},
+                tahun: {{ $tahun }}
+            });
+        });
+    });
+    // Kirim data ke backend
+    fetch('/obat/rekapitulasi-obat/input-harian', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify({ bulk: bulk })
+    })
+    .then(response => response.json())
+    .then(res => {
+        if (res.success) {
+            notif.textContent = 'Data rekapitulasi berhasil disimpan!';
+            notif.classList.remove('d-none', 'alert-danger');
+            notif.classList.add('alert-success');
+        } else {
+            notif.textContent = res.message || 'Gagal menyimpan data rekapitulasi.';
+            notif.classList.remove('d-none', 'alert-success');
+            notif.classList.add('alert-danger');
+        }
+    })
+    .catch(err => {
+        notif.textContent = 'Terjadi kesalahan saat menyimpan data.';
+        notif.classList.remove('d-none', 'alert-success');
+        notif.classList.add('alert-danger');
+    });
+});
 
 </script>
 <script>
@@ -487,6 +550,7 @@ document.querySelectorAll('.daily-input').forEach(input => {
         clearTimeout(typingTimer);
     });
 });
+// Hapus auto-save, hanya simpan manual lewat tombol
 </script>
 
 
