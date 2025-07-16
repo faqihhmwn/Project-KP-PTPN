@@ -11,20 +11,9 @@ class KategoriBiayaSeeder extends Seeder
 
 public function run()
 {
-    // Nonaktifkan foreign key checks sementara
-    DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-    // Hapus semua data
-    DB::table('kategori_biayas')->delete();
-
-    // Aktifkan lagi foreign key checks
-    DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-    // Insert ulang data baru
     DB::table('kategori_biayas')->insert([
         ['nama' => 'Gol. III-IV'],
         ['nama' => 'Gol. I-II'],
-        ['nama' => 'Kampanye'],
         ['nama' => 'Kampanye'],
         ['nama' => 'Honor, ILA, OS'],
         ['nama' => 'Pens. III-IV'],

@@ -172,26 +172,20 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
 
 //REKAPITULASI BIAYA
 Route::prefix('rekap')->middleware('auth')->group(function () {
-    Route::get('/regional/index', [RegionalController::class, 'index'])->name('rekap.regional.index');
-    Route::post('/regional/store', [RegionalController::class, 'store'])->name('rekap.regional.store');
-    Route::get('/regional/show', [RegionalController::class, 'show'])->name('rekap.regional.show');
-    Route::put('/regional/update/{id}', [RegionalController::class, 'update'])->name('rekap.regional.update');
-    Route::delete('/regional/destroy{id}', [RegionalController::class, 'destroy'])->name('rekap.regional.destroy');
-    // web.php
-    Route::put('/regional/validate/{id}', [RegionalController::class, 'validate'])->name('rekap.regional.validate');
+    // Rute untuk Rekap Regional
+    Route::prefix('regional')->name('rekap.regional.')->group(function () {
+        Route::get('/', [RegionalController::class, 'index'])->name('index');
+        Route::post('/', [RegionalController::class, 'store'])->name('store');
+        // Rute update: Mengirim tahun dan bulan_id dari Blade, bukan ID tunggal
+        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
+    });
 
-
+    // Rute untuk Rekap Kapitasi
     Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('rekap.kapitasi.index');
+    // Rute untuk Rekap BPJS
     Route::get('/bpjs', [BpjsController::class, 'index'])->name('rekap.bpjs.index');
+    // Rute untuk Rekap Unit (jika ada)
+    // Route::get('/unit', [UnitController::class, 'index'])->name('rekap.unit.index');
 });
-
-// web.php
-
-    Route::prefix('rekap/regional')->name('rekap.regional.')->group(function () {
-    Route::get('/', [RegionalController::class, 'index'])->name('index');
-    Route::post('/', [RegionalController::class, 'store'])->name('store');
-    Route::put('/{id}', [RegionalController::class, 'update'])->name('update');
-    Route::delete('/{id}', [RegionalController::class, 'destroy'])->name('destroy');
-    Route::put('/validasi/{id}', [RegionalController::class, 'validateRekap'])->name('validate');
-});
-
