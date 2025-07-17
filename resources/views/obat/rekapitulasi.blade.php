@@ -101,6 +101,8 @@
     <!-- Table Container -->
     <div class="table-container">
         <div id="rekapNotif" class="alert d-none mb-3"></div>
+        <!-- Tambahkan CSRF Token untuk keamanan -->
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <table>
             <thead>
                 <tr>
@@ -133,9 +135,13 @@
                             @php
                                 $jumlahKeluar = 0;
                                 $tanggal = \Carbon\Carbon::create($tahun, $bulan, $day);
-                                $transaksi = $obat->transaksiObats->where('tanggal', $tanggal->format('Y-m-d'))->where('tipe_transaksi', 'keluar')->first();
-                                if ($transaksi && isset($transaksi->jumlah_keluar)) {
-                                    $jumlahKeluar = $transaksi->jumlah_keluar;
+                                $rekapitulasi = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                                    ->where('tanggal', $tanggal->format('Y-m-d'))
+                                    ->where('bulan', $bulan)
+                                    ->where('tahun', $tahun)
+                                    ->first();
+                                if ($rekapitulasi) {
+                                    $jumlahKeluar = $rekapitulasi->jumlah_keluar;
                                 }
                                 $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
                             @endphp
@@ -431,16 +437,22 @@ document.getElementById('simpanRekapBtn').addEventListener('click', async functi
             const harga = parseInt(row.getAttribute('data-harga')) || 0;
             const stokAwalCell = row.querySelector('.stok-awal');
             const stokAwal = parseInt(stokAwalCell?.textContent.replace(/[^\d]/g, '')) || 0;
-            let totalKeluar = 0;
 
             // Untuk setiap input harian
             const inputs = row.querySelectorAll('.daily-input');
-            for (const input of inputs) {
+            inputs.forEach((input) => {
                 const tanggal = input.getAttribute('data-tanggal');
                 const jumlahKeluar = parseInt(input.value) || 0;
-                totalKeluar += jumlahKeluar;
 
                 if (tanggal) {  // Pastikan tanggal ada
+                    // Hitung sisa stok hanya untuk tanggal ini
+                    let totalKeluar = 0;
+                    inputs.forEach((inp) => {
+                        if (inp.getAttribute('data-tanggal') <= tanggal) {
+                            totalKeluar += parseInt(inp.value) || 0;
+                        }
+                    });
+
                     bulk.push({
                         obat_id: obatId,
                         tanggal: tanggal,
@@ -452,15 +464,15 @@ document.getElementById('simpanRekapBtn').addEventListener('click', async functi
                         total_biaya: jumlahKeluar * harga
                     });
                 }
-            }
+            });
         }
 
         // Kirim data ke backend
-        const response = await fetch('/obat/rekapitulasi-obat/input-harian', {
+        const response = await fetch('{{ route("obat.rekapitulasi-obat.input-harian") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
@@ -482,13 +494,17 @@ document.getElementById('simpanRekapBtn').addEventListener('click', async functi
         notif.classList.add('alert-success');
 
         // Refresh halaman setelah 1 detik
-        setTimeout(() => window.location.reload(), 1000);
+        setTimeout(() => {
+            window.location.href = window.location.pathname + 
+                '?bulan=' + CURRENT_BULAN + 
+                '&tahun=' + CURRENT_TAHUN;
+        }, 1000);
 
     } catch (error) {
         console.error('Error saving data:', error);
         notif.textContent = '❌ ' + (error.message || 'Terjadi kesalahan saat menyimpan data');
         notif.classList.remove('d-none', 'alert-success');
-        notif.classList.add('alert-danger');
+        notif.classList.add('alert-danger', 'd-block');
     } finally {
         // Selalu reset tombol save
         saveBtn.disabled = false;
