@@ -13,10 +13,15 @@ class SakitBerkepanjanganController extends Controller
     public function index(Request $request)
     {
         $subkategori = SubKategori::where('kategori_id', 14)->get();
-
+        $is_admin = Auth::guard('admin')->check();
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
+        
         $query = LaporanBulanan::with(['subkategori', 'unit'])
-            ->where('kategori_id', 14)
-            ->where('unit_id', Auth::user()->unit_id);
+            ->where('kategori_id', 14);
+
+        if (!$is_admin) {
+            $query->where('unit_id', $authUser->unit_id);
+        }
 
         // Search
         if ($request->filled('search')) {
@@ -43,7 +48,11 @@ class SakitBerkepanjanganController extends Controller
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
             ->paginate(10);
 
-        return view('laporan.kependudukan', compact('data', 'subkategori'));
+        if ($is_admin) {
+            return view('admin.laporan.sakit-berkepanjangan', compact('data', 'subkategori'));
+        } else {
+            return view('laporan.sakit-berkepanjangan', compact('data', 'subkategori'));
+        }
     }
 
 
@@ -60,7 +69,6 @@ class SakitBerkepanjanganController extends Controller
             'tahun' => 'required|integer|min:2000|max:' . date('Y'),
             'jumlah' => 'required|array',
         ]);
-
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
             $laporan = LaporanBulanan::where([
                 'user_id' => Auth::id(),
@@ -70,9 +78,7 @@ class SakitBerkepanjanganController extends Controller
                 'bulan' => $request->bulan,
                 'tahun' => $request->tahun,
             ])->first();
-
             if (!$laporan && $jumlah !== null) {
-                // Jika belum ada, buat baru
                 LaporanBulanan::create([
                     'user_id' => Auth::id(),
                     'unit_id' => Auth::user()->unit_id,
@@ -83,7 +89,6 @@ class SakitBerkepanjanganController extends Controller
                     'jumlah' => $jumlah,
                 ]);
             } elseif ($laporan && $jumlah != 0) {
-                // Jika sudah ada, update HANYA jika jumlah bukan 0
                 $laporan->update(['jumlah' => $jumlah]);
             }
         }
@@ -107,17 +112,6 @@ class SakitBerkepanjanganController extends Controller
             'tahun' => $request->tahun,
             'subkategori_id' => $request->subkategori_id,
         ]);
-
         return redirect()->route('laporan.sakit-berkepanjangan.index')->with('success', 'Laporan berhasil diperbarui');
     }
-
-    // public function destroy($id)
-    // {
-    //     $laporan = LaporanBulanan::findOrFail($id);
-    //     $laporan->delete();
-
-    //     return redirect()->route('laporan.sakit-berkepanjangan.index')->with('success', 'Laporan berhasil dihapus');
-    // }
-
-
 }

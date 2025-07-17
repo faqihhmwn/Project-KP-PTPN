@@ -14,10 +14,15 @@ class KategoriKhususController extends Controller
     public function index(Request $request)
     {
         $subkategoris = SubKategori::where('kategori_id', 21)->get();
+        $is_admin = Auth::guard('admin')->check();
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
 
         $query = InputManual::with('subkategori')
-            ->whereIn('subkategori_id', $subkategoris->pluck('id'))
-            ->where('unit_id', Auth::user()->unit_id); // Filter berdasarkan unit login
+            ->whereIn('subkategori_id', $subkategoris->pluck('id'));
+
+        if (!$is_admin) {
+            $query->where('unit_id', $authUser->unit_id);
+        }
 
         if ($request->has('filter') && $request->filter !== null) {
             $query->where('subkategori_id', $request->filter);
@@ -25,7 +30,11 @@ class KategoriKhususController extends Controller
 
         $data = $query->get();
 
-        return view('laporan.kategori-khusus', compact('data', 'subkategoris'));
+        if ($is_admin) {
+            return view('admin.laporan.kategori-khusus', compact('data', 'subkategoris'));
+        } else {
+            return view('laporan.kategori-khusus', compact('data', 'subkategoris'));
+        }
     }
 
     public function store(Request $request)
@@ -36,15 +45,13 @@ class KategoriKhususController extends Controller
             'status' => 'required|string|max:255',
             'jenis_disabilitas' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:255',
-
         ]);
-
+        
         $unitId = Auth::user()->unit_id;
         $userId = Auth::id();
         $bulan = now()->month;
         $tahun = now()->year;
-
-        // 1. Simpan data ke input_manual
+        
         $inputManual = InputManual::create([
             'nama' => $request->nama,
             'status' => $request->status,
@@ -56,22 +63,20 @@ class KategoriKhususController extends Controller
             'bulan' => $bulan,
             'tahun' => $tahun,
         ]);
-
-        // 2. Simpan juga ke laporan_bulanan
+        
         \App\Models\LaporanBulanan::create([
-            'kategori_id' => 21, // kategori khusus
+            'kategori_id' => 21,
             'subkategori_id' => $request->subkategori_id,
             'unit_id' => $unitId,
             'user_id' => $userId,
             'bulan' => $bulan,
             'tahun' => $tahun,
-            'jumlah' => 1, // atau bisa hitung otomatis jumlah pekerja jika batch
+            'jumlah' => 1,
             'input_manual_id' => $inputManual->id,
         ]);
-
+        
         return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil ditambahkan.');
     }
-
 
     public function edit($id)
     {
@@ -90,9 +95,8 @@ class KategoriKhususController extends Controller
             'status' => 'required|string|max:255',
             'jenis_disabilitas' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:500',
-
         ]);
-
+        
         $item = InputManual::findOrFail($id);
         $item->update([
             'subkategori_id' => $request->subkategori_id,
@@ -100,17 +104,8 @@ class KategoriKhususController extends Controller
             'status' => $request->status,
             'jenis_disabilitas' => $request->jenis_disabilitas,
             'keterangan' => $request->keterangan,
-
         ]);
-
+        
         return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil diperbarui.');
     }
-
-    // public function destroy($id)
-    // {
-    //     $item = InputManual::findOrFail($id);
-    //     $item->delete();
-
-    //     return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil dihapus.');
-    // }
 }

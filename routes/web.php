@@ -22,16 +22,12 @@ use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\DashboardController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware('auth:web,admin') // <-- UBAH BARIS INI
+    ->middleware('auth:web,admin')
     ->name('dashboard');
 
 Route::get('/', function () {
     return redirect('/dashboard');
 });
-
-// Route::get('/dashboard', function () {
-//     return view('dashboard');
-// })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -41,7 +37,8 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name
 
 require __DIR__.'/auth.php';
 
-Route::prefix('laporan/kependudukan')->middleware('auth')->name('laporan.kependudukan.')->group(function () {
+// Semua middleware di bawah ini diubah dari 'auth' menjadi 'auth:web,admin'
+Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('laporan.kependudukan.')->group(function () {
     Route::get('/', [KependudukanController::class, 'index'])->name('index');
     Route::post('/store', [KependudukanController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KependudukanController::class, 'edit'])->name('edit');
@@ -49,7 +46,7 @@ Route::prefix('laporan/kependudukan')->middleware('auth')->name('laporan.kependu
     Route::delete('/destroy/{id}', [KependudukanController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/penyakit')->middleware('auth')->name('laporan.penyakit.')->group(function () {
+Route::prefix('laporan/penyakit')->middleware('auth:web,admin')->name('laporan.penyakit.')->group(function () {
     Route::get('/', [PenyakitController::class, 'index'])->name('index');
     Route::post('/store', [PenyakitController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [PenyakitController::class, 'edit'])->name('edit');
@@ -57,7 +54,7 @@ Route::prefix('laporan/penyakit')->middleware('auth')->name('laporan.penyakit.')
     Route::delete('/destroy/{id}', [PenyakitController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/opname')->middleware('auth')->name('laporan.opname.')->group(function () {
+Route::prefix('laporan/opname')->middleware('auth:web,admin')->name('laporan.opname.')->group(function () {
     Route::get('/', [OpnameController::class, 'index'])->name('index');
     Route::post('/store', [OpnameController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [OpnameController::class, 'edit'])->name('edit');
@@ -65,7 +62,7 @@ Route::prefix('laporan/opname')->middleware('auth')->name('laporan.opname.')->gr
     Route::delete('/destroy/{id}', [OpnameController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/penyakit-kronis')->middleware('auth')->name('laporan.penyakit-kronis.')->group(function () {
+Route::prefix('laporan/penyakit-kronis')->middleware('auth:web,admin')->name('laporan.penyakit-kronis.')->group(function () {
     Route::get('/', [PenyakitKronisController::class, 'index'])->name('index');
     Route::post('/store', [PenyakitKronisController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [PenyakitKronisController::class, 'edit'])->name('edit');
@@ -73,7 +70,7 @@ Route::prefix('laporan/penyakit-kronis')->middleware('auth')->name('laporan.peny
     Route::delete('/destroy/{id}', [PenyakitKronisController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/konsultasi-klinik')->middleware('auth')->name('laporan.konsultasi-klinik.')->group(function () {
+Route::prefix('laporan/konsultasi-klinik')->middleware('auth:web,admin')->name('laporan.konsultasi-klinik.')->group(function () {
     Route::get('/', [KonsultasiKlinikController::class, 'index'])->name('index');
     Route::post('/store', [KonsultasiKlinikController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KonsultasiKlinikController::class, 'edit'])->name('edit');
@@ -81,7 +78,7 @@ Route::prefix('laporan/konsultasi-klinik')->middleware('auth')->name('laporan.ko
     Route::delete('/destroy/{id}', [KonsultasiKlinikController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/cuti-sakit')->middleware('auth')->name('laporan.cuti-sakit.')->group(function () {
+Route::prefix('laporan/cuti-sakit')->middleware('auth:web,admin')->name('laporan.cuti-sakit.')->group(function () {
     Route::get('/', [CutiSakitController::class, 'index'])->name('index');
     Route::post('/store', [CutiSakitController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [CutiSakitController::class, 'edit'])->name('edit');
@@ -89,7 +86,7 @@ Route::prefix('laporan/cuti-sakit')->middleware('auth')->name('laporan.cuti-saki
     Route::delete('/destroy/{id}', [CutiSakitController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/peserta-kb')->middleware('auth')->name('laporan.peserta-kb.')->group(function () {
+Route::prefix('laporan/peserta-kb')->middleware('auth:web,admin')->name('laporan.peserta-kb.')->group(function () {
     Route::get('/', [PesertaKbController::class, 'index'])->name('index');
     Route::post('/store', [PesertaKbController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [PesertaKbController::class, 'edit'])->name('edit');
@@ -97,7 +94,7 @@ Route::prefix('laporan/peserta-kb')->middleware('auth')->name('laporan.peserta-k
     Route::delete('/destroy/{id}', [PesertaKbController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/metode-kb')->middleware('auth')->name('laporan.metode-kb.')->group(function () {
+Route::prefix('laporan/metode-kb')->middleware('auth:web,admin')->name('laporan.metode-kb.')->group(function () {
     Route::get('/', [MetodeKbController::class, 'index'])->name('index');
     Route::post('/store', [MetodeKbController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [MetodeKbController::class, 'edit'])->name('edit');
@@ -105,7 +102,7 @@ Route::prefix('laporan/metode-kb')->middleware('auth')->name('laporan.metode-kb.
     Route::delete('/destroy/{id}', [MetodeKbController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/kehamilan')->middleware('auth')->name('laporan.kehamilan.')->group(function () {
+Route::prefix('laporan/kehamilan')->middleware('auth:web,admin')->name('laporan.kehamilan.')->group(function () {
     Route::get('/', [KehamilanController::class, 'index'])->name('index');
     Route::post('/store', [KehamilanController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KehamilanController::class, 'edit'])->name('edit');
@@ -113,7 +110,7 @@ Route::prefix('laporan/kehamilan')->middleware('auth')->name('laporan.kehamilan.
     Route::delete('/destroy/{id}', [KehamilanController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/imunisasi')->middleware('auth')->name('laporan.imunisasi.')->group(function () {
+Route::prefix('laporan/imunisasi')->middleware('auth:web,admin')->name('laporan.imunisasi.')->group(function () {
     Route::get('/', [ImunisasiController::class, 'index'])->name('index');
     Route::post('/store', [ImunisasiController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [ImunisasiController::class, 'edit'])->name('edit');
@@ -121,7 +118,7 @@ Route::prefix('laporan/imunisasi')->middleware('auth')->name('laporan.imunisasi.
     Route::delete('/destroy/{id}', [ImunisasiController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/kematian')->middleware('auth')->name('laporan.kematian.')->group(function () {
+Route::prefix('laporan/kematian')->middleware('auth:web,admin')->name('laporan.kematian.')->group(function () {
     Route::get('/', [KematianController::class, 'index'])->name('index');
     Route::post('/store', [KematianController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KematianController::class, 'edit'])->name('edit');
@@ -129,7 +126,7 @@ Route::prefix('laporan/kematian')->middleware('auth')->name('laporan.kematian.')
     Route::delete('/destroy/{id}', [KematianController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/klaim-asuransi')->middleware('auth')->name('laporan.klaim-asuransi.')->group(function () {
+Route::prefix('laporan/klaim-asuransi')->middleware('auth:web,admin')->name('laporan.klaim-asuransi.')->group(function () {
     Route::get('/', [KlaimAsuransiController::class, 'index'])->name('index');
     Route::post('/store', [KlaimAsuransiController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KlaimAsuransiController::class, 'edit'])->name('edit');
@@ -137,7 +134,7 @@ Route::prefix('laporan/klaim-asuransi')->middleware('auth')->name('laporan.klaim
     Route::delete('/destroy/{id}', [KlaimAsuransiController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/kecelakaan-kerja')->middleware('auth')->name('laporan.kecelakaan-kerja.')->group(function () {
+Route::prefix('laporan/kecelakaan-kerja')->middleware('auth:web,admin')->name('laporan.kecelakaan-kerja.')->group(function () {
     Route::get('/', [KecelakaanKerjaController::class, 'index'])->name('index');
     Route::post('/store', [KecelakaanKerjaController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KecelakaanKerjaController::class, 'edit'])->name('edit');
@@ -145,7 +142,7 @@ Route::prefix('laporan/kecelakaan-kerja')->middleware('auth')->name('laporan.kec
     Route::delete('/destroy/{id}', [KecelakaanKerjaController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/sakit-berkepanjangan')->middleware('auth')->name('laporan.sakit-berkepanjangan.')->group(function () {
+Route::prefix('laporan/sakit-berkepanjangan')->middleware('auth:web,admin')->name('laporan.sakit-berkepanjangan.')->group(function () {
     Route::get('/', [SakitBerkepanjanganController::class, 'index'])->name('index');
     Route::post('/store', [SakitBerkepanjanganController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [SakitBerkepanjanganController::class, 'edit'])->name('edit');
@@ -153,7 +150,7 @@ Route::prefix('laporan/sakit-berkepanjangan')->middleware('auth')->name('laporan
     Route::delete('/destroy/{id}', [SakitBerkepanjanganController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/absensi-dokter-honorer')->middleware('auth')->name('laporan.absensi-dokter-honorer.')->group(function () {
+Route::prefix('laporan/absensi-dokter-honorer')->middleware('auth:web,admin')->name('laporan.absensi-dokter-honorer.')->group(function () {
     Route::get('/', [AbsensiDokterHonorController::class, 'index'])->name('index');
     Route::post('/store', [AbsensiDokterHonorController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [AbsensiDokterHonorController::class, 'edit'])->name('edit');
@@ -161,7 +158,7 @@ Route::prefix('laporan/absensi-dokter-honorer')->middleware('auth')->name('lapor
     Route::delete('/destroy/{id}', [AbsensiDokterHonorController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kategori-khusus.')->group(function () {
+Route::prefix('laporan/kategori-khusus')->middleware('auth:web,admin')->name('laporan.kategori-khusus.')->group(function () {
     Route::get('/', [KategoriKhususController::class, 'index'])->name('index');
     Route::post('/store', [KategoriKhususController::class, 'store'])->name('store');
     Route::get('/edit/{id}', [KategoriKhususController::class, 'edit'])->name('edit');
