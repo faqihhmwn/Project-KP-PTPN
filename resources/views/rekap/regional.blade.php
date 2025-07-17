@@ -1,5 +1,4 @@
 @extends('layout.app')
-
 @section('content')
 <div class="container mt-4">
     <h3 class="mb-4">Rekapitulasi Biaya Kesehatan - PTPN I Regional</h3>

@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Rekap\BpjsController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Laporan\KependudukanController;
 use App\Http\Controllers\Laporan\KonsultasiKlinikController;
@@ -23,7 +22,7 @@ use App\Http\Controllers\Laporan\KategoriKhususController;
 
 use App\Http\Controllers\Rekap\RegionalController;
 use App\Http\Controllers\Rekap\KapitasiController;
-use App\Http\Controllers\Rekap\UnitController;
+use App\Http\Controllers\Rekap\BpjsController;
 
 
 Route::get('/', function () {
@@ -170,26 +169,38 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
     Route::delete('/destroy/{id}', [KategoriKhususController::class, 'destroy'])->name('destroy');
 });
 
-//REKAPITULASI BIAYA
-Route::prefix('rekap')->middleware('auth')->group(function () {
-    // Rute untuk Rekap Regional
-    Route::prefix('regional')->name('rekap.regional.')->group(function () {
-        Route::get('/', [RegionalController::class, 'index'])->name('index');
-        Route::post('/', [RegionalController::class, 'store'])->name('store');
-        // Rute update: Mengirim tahun dan bulan_id dari Blade, bukan ID tunggal
-        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update');
-        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy');
-        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
 
-        // TAMBAHKAN DUA ROUTE INI:
-        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate');
-        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy');
+// routes/web.php
+
+// REKAPITULASI BIAYA
+Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
+    // PENJELASAN:
+    // Saya menambahkan `->name('rekap.')` di sini. Ini akan memberikan prefix nama 'rekap.'
+    // untuk semua rute di dalam group ini secara otomatis, kecuali jika ditimpa.
+    // Ini membuat penamaan rute lebih ringkas di dalamnya.
+
+    // Rute untuk Rekap Regional
+    Route::prefix('regional')->name('regional.')->group(function () { // nama 'regional.' akan menjadi rekap.regional.
+        Route::get('/', [RegionalController::class, 'index'])->name('index'); // -> rekap.regional.index
+        Route::post('/', [RegionalController::class, 'store'])->name('store'); // -> rekap.regional.store
+        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update'); // -> rekap.regional.update
+        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy'); // -> rekap.regional.destroy
+        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate'); // -> rekap.regional.validate
+
+        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate'); // -> rekap.regional.biayaTersedia.storeOrUpdate
+        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy'); // -> rekap.regional.biayaTersedia.destroy
+    });
+
+    // Rute untuk Rekap Iuran Bpjs
+    Route::prefix('bpjs')->name('bpjs.')->group(function () { // nama 'iuran-bpjs.' akan menjadi rekap.iuran-bpjs.
+        Route::get('/', [BpjsController::class, 'index'])->name('index'); // -> rekap.iuran-bpjs.index
+        Route::post('/', [BpjsController::class, 'store'])->name('store'); // -> rekap.iuran-bpjs.store
+        Route::put('/{tahun}/{bulan_id}', [BpjsController::class, 'update'])->name('update'); // -> rekap.iuran-bpjs.update
+        Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy'); // -> rekap.iuran-bpjs.destroy
+        Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate'); // -> rekap.iuran-bpjs.validate
     });
 
     // Rute untuk Rekap Kapitasi
-    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('rekap.kapitasi.index');
-    // Rute untuk Rekap BPJS
-    Route::get('/bpjs', [BpjsController::class, 'index'])->name('rekap.bpjs.index');
-    // Rute untuk Rekap Unit (jika ada)
-    // Route::get('/unit', [UnitController::class, 'index'])->name('rekap.unit.index');
-});
+    // Ini sekarang berada di dalam group 'rekap', sehingga nama 'rekap.kapitasi.index' akan terbentuk dengan benar.
+    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('kapitasi.index'); // -> rekap.kapitasi.index
+}); 

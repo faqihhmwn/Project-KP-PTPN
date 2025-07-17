@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->year('tahun');
             $table->foreignId('bulan_id')->nullable()->constrained('bulans')->onDelete('cascade');
-            $table->foreignId('kategori_biaya_id')->nullable()->constrained('kategori_biayas')->onDelete('cascade');
+            $table->foreignId('kategori_iuran_id')->nullable()->constrained('kategori_biayas')->onDelete('cascade');
             $table->decimal('total_iuran_bpjs')->nullable();
             // Tiga boolean untuk menandakan cakupan
             $table->boolean('cakupan_semua_bulan')->default(false);

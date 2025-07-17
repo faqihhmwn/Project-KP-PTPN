@@ -12,8 +12,7 @@ class RekapBpjsIuran extends Model
     protected $fillable = [
         'tahun',
         'bulan_id',
-        'unit_id',
-        'kategori_biaya_id',
+        'kategori_iuran_id',
         'total_iuran_bpjs',
         'cakupan_semua_unit',
         'cakupan_semua_bulan',
@@ -26,13 +25,8 @@ class RekapBpjsIuran extends Model
         return $this->belongsTo(Bulan::class);
     }
 
-    public function unit()
+    public function kategoriIuran()
     {
-        return $this->belongsTo(Unit::class);
-    }
-
-    public function kategoriBiaya()
-    {
-        return $this->belongsTo(KategoriBiaya::class);
+        return $this->belongsTo(KategoriIuran::class);
     }
 }
