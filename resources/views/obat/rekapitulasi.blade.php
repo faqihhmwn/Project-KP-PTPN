@@ -73,7 +73,7 @@
                     <select name="bulan" class="form-select" id="bulanSelect">
                         @for($i = 1; $i <= 12; $i++)
                             <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
-                                {{ \Carbon\Carbon::create()->month($i)->format('F') }}
+                                {{ \Carbon\Carbon::createFromDate(null, $i, 1)->format('F') }}
                             </option>
                         @endfor
                     </select>
@@ -147,7 +147,7 @@
                         @for($day = 1; $day <= $daysInMonth; $day++)
                             @php
                                 $jumlahKeluar = 0;
-                                $tanggal = \Carbon\Carbon::create($tahun, $bulan, $day);
+                                $tanggal = \Carbon\Carbon::createFromDate($tahun, (int)$bulan, $day);
                                 $rekapitulasi = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
                                     ->where('tanggal', $tanggal->format('Y-m-d'))
                                     ->where('bulan', $bulan)
@@ -173,7 +173,10 @@
                         <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ route('obat.show', ['obat' => $obat->id, 'return_url' => url()->current()]) }}" class="btn btn-info btn-sm" title="Detail">
+                                <a href="{{ route('obat.rekapitulasi.detail', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}" class="btn btn-info btn-sm" title="Detail Rekapitulasi">
+                                    <i class="fas fa-chart-bar"></i>
+                                </a>
+                                <a href="{{ route('obat.show', ['obat' => $obat->id, 'return_url' => url()->current()]) }}" class="btn btn-primary btn-sm" title="Detail Obat">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <a href="{{ route('obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}" class="btn btn-warning btn-sm" title="Edit">

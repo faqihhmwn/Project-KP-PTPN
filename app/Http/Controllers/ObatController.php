@@ -147,7 +147,7 @@ class ObatController extends Controller
             ->get();
 
         // Generate data untuk setiap hari dalam bulan
-        $daysInMonth = Carbon::create($tahun, $bulan)->daysInMonth;
+        $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
         
         return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
     }
@@ -300,5 +300,27 @@ class ObatController extends Controller
             \Log::error('Export error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal mengexport data: ' . $e->getMessage());
         }
+    }
+
+    public function showRekapitulasi(Request $request, Obat $obat)
+    {
+        // Get bulan & tahun from request or use current
+        $bulan = $request->get('bulan', Carbon::now()->month);
+        $tahun = $request->get('tahun', Carbon::now()->year);
+
+        // Get rekap harian for selected month
+        $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
+            ->orderBy('tanggal', 'asc')
+            ->get();
+
+        return view('obat.detail_rekapitulasi', [
+            'obat' => $obat,
+            'rekapHarian' => $rekapHarian,
+            'bulan' => $bulan,
+            'tahun' => $tahun
+        ]);
     }
 }
