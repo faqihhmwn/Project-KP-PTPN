@@ -167,6 +167,7 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
 });
 
 
+
 // Obat Routes
 Route::prefix('obat')->name('obat.')->group(function () {
     Route::get('/', [ObatController::class, 'index'])->name('index');
@@ -179,9 +180,8 @@ Route::prefix('obat')->name('obat.')->group(function () {
     Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
     
     // Rekapitulasi
-    Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
+    Route::post('/rekapitulasi-obat/input-harian', [ObatController::class, 'storeRekapitulasi'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
-    
     
     // Transaksi
     Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
@@ -192,15 +192,6 @@ Route::prefix('obat')->name('obat.')->group(function () {
     Route::get('/export', [ObatController::class, 'exportExcel'])->name('export');
 });
 
-
-// Farmasi Sidebar Routes
-// Route::prefix('farmasi')->group(function () {
-//     Route::get('/dashboard-obat', [ObatController::class, 'dashboard']);
-//     Route::get('/rekapitulasi-obat', [ObatController::class, 'rekapitulasi']);
-// });
-
-// Default redirect ke dashboard obat
-// Route::redirect('/dashboard', '/obat/dashboard');
 
 
 Route::get('/login', function () {

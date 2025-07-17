@@ -10,8 +10,10 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Edit Obat: {{ $obat->nama_obat }}</h4>
-                    <a href="{{ route('obat.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Kembali
+                    <!-- <a href="{{ route('obat.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Kembali -->
+                     <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Kembali ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
                     </a>
                 </div>
 
