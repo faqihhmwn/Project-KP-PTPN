@@ -69,10 +69,11 @@ class BpjsController extends Controller
                 }
 
             // Penting: Setelah loop selesai, urutkan $grouped berdasarkan bulan_id
-            ksort($grouped);
             }
-        return view('rekap.bpjs', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals'));
+            ksort($grouped);
     }
+    return view('rekap.bpjs', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals'));
+
 }
 
     public function store(Request $request)

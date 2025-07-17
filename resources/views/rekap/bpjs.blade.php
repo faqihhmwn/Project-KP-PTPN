@@ -12,6 +12,7 @@
     @endif
 
     @isset ($editItem)
+    {{-- Blok editItem belum digunakan --}}
     @endisset
 
     
@@ -49,7 +50,7 @@
     </form>
 
     @if ($selectedTahun)
-        <form method="GET" action="{{ route('rekap.bpjs.store') }}" id="mainRekapForm">
+        <form method="POST" action="{{ route('rekap.bpjs.store') }}" id="mainRekapForm">
             @csrf
             <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
 
@@ -64,6 +65,8 @@
                 </select>
             </div>
         </div>
+        @endif
+        
 
         <table class="table table-bordered">
             <thead>
@@ -303,5 +306,3 @@
         });
     </script>
 @endpush
-
-
