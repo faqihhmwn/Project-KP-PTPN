@@ -176,9 +176,7 @@
                                 <a href="{{ route('obat.rekapitulasi.detail', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}" class="btn btn-info btn-sm" title="Detail Rekapitulasi">
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
-                                <a href="{{ route('obat.show', ['obat' => $obat->id, 'return_url' => url()->current()]) }}" class="btn btn-primary btn-sm" title="Detail Obat">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+    
                                 <a href="{{ route('obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}" class="btn btn-warning btn-sm" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
