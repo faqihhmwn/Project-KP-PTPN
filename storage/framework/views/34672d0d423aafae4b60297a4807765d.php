@@ -1,0 +1,79 @@
+<aside class="app-sidebar bg-blue-dark shadow" data-bs-theme="dark">
+  <!--begin::Sidebar Brand-->
+  <div class="sidebar-brand">
+    <a href="/" class="brand-link">
+      <img src="<?php echo e(asset('assets/img/sidebar/logo-ptpn.png')); ?>" class="brand-image opacity-75 shadow" />
+      <span class="brand-text fw-light">Puskemas PTPN</span>
+    </a>
+  </div>
+  <!--end::Sidebar Brand-->
+
+  <!--begin::Sidebar Wrapper-->
+  <div class="sidebar-wrapper">
+    <nav class="mt-2">
+      <!--begin::Sidebar Menu-->
+      <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
+        <li class="nav-item">
+          <a href="/" class="nav-link">
+            <i class="nav-icon bi bi-house"></i>
+            <p>Dashboard</p>
+          </a>
+        </li>
+
+        <!-- Tombol buka offcanvas -->
+        <li class="nav-item">
+          <a href="#" class="nav-link" data-bs-toggle="offcanvas" data-bs-target="#laporanSidebar" aria-controls="laporanSidebar">
+            <i class="nav-icon bi bi-journal-medical"></i>
+            <p>Laporan Kesehatan</p>
+          </a>
+        </li>
+
+        
+      </ul>
+      <!--end::Sidebar Menu-->
+    </nav>
+  </div>
+  <!--end::Sidebar Wrapper-->
+</aside>
+
+<!-- Offcanvas Kategori Laporan -->
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="laporanSidebar" aria-labelledby="laporanSidebarLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="laporanSidebarLabel">Laporan Kesehatan</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body overflow-auto">
+    <ul class="list-group list-group-flush">
+      <?php
+        $kategoris = [
+          'kependudukan' => 'Kependudukan',
+          'penyakit' => 'Penyakit',
+          'opname' => 'Opname',
+          'penyakit-kronis' => 'Penyakit Kronis',
+          'konsultasi-klinik' => 'Konsultasi Klinik',
+          'cuti-sakit' => 'Cuti Sakit',
+          'peserta-kb' => 'Peserta KB',
+          'metode-kb' => 'Metode KB',
+          'kehamilan' => 'Kehamilan',
+          'imunisasi' => 'Imunisasi',
+          'kematian' => 'Kematian',
+          'klaim-asuransi' => 'Klaim Asuransi',
+          'kecelakaan-kerja' => 'Kecelakaan Kerja',
+          'sakit-berkepanjangan' => 'Sakit Berkepanjangan',
+          'absensi-dokter-honorer' => 'Absensi Dokter Honorer',
+          'kategori-khusus' => 'Kategori Khusus',
+        ];
+      ?>
+
+      <?php $__currentLoopData = $kategoris; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $slug => $nama): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <li class="list-group-item bg-dark border-secondary">
+          <a href="<?php echo e(url('/laporan/' . $slug)); ?>" class="text-white text-decoration-none d-block">
+            <?php echo e($nama); ?>
+
+          </a>
+        </li>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </ul>
+  </div>
+</div>
+<?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN/resources/views//layout/parts/sidebar.blade.php ENDPATH**/ ?>

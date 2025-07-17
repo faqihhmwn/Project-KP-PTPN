@@ -22,9 +22,8 @@ use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\DashboardController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware('auth:web,admin') // <-- UBAH BARIS INI
     ->name('dashboard');
-
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -169,5 +168,3 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
     Route::put('/update/{id}', [KategoriKhususController::class, 'update'])->name('update');
     Route::delete('/destroy/{id}', [KategoriKhususController::class, 'destroy'])->name('destroy');
 });
-
-

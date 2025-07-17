@@ -14,6 +14,21 @@
 
     {{-- Filter Periode dan Search --}}
     <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
+        {{-- TAMBAHKAN DROPDOWN UNIT KHUSUS ADMIN --}}
+        @if ($is_admin)
+        <div class="col-md-3">
+            <label for="unit_id" class="form-label">Pilih Unit</label>
+            <select name="unit_id" class="form-select" id="unit_id">
+                <option value="">Semua Unit</option>
+                @foreach ($units as $unit)
+                    <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
+                        {{ $unit->nama }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        @endif
+        
         <div class="col-md-3">
             <label for="bulan" class="form-label">Bulan</label>
             <select name="bulan" class="form-select" id="bulan">
