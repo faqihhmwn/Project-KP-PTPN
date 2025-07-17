@@ -129,7 +129,7 @@ class RegionalController extends Controller
 
         //Penyimpanan detail biaya
         foreach ($request->input('total_biaya_kesehatan') as $kategoriId => $valueInput) {
-            $totalBiayaKesehatanDetail = (int) str_replace(['.', ','], '', $valueInput);
+            $totalBiayaKesehatanDetail = (int) $valueInput;
 
             RekapBiayaKesehatan::create([
                 'kategori_biaya_id' => $kategoriId,
@@ -181,7 +181,7 @@ class RegionalController extends Controller
         $totalBiayaKesehatanBulanIni = 0;
 
         foreach ($request->input('total_biaya_kesehatan') as $kategoriId => $valueInput) {
-            $totalBiayaKesehatanDetail = (int) str_replace(['.', ','], '', $valueInput);
+            $totalBiayaKesehatanDetail = (int) $valueInput;
 
             RekapBiayaKesehatan::updateOrCreate(
                 [
@@ -267,7 +267,7 @@ class RegionalController extends Controller
 
         // Simpan atau update biaya per kategori
         foreach ($request->input('total_tersedia') as $kategoriId => $valueInput) {
-            $nilaiBiaya = (int) str_replace(['.', ','], '', $valueInput);
+            $nilaiBiaya = (int) $valueInput;
 
             BiayaTersedia::updateOrCreate(
                 [

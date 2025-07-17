@@ -367,7 +367,7 @@
         
     </script>
     <!--end::Script-->
-  @stack('scripts')
+    @stack('scripts')
   </body>
   <!--end::Body-->
 </html>
