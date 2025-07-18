@@ -33,12 +33,6 @@
                 <div class="card-body">
                     <div class="row g-2">
                         <div class="col-md-2">
-                            <a href="{{ route('obat.create') }}" class="btn btn-primary w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
-                                <i class="bi bi-plus-circle mb-1" style="font-size: 1.5rem;"></i>
-                                Tambah Obat
-                            </a>
-                        </div>
-                        <div class="col-md-2">
                             <a href="{{ route('obat.index') }}" class="btn btn-info w-100 mb-2 d-flex flex-column align-items-center justify-content-center">
                                 <i class="bi bi-list-ul mb-1" style="font-size: 1.5rem;"></i>
                                 Daftar Obat

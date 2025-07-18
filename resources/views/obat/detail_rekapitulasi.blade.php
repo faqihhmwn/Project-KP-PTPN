@@ -19,11 +19,20 @@
         transform: translateY(-3px);
     }
     .table th {
-        background-color: #f8f9fa;
+        background-color: #9ac2e9ff;
         border-bottom: 2px solid #dee2e6;
+        color: #2c3e50;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        padding: 12px;
     }
     .table-hover tbody tr:hover {
         background-color: #f8f9fa;
+    }
+    .table td {
+        padding: 12px;
+        vertical-align: middle;
     }
     .no-data {
         background-color: #f8f9fa;
@@ -53,11 +62,14 @@
         <div class="col-md-6 mb-3">
             <div class="card info-card h-100 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title text-primary d-flex align-items-center mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Informasi Obat
-                    </h5>
-                    <div class="table-responsive">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="card-title text-primary m-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Informasi Obat
+                        </h5>
+                    </div>
+
+                    <div class="mt-2">
                         <table class="table table-borderless mb-0">
                             <tr>
                                 <td width="150" class="text-muted"><strong>Nama Obat</strong></td>
@@ -83,20 +95,23 @@
         <div class="col-md-6 mb-3">
             <div class="card info-card h-100 shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title text-primary d-flex align-items-center mb-3">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        Statistik Bulan Ini
-                    </h5>
-                    <div class="row text-center g-3">
+                    <div class="d-flex justify-content-between align-items-center mb-5">
+                        <h5 class="card-title text-primary m-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Statistik Bulan Ini
+                        </h5>
+                    </div>
+
+                    <div class="row text-center g-2 mt-2">
                         <div class="col-6">
                             <div class="p-3 rounded bg-primary bg-opacity-10 stat-card">
-                                <h3 class="text-primary mb-0">{{ $rekapHarian->sum('jumlah_keluar') }}</h3>
+                                <h3 class="text-primary mb-1">{{ $rekapHarian->sum('jumlah_keluar') }}</h3>
                                 <small class="text-muted">Total Keluar</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="p-3 rounded bg-success bg-opacity-10 stat-card">
-                                <h3 class="text-success mb-0">Rp {{ number_format($rekapHarian->sum('jumlah_keluar') * $obat->harga_satuan, 0, ',', '.') }}</h3>
+                                <h3 class="text-success mb-1">Rp {{ number_format($rekapHarian->sum('jumlah_keluar') * $obat->harga_satuan, 0, ',', '.') }}</h3>
                                 <small class="text-muted">Total Biaya</small>
                             </div>
                         </div>
@@ -109,40 +124,45 @@
     <!-- Rekapitulasi Table -->
     <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title text-primary d-flex align-items-center mb-4">
-                <i class="fas fa-table me-2"></i>
-                Rekapitulasi Harian {{ \Carbon\Carbon::createFromDate(null, (int)$bulan, 1)->format('F') }} {{ $tahun }}
-            </h5>
-            
-            <div class="table-responsive">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title text-primary m-0">
+                    <i class="fas fa-table me-2"></i>
+                    Rekapitulasi Harian {{ \Carbon\Carbon::createFromDate(null, (int)$bulan, 1)->format('F') }} {{ $tahun }}
+                </h5>
+            </div>
+
+            <div class="table-responsive mt-3">
                 <table class="table table-hover table-bordered align-middle">
                     <thead>
-                        <tr class="text-center">
+                        <tr class="text-center bg-light">
                             <th style="width: 15%;">Tanggal</th>
-                            <th style="width: 20%;">Hari</th>
-                            <th style="width: 25%;">Jumlah Keluar</th>
-                            <th style="width: 40%;">Total Biaya</th>
+                            <th style="width: 35%;">Jumlah Keluar</th>
+                            <th style="width: 50%;">Total Biaya</th>
                         </tr>
                     </thead>
                     <tbody>
                         @php
-                            $totalHari = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
+                            $totalHari = \Carbon\Carbon::create($tahun, $bulan)->daysInMonth;
                             $totalKeluar = 0;
                             $totalBiaya = 0;
+                            
+                            // Pre-process rekapitulasi data into an array for faster lookup
+                            $rekapData = [];
+                            foreach($rekapHarian as $rekap) {
+                                $rekapData[intval(date('d', strtotime($rekap->tanggal)))] = $rekap;
+                            }
                         @endphp
 
                         @for($day = 1; $day <= $totalHari; $day++)
                             @php
-                                $currentDate = \Carbon\Carbon::createFromDate($tahun, $bulan, $day);
-                                $rekap = $rekapHarian->firstWhere('tanggal', $currentDate->format('Y-m-d'));
+                                $rekap = $rekapData[$day] ?? null;
                                 $jumlahKeluar = $rekap ? $rekap->jumlah_keluar : 0;
                                 $biaya = $jumlahKeluar * $obat->harga_satuan;
                                 $totalKeluar += $jumlahKeluar;
                                 $totalBiaya += $biaya;
                             @endphp
                             <tr @if($jumlahKeluar > 0) class="table-light" @endif>
-                                <td class="text-center">{{ $currentDate->format('d') }}</td>
-                                <td>{{ $currentDate->format('l') }}</td>
+                                <td class="text-center">{{ sprintf('%02d', $day) }}</td>
                                 <td class="text-center">
                                     @if($jumlahKeluar > 0)
                                         <span class="badge bg-primary">{{ $jumlahKeluar }} {{ $obat->satuan }}</span>
@@ -160,7 +180,7 @@
                             </tr>
                         @endfor
                         <tr class="table-primary fw-bold">
-                            <td colspan="2" class="text-center">Total</td>
+                            <td class="text-center">Total</td>
                             <td class="text-center">{{ $totalKeluar }} {{ $obat->satuan }}</td>
                             <td class="text-end">Rp {{ number_format($totalBiaya, 0, ',', '.') }}</td>
                         </tr>
