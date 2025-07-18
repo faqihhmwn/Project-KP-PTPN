@@ -201,6 +201,11 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
     });
 
     // Rute untuk Rekap Kapitasi
-    // Ini sekarang berada di dalam group 'rekap', sehingga nama 'rekap.kapitasi.index' akan terbentuk dengan benar.
-    Route::get('/kapitasi', [KapitasiController::class, 'index'])->name('kapitasi.index'); // -> rekap.kapitasi.index
-}); 
+    Route::prefix('kapitasi')->name('kapitasi.')->group(function () {
+        Route::get('/', [KapitasiController::class, 'index'])->name('index');
+        Route::post('/', [KapitasiController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [KapitasiController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [KapitasiController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [KapitasiController::class, 'validateRekap'])->name('validate');
+    });
+});

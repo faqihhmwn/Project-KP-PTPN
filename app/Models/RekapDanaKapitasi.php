@@ -5,15 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class RekapBpjsIuran extends Model
+class RekapDanaKapitasi extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'tahun',
         'bulan_id',
-        'kategori_iuran_id',
-        'total_iuran_bpjs',
+        'kategori_kapitasi_id',
+        'total_biaya_kapitasi',
         'cakupan_semua_bulan',
         'cakupan_semua_kategori',
     ];
@@ -24,8 +24,8 @@ class RekapBpjsIuran extends Model
         return $this->belongsTo(Bulan::class);
     }
 
-    public function kategoriIuran()
+    public function kategoriKapitasi()
     {
-        return $this->belongsTo(KategoriIuran::class);
+        return $this->belongsTo(KategoriKapitasi::class);
     }
 }

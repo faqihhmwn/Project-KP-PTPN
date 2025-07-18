@@ -3,12 +3,233 @@
 namespace App\Http\Controllers\Rekap;
 
 use App\Http\Controllers\Controller;
+use App\Models\Bulan;
+use App\Models\KategoriKapitasi;
+use App\Models\RekapDanaKapitasi;
+use App\Models\DanaMasuk;
+use App\Models\SisaSaldoKapitasi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\DB;
 
 class KapitasiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
+    {   $tahun = range(date('Y'), 2000);
+        $selectedTahun = $request->tahun ?? null;
+        $selectedBulan = $request->bulan ?? null;
+
+        $bulan = Bulan::orderBy('id')->get();
+        $kategori = KategoriKapitasi::orderBy('id')->get();
+
+        $grouped = [];
+        $annualTotals = [];
+
+        // Inisialisasi annualTotals untuk semua kategori dan total keseluruhan
+        foreach ($kategori as $k) {
+            $annualTotals[$k->id] = 0;
+        }
+        $annualTotals['all_kategoris_total'] = 0;
+
+        if ($selectedTahun) {
+            $rawData = RekapDanaKapitasi::with(['kategoriKapitasi', 'bulan'])
+                ->where('tahun', $selectedTahun)
+                ->get();
+
+            foreach ($rawData as $row) {
+                $bulanId = $row->bulan_id;
+                $kategoriId = $row->kategori_kapitasi_id;
+
+                if (!isset($grouped[$bulanId])) {
+                    $grouped[$bulanId] = [
+                        'id' => $row->id,
+                        'bulan_id' => $bulanId,
+                        'bulan' => $row->bulan->nama,
+                        'tahun' => $row->tahun,
+                        'validasi' => null,
+                        'kategori' => [],
+                        'total_biaya_kapitasi' => 0
+                    ];
+                }
+
+                // Baris ini mengambil status validasi dari salah satu record untuk bulan tersebut.
+                // Jika Anda memiliki banyak record untuk bulan yang sama, ini akan mengambil validasi dari record terakhir yang diproses.
+                // Idealnya, status validasi ini harus disimpan di record 'total_biaya_kesehatan' yang kategori_biaya_id-nya NULL.
+
+                $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
+
+                if ($kategoriId === null) {
+                    // --- LOKASI PERUBAHAN PERTAMA ---
+                    // Mengambil data untuk 'total_biaya_kesehatan' dari kolom 'total_biaya_kesehatan'
+                    $grouped[$bulanId]['total_biaya_kapitasi'] = $row->total_biaya_kapitasi;
+                    $annualTotals['all_kategoris_total'] += $row->total_biaya_kapitasi;
+                } else {
+                    $grouped[$bulanId]['kategori'][$kategoriId] = $row->total_biaya_kapitasi;
+                    $annualTotals[$kategoriId] += $row->total_biaya_kapitasi;
+                }
+
+            // Penting: Setelah loop selesai, urutkan $grouped berdasarkan bulan_id
+            }
+            ksort($grouped);
+        }
+        return view('rekap.kapitasi', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals'));
+}
+
+    public function store(Request $request)
     {
-        return view('rekap.kapitasi');
+        $request->validate([
+            'bulan_id' => 'required|exists:bulans,id',
+            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
+            'total_biaya_kapitasi' => 'required|array',
+            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
+        ]);
+        $tahun = $request->tahun;
+        $bulanId = $request->bulan_id;
+
+        $kategoriCount = KategoriKapitasi::count();
+        $existingCount = RekapDanaKapitasi::where('tahun', $tahun)
+                                            ->where('bulan_id', $bulanId)
+                                            ->whereNotNull('kategori_kapitasi_id')
+                                            ->count();
+
+        $existingTotalRecord = RekapDanaKapitasi::where('tahun', $tahun)
+                                                    ->where('bulan_id', $bulanId)
+                                                    ->whereNull('kategori_kapitasi_id')
+                                                    ->exists();
+
+        if ($existingCount >= $kategoriCount && $existingTotalRecord) {
+            return redirect()->route('rekap.kapitasi.index', [
+                'tahun' => $tahun,
+                'bulan_id' => $bulanId,
+            ])->with('success', '⚠️ Data input sudah pernah diinputkan, silakan cek tabel kembali.');
+        }
+        
+        RekapDanaKapitasi::where('tahun', $tahun)
+                            ->where('bulan_id', $bulanId)
+                            ->delete();
+
+        $totalBiayaKapitasiBulanIni = 0;
+
+        //Penyimpanan detail biaya
+        foreach ($request->input('total_biaya_kapitasi') as $kategoriId => $valueInput) {
+            $totalBiayaKapitasiDetail = (int) $valueInput;
+
+            RekapDanaKapitasi::create([
+                'kategori_kapitasi_id' => $kategoriId,
+                'bulan_id' => $bulanId,
+                'tahun' => $tahun,
+                'total_biaya_kapitasi' => $totalBiayaKapitasiDetail,
+                'validasi' => null,
+            ]);
+            $totalBiayaKapitasiBulanIni += $totalBiayaKapitasiDetail;
+        }
+        //Penyimpanan total biaya bulanan
+        RekapDanaKapitasi::create([
+            'kategori_kapitasi_id' => null,
+            'bulan_id' => $bulanId,
+            'tahun' => $tahun,
+            'total_biaya_kapitasi' => $totalBiayaKapitasiBulanIni,
+            'validasi' => null,
+        ]);
+
+        return redirect()->route('rekap.kapitasi.index', [
+            'tahun' => $tahun,
+            'bulan_id' => $bulanId,
+        ])->with('success', '✅ Data berhasil disimpan!');
+    }
+
+    // Perbaikan: Ubah parameter $id menjadi $tahun dan $bulan_id
+    public function update(Request $request, $tahun, $bulan_id)
+    {
+        $request->validate([
+            'total_biaya_kapitasi' => 'required|array',
+            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
+        ]);
+
+        $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
+                                        ->where('bulan_id', $bulan_id)
+                                        ->whereNull('kategori_kapitasi_id')
+                                        ->first();
+
+        if ($totalRecord && $totalRecord->validasi !== null) {
+            return redirect()->route('rekap.kapitasi.index', [
+                'tahun' => $tahun,
+                'bulan_id' => $bulan_id,
+            ])->with('error', '⚠️ Data sudah tervalidasi dan tidak bisa diedit.');
+        }
+
+        $totalBiayaKapitasiBulanIni = 0;
+
+        foreach ($request->input('total_biaya_kapitasi') as $kategoriId => $valueInput) {
+            $totalBiayaKapitasiDetail = (int) $valueInput;
+
+            RekapDanaKapitasi::updateOrCreate(
+                [
+                    'kategori_kapitasi_id' => $kategoriId,
+                    'bulan_id' => $bulan_id,
+                    'tahun' => $tahun,
+                ],
+                [
+                    'total_biaya_kapitasi' => $totalBiayaKapitasiDetail,
+                ]
+            );
+            $totalBiayaKapitasiBulanIni += $totalBiayaKapitasiDetail;
+        }
+
+        RekapDanaKapitasi::updateOrCreate(
+            [
+                'kategori_kapitasi_id' => null,
+                'bulan_id' => $bulan_id,
+                'tahun' => $tahun,
+            ],
+            [
+                'total_biaya_kapitasi' => $totalBiayaKapitasiBulanIni,
+            ]
+        );
+
+        return redirect()->route('rekap.kapitasi.index', [
+            'tahun' => $tahun,
+            'bulan' => $bulan_id,
+        ])->with('success', '✅ Data berhasil diperbarui!');
+    }
+
+    public function destroy(Request $request, $tahun, $bulan_id)
+    {
+        $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
+                                        ->where('bulan_id', $bulan_id)
+                                        ->whereNull('kategori_kapitasi_id')
+                                        ->first();
+
+        if ($totalRecord && $totalRecord->validasi !== null) {
+            return redirect()->route('rekap.kapitasi.index', [
+                'tahun' => $tahun,
+                'bulan' => $bulan_id,
+            ])->with('error', '❌ Data sudah tervalidasi dan tidak bisa dihapus.');
+        }
+
+            RekapDanaKapitasi::where('tahun', $tahun)
+                            ->where('bulan_id', $bulan_id)
+                            ->delete();
+
+        return redirect()->route('rekap.kapitasi.index', [
+            'tahun' => $tahun,
+        ])->with('success', '🗑️ Semua data untuk bulan ini berhasil dihapus.');
+    }
+
+    public function validateRekap(Request $request, $tahun, $bulan_id)
+    {
+        $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
+                                        ->where('bulan_id', $bulan_id)
+                                        ->whereNull('kategori_kapitasi_id')
+                                        ->firstOrFail();
+
+        $totalRecord->validasi = 'Tervalidasi';
+        $totalRecord->save();
+
+        return redirect()->route('rekap.kapitasi.index', [
+            'tahun' => $tahun,
+            'bulan' => $bulan_id,
+        ])->with('success', '✅ Data berhasil divalidasi!');
     }
 }

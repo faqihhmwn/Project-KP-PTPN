@@ -95,7 +95,7 @@
         <table class="table table-striped table-bordered text-nowrap">
             <thead>
                 <tr>
-                    <th rowspan="2" class="text-center align-middle">Rekap Iuran BPJS</th>
+                    <th rowspan="2" class="text-center align-middle">Bulan</th>
                     <th colspan="{{ $kategori->count() }}" class="group-header text-center">DETAIL IURAN</th>
                     <th rowspan="2" class="bg-warning text-dark text-center align-middle">TOTAL IURAN BPJS</th>
                     <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
