@@ -65,8 +65,8 @@
             </li>
             <!--end::Menu Body-->
             <!--begin::Menu Footer-->
-            <li class="user-footer">
-                <a href="{{ route('profile.edit') }}" class="btn btn-default btn-flat">Profile</a>
+            <li class="user-footer">    
+                <a href="{{ route('profile.edit') }}" class="btn btn-default btn-flat">Ganti Password</a>
                 <form method="POST" action="{{ route('logout') }}" class="d-inline float-end">
                     @csrf
                     <button type="submit" class="btn btn-default btn-flat">Sign out</button>
