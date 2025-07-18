@@ -1573,13 +1573,14 @@ class KependudukanController extends Controller
         if ($bulan) $query->where('bulan', $bulan);
         if ($tahun) $query->where('tahun', $tahun);
 
-        // ==== PERUBAHAN DI SINI: Tambahkan .appends() ====
+        // ==== PERUBAHAN DI SINI: Tambahkan orderBy untuk subkategori_id ====
         $data = $query->orderBy('tahun', 'desc')
                       ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
                       ->orderBy('unit_id')
+                      ->orderBy('subkategori_id', 'asc') // <-- BARIS INI DITAMBAHKAN
                       ->paginate(10)
-                      ->appends($request->query()); // <-- BARIS INI DIPERBARUI
-
+                      ->appends($request->query());
+            
         $approvals = LaporanApproval::where('kategori_id', self::KATEGORI_ID)->get()->keyBy(function ($item) {
             return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
         });
@@ -1588,7 +1589,7 @@ class KependudukanController extends Controller
 
         if ($request->ajax()) {
             if ($is_admin) {
-                return view('admin.laporan.partials.kependudukan_table', $viewData)->render();
+                return view('admin.laporan.partials.kependudukan_admin_content', $viewData)->render();
             } else {
                 return view('laporan.partials.kependudukan_table', $viewData)->render();
             }
@@ -1599,6 +1600,89 @@ class KependudukanController extends Controller
         } else {
             return view('laporan.kependudukan', $viewData);
         }
+    }
+
+    public function store(Request $request)
+    {
+        $is_admin = Auth::guard('admin')->check();
+
+        $rules = [
+            'bulan' => 'required|integer|min:1|max:12',
+            'tahun' => 'required|integer|min:2020|max:' . date('Y'),
+            'jumlah' => 'present|array',
+            'jumlah.*' => 'nullable|numeric|min:0'
+        ];
+
+        if ($is_admin) {
+            $rules['unit_id'] = 'required|exists:units,id';
+        }
+
+        $request->validate($rules);
+
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
+        $unitId = $is_admin ? $request->unit_id : $authUser->unit_id;
+        $userId = $is_admin ? null : $authUser->id;
+
+        $isApproved = LaporanApproval::where('unit_id', $unitId)
+            ->where('kategori_id', self::KATEGORI_ID)
+            ->where('bulan', $request->bulan)
+            ->where('tahun', $request->tahun)
+            ->exists();
+
+        if ($isApproved) {
+            return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
+        }
+        
+        foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
+            if ($jumlah !== null && $jumlah !== '') {
+                LaporanBulanan::updateOrCreate(
+                    [
+                        'unit_id' => $unitId,
+                        'kategori_id' => self::KATEGORI_ID,
+                        'subkategori_id' => $subkategori_id,
+                        'bulan' => $request->bulan,
+                        'tahun' => $request->tahun,
+                    ],
+                    [
+                        'user_id' => $userId,
+                        'jumlah' => $jumlah,
+                    ]
+                );
+            }
+        }
+
+        return back()->with('success', 'Laporan berhasil disimpan.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $laporan = LaporanBulanan::findOrFail($id);
+        
+        $isApproved = LaporanApproval::where('unit_id', $laporan->unit_id)
+            ->where('kategori_id', $laporan->kategori_id)
+            ->where('bulan', $laporan->bulan)
+            ->where('tahun', $laporan->tahun)
+            ->exists();
+
+        if ($isApproved && !Auth::guard('admin')->check()) {
+            return redirect()->back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
+        }
+
+        $laporan->update($request->only(['jumlah']));
+        
+        return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
+    }
+    
+    public function destroy($id)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+        }
+
+        $laporan = LaporanBulanan::findOrFail($id);
+        $laporan->delete();
+
+        return back()->with('success', 'Data berhasil dihapus.');
     }
 
     public function approve(Request $request)
@@ -1646,74 +1730,6 @@ class KependudukanController extends Controller
         }
 
         return back()->with('error', 'Data persetujuan tidak ditemukan.');
-    }
-
-    public function store(Request $request)
-    {
-        $is_admin = Auth::guard('admin')->check();
-
-        $rules = [
-            'bulan' => 'required|integer|min:1|max:12',
-            'tahun' => 'required|integer|min:2020|max:' . date('Y'),
-            'jumlah' => 'required|array',
-        ];
-
-        if ($is_admin) {
-            $rules['unit_id'] = 'required|exists:units,id';
-        }
-
-        $request->validate($rules);
-
-        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
-        $unitId = $is_admin ? $request->unit_id : $authUser->unit_id;
-        $userId = $is_admin ? null : $authUser->id;
-
-        $isApproved = LaporanApproval::where('unit_id', $unitId)
-            ->where('kategori_id', self::KATEGORI_ID)
-            ->where('bulan', $request->bulan)
-            ->where('tahun', $request->tahun)
-            ->exists();
-
-        if ($isApproved) {
-            return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
-        }
-        
-        foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            LaporanBulanan::updateOrCreate(
-                [
-                    'unit_id' => $unitId,
-                    'kategori_id' => self::KATEGORI_ID,
-                    'subkategori_id' => $subkategori_id,
-                    'bulan' => $request->bulan,
-                    'tahun' => $request->tahun,
-                ],
-                [
-                    'user_id' => $userId,
-                    'jumlah' => $jumlah ?? 0,
-                ]
-            );
-        }
-
-        return back()->with('success', 'Laporan berhasil disimpan.');
-    }
-
-    public function update(Request $request, $id)
-    {
-        $laporan = LaporanBulanan::findOrFail($id);
-        
-        $isApproved = LaporanApproval::where('unit_id', $laporan->unit_id)
-            ->where('kategori_id', $laporan->kategori_id)
-            ->where('bulan', $laporan->bulan)
-            ->where('tahun', $laporan->tahun)
-            ->exists();
-
-        if ($isApproved) {
-            return redirect()->route('laporan.kependudukan.index')->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
-        }
-
-        $laporan->update($request->only(['jumlah', 'bulan', 'tahun', 'subkategori_id']));
-        
-        return redirect()->route('laporan.kependudukan.index')->with('success', 'Laporan berhasil diperbarui.');
     }
 }
 </code>
@@ -6306,19 +6322,10 @@ resources\views\admin\laporan\kependudukan.blade.php:
     <h3 class="mb-4">Laporan Kependudukan (Admin)</h3>
 
     {{-- Notifikasi --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    @if (session('success'))<div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+    @if (session('error'))<div class="alert alert-danger alert-dismissible fade show" role="alert">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
+    {{-- Form Input Admin --}}
     <div class="card mb-4">
         <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
         <div class="card-body">
@@ -6336,7 +6343,9 @@ resources\views\admin\laporan\kependudukan.blade.php:
                     </div>
                     <div class="col-md-3">
                         <label for="bulan_input" class="form-label">Bulan</label>
+                        {{-- ==== PERUBAHAN DROPDOWN BULAN ==== --}}
                         <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
                             @foreach (range(1, 12) as $b)
                                 <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}</option>
                             @endforeach
@@ -6344,14 +6353,16 @@ resources\views\admin\laporan\kependudukan.blade.php:
                     </div>
                     <div class="col-md-3">
                         <label for="tahun_input" class="form-label">Tahun</label>
+                        {{-- ==== PERUBAHAN DROPDOWN TAHUN ==== --}}
                         <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
                             @for ($t = date('Y'); $t >= 2020; $t--)
                                 <option value="{{ $t }}">{{ $t }}</option>
                             @endfor
                         </select>
                     </div>
                 </div>
-
+                
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -6363,7 +6374,10 @@ resources\views\admin\laporan\kependudukan.blade.php:
                         @foreach ($subkategori as $sub)
                         <tr>
                             <td>{{ $sub->nama }}</td>
-                            <td><input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="0" required></td>
+                            <td>
+                                {{-- ==== PERUBAHAN INPUT FIELD JUMLAH ==== --}}
+                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan nilai">
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -16047,21 +16061,10 @@ storage\framework\views\ae217bd5496e72aef83085662d3d0459.php:
     <h3 class="mb-4">Laporan Kependudukan (Admin)</h3>
 
     
-    <?php if(session('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php echo e(session('success')); ?>
+    <?php if(session('success')): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?php echo e(session('success')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+    <?php if(session('error')): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?php echo e(session('error')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
 
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    <?php if(session('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php echo e(session('error')); ?>
-
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
+    
     <div class="card mb-4">
         <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
         <div class="card-body">
@@ -16079,7 +16082,9 @@ storage\framework\views\ae217bd5496e72aef83085662d3d0459.php:
                     </div>
                     <div class="col-md-3">
                         <label for="bulan_input" class="form-label">Bulan</label>
+                        
                         <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
                             <?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <option value="<?php echo e($b); ?>"><?php echo e(DateTime::createFromFormat('!m', $b)->format('F')); ?></option>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -16087,14 +16092,16 @@ storage\framework\views\ae217bd5496e72aef83085662d3d0459.php:
                     </div>
                     <div class="col-md-3">
                         <label for="tahun_input" class="form-label">Tahun</label>
+                        
                         <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
                             <?php for($t = date('Y'); $t >= 2020; $t--): ?>
                                 <option value="<?php echo e($t); ?>"><?php echo e($t); ?></option>
                             <?php endfor; ?>
                         </select>
                     </div>
                 </div>
-
+                
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -16106,7 +16113,10 @@ storage\framework\views\ae217bd5496e72aef83085662d3d0459.php:
                         <?php $__currentLoopData = $subkategori; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <tr>
                             <td><?php echo e($sub->nama); ?></td>
-                            <td><input type="number" name="jumlah[<?php echo e($sub->id); ?>]" class="form-control" min="0" value="0" required></td>
+                            <td>
+                                
+                                <input type="number" name="jumlah[<?php echo e($sub->id); ?>]" class="form-control" min="0" value="" placeholder="Masukkan nilai">
+                            </td>
                         </tr>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </tbody>
@@ -16515,12 +16525,8 @@ storage\framework\views\c9b69444f3e51698e40a7d25c9b2d751.php:
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Kependudukan</h3>
 
-    <?php if(session('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert"><?php echo e(session('success')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
-    <?php if(session('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert"><?php echo e(session('error')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
+    <?php if(session('success')): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?php echo e(session('success')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+    <?php if(session('error')): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?php echo e(session('error')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
 
     <div class="card mb-4">
         <div class="card-header fw-bold">Input Laporan Bulanan</div>
@@ -16529,8 +16535,8 @@ storage\framework\views\c9b69444f3e51698e40a7d25c9b2d751.php:
                 <?php echo csrf_field(); ?>
                 <fieldset id="input-form">
                     <div class="row mb-3">
-                        <div class="col-md-3"><label for="bulan" class="form-label">Bulan</label><select name="bulan" id="bulan" class="form-select" required><?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($b); ?>" <?php echo e(old('bulan') == $b ? 'selected' : ''); ?>><?php echo e(DateTime::createFromFormat('!m', $b)->format('F')); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></div>
-                        <div class="col-md-3"><label for="tahun" class="form-label">Tahun</label><select name="tahun" id="tahun" class="form-select" required><?php for($t = date('Y'); $t >= 2020; $t--): ?><option value="<?php echo e($t); ?>" <?php echo e(old('tahun') == $t ? 'selected' : ''); ?>><?php echo e($t); ?></option><?php endfor; ?></select></div>
+                        <div class="col-md-3"><label for="bulan" class="form-label">Bulan</label><select name="bulan" id="bulan" class="form-select" required><?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($b); ?>" <?php echo e(old('bulan', date('n')) == $b ? 'selected' : ''); ?>><?php echo e(DateTime::createFromFormat('!m', $b)->format('F')); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></div>
+                        <div class="col-md-3"><label for="tahun" class="form-label">Tahun</label><select name="tahun" id="tahun" class="form-select" required><?php for($t = date('Y'); $t >= 2020; $t--): ?><option value="<?php echo e($t); ?>" <?php echo e(old('tahun', date('Y')) == $t ? 'selected' : ''); ?>><?php echo e($t); ?></option><?php endfor; ?></select></div>
                     </div>
                     <div id="approval-status-alert" class="alert alert-warning" style="display: none;">Data untuk periode ini sudah disetujui dan tidak dapat diubah.</div>
                     <table class="table table-bordered">
@@ -16600,11 +16606,8 @@ document.addEventListener('DOMContentLoaded', function () {
             statusAlert.style.display = 'none';
         }
     }
-
     bulanSelect.addEventListener('change', checkApprovalStatus);
     tahunSelect.addEventListener('change', checkApprovalStatus);
-
-    // Initial check on page load
     checkApprovalStatus();
 });
 </script>

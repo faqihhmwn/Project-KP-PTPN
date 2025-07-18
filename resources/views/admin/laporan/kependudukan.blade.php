@@ -5,19 +5,10 @@
     <h3 class="mb-4">Laporan Kependudukan (Admin)</h3>
 
     {{-- Notifikasi --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    @if (session('success'))<div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+    @if (session('error'))<div class="alert alert-danger alert-dismissible fade show" role="alert">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
+    {{-- Form Input Admin --}}
     <div class="card mb-4">
         <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
         <div class="card-body">
@@ -35,7 +26,9 @@
                     </div>
                     <div class="col-md-3">
                         <label for="bulan_input" class="form-label">Bulan</label>
+                        {{-- ==== PERUBAHAN DROPDOWN BULAN ==== --}}
                         <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
                             @foreach (range(1, 12) as $b)
                                 <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}</option>
                             @endforeach
@@ -43,14 +36,16 @@
                     </div>
                     <div class="col-md-3">
                         <label for="tahun_input" class="form-label">Tahun</label>
+                        {{-- ==== PERUBAHAN DROPDOWN TAHUN ==== --}}
                         <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
                             @for ($t = date('Y'); $t >= 2020; $t--)
                                 <option value="{{ $t }}">{{ $t }}</option>
                             @endfor
                         </select>
                     </div>
                 </div>
-
+                
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -62,7 +57,10 @@
                         @foreach ($subkategori as $sub)
                         <tr>
                             <td>{{ $sub->nama }}</td>
-                            <td><input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="0" required></td>
+                            <td>
+                                {{-- ==== PERUBAHAN INPUT FIELD JUMLAH ==== --}}
+                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>

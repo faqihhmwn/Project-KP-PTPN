@@ -44,9 +44,11 @@ class KependudukanController extends Controller
         if ($bulan) $query->where('bulan', $bulan);
         if ($tahun) $query->where('tahun', $tahun);
 
+        // ==== PERUBAHAN DI SINI: Tambahkan orderBy untuk subkategori_id ====
         $data = $query->orderBy('tahun', 'desc')
                       ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
                       ->orderBy('unit_id')
+                      ->orderBy('subkategori_id', 'asc') // <-- BARIS INI DITAMBAHKAN
                       ->paginate(10)
                       ->appends($request->query());
             
@@ -78,7 +80,8 @@ class KependudukanController extends Controller
         $rules = [
             'bulan' => 'required|integer|min:1|max:12',
             'tahun' => 'required|integer|min:2020|max:' . date('Y'),
-            'jumlah' => 'required|array',
+            'jumlah' => 'present|array',
+            'jumlah.*' => 'nullable|numeric|min:0'
         ];
 
         if ($is_admin) {
@@ -101,26 +104,22 @@ class KependudukanController extends Controller
             return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
         }
         
-        $existingData = LaporanBulanan::where('unit_id', $unitId)
-            ->where('kategori_id', self::KATEGORI_ID)
-            ->where('bulan', $request->bulan)
-            ->where('tahun', $request->tahun)
-            ->exists();
-
-        if ($existingData) {
-            return back()->with('error', 'Data untuk periode ini sudah ada. Silakan gunakan fitur "Edit" untuk mengubahnya.');
-        }
-
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            LaporanBulanan::create([
-                'unit_id' => $unitId,
-                'kategori_id' => self::KATEGORI_ID,
-                'subkategori_id' => $subkategori_id,
-                'bulan' => $request->bulan,
-                'tahun' => $request->tahun,
-                'user_id' => $userId,
-                'jumlah' => $jumlah ?? 0,
-            ]);
+            if ($jumlah !== null && $jumlah !== '') {
+                LaporanBulanan::updateOrCreate(
+                    [
+                        'unit_id' => $unitId,
+                        'kategori_id' => self::KATEGORI_ID,
+                        'subkategori_id' => $subkategori_id,
+                        'bulan' => $request->bulan,
+                        'tahun' => $request->tahun,
+                    ],
+                    [
+                        'user_id' => $userId,
+                        'jumlah' => $jumlah,
+                    ]
+                );
+            }
         }
 
         return back()->with('success', 'Laporan berhasil disimpan.');
@@ -137,20 +136,17 @@ class KependudukanController extends Controller
             ->exists();
 
         if ($isApproved && !Auth::guard('admin')->check()) {
-            return redirect()->route('laporan.kependudukan.index')->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
+            return redirect()->back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
         }
 
+        $request->validate(['jumlah' => 'required|numeric|min:0']);
         $laporan->update($request->only(['jumlah']));
         
         return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
     }
     
-    /**
-     * HAPUS DATA LAPORAN (KHUSUS ADMIN)
-     */
     public function destroy($id)
     {
-        // Pastikan hanya admin yang bisa menghapus
         if (!Auth::guard('admin')->check()) {
             return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
         }

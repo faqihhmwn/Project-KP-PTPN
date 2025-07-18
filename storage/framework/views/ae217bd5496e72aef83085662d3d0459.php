@@ -5,21 +5,10 @@
     <h3 class="mb-4">Laporan Kependudukan (Admin)</h3>
 
     
-    <?php if(session('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php echo e(session('success')); ?>
+    <?php if(session('success')): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?php echo e(session('success')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+    <?php if(session('error')): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?php echo e(session('error')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
 
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    <?php if(session('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php echo e(session('error')); ?>
-
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
+    
     <div class="card mb-4">
         <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
         <div class="card-body">
@@ -37,7 +26,9 @@
                     </div>
                     <div class="col-md-3">
                         <label for="bulan_input" class="form-label">Bulan</label>
+                        
                         <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
                             <?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <option value="<?php echo e($b); ?>"><?php echo e(DateTime::createFromFormat('!m', $b)->format('F')); ?></option>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -45,14 +36,16 @@
                     </div>
                     <div class="col-md-3">
                         <label for="tahun_input" class="form-label">Tahun</label>
+                        
                         <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
                             <?php for($t = date('Y'); $t >= 2020; $t--): ?>
                                 <option value="<?php echo e($t); ?>"><?php echo e($t); ?></option>
                             <?php endfor; ?>
                         </select>
                     </div>
                 </div>
-
+                
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -64,7 +57,10 @@
                         <?php $__currentLoopData = $subkategori; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <tr>
                             <td><?php echo e($sub->nama); ?></td>
-                            <td><input type="number" name="jumlah[<?php echo e($sub->id); ?>]" class="form-control" min="0" value="0" required></td>
+                            <td>
+                                
+                                <input type="number" name="jumlah[<?php echo e($sub->id); ?>]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
+                            </td>
                         </tr>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </tbody>
