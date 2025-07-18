@@ -16,8 +16,6 @@ class Obat extends Model
         'harga_satuan',
         'satuan',
         'stok_awal',
-        'stok_masuk',
-        'stok_keluar',
         'stok_sisa',
         'keterangan'
     ];
