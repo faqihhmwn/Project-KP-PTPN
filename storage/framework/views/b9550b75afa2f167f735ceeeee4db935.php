@@ -94,15 +94,6 @@
                     <button type="submit" class="btn btn-primary w-100">Tampilkan</button>
                 </div>
             </form>
-            
-            <?php if($unitId && $bulan && $tahun): ?>
-                <?php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); ?>
-                <?php if(!$isApproved): ?>
-                <form action="<?php echo e(route('laporan.kependudukan.approve')); ?>" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')"><?php echo csrf_field(); ?><input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>"><input type="hidden" name="bulan" value="<?php echo e($bulan); ?>"><input type="hidden" name="tahun" value="<?php echo e($tahun); ?>"><button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button></form>
-                <?php else: ?>
-                 <div class="alert alert-info d-flex justify-content-between align-items-center"><span>Periode ini telah disetujui pada <?php echo e($approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i')); ?>.</span><form action="<?php echo e(route('laporan.kependudukan.unapprove')); ?>" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')"><?php echo csrf_field(); ?><input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>"><input type="hidden" name="bulan" value="<?php echo e($bulan); ?>"><input type="hidden" name="tahun" value="<?php echo e($tahun); ?>"><button type="submit" class="btn btn-danger btn-sm">Un-approve</button></form></div>
-                <?php endif; ?>
-            <?php endif; ?>
         </div>
     </div>
 

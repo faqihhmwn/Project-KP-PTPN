@@ -1,27 +1,30 @@
 {{-- BAGIAN APPROVE/UNAPPROVE --}}
 @if($unitId && $bulan && $tahun)
     @php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); @endphp
-    <div class="mb-3">
-        @if(!$isApproved)
-            <form action="{{ route('laporan.penyakit.approve') }}" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')">
-                @csrf
-                <input type="hidden" name="unit_id" value="{{ $unitId }}">
-                <input type="hidden" name="bulan" value="{{ $bulan }}">
-                <input type="hidden" name="tahun" value="{{ $tahun }}">
-                <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
-            </form>
-        @else
-            <div class="alert alert-info d-flex justify-content-between align-items-center">
-                <span>Periode ini telah disetujui pada {{ $approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i') }}.</span>
-                <form action="{{ route('laporan.penyakit.unapprove') }}" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')">
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Persetujuan Periode</p>
+            @if(!$isApproved)
+                <form action="{{ route('laporan.penyakit.approve') }}" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')">
                     @csrf
                     <input type="hidden" name="unit_id" value="{{ $unitId }}">
                     <input type="hidden" name="bulan" value="{{ $bulan }}">
                     <input type="hidden" name="tahun" value="{{ $tahun }}">
-                    <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
                 </form>
-            </div>
-        @endif
+            @else
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                    <span>Periode ini telah disetujui pada {{ $approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i') }}.</span>
+                    <form action="{{ route('laporan.penyakit.unapprove') }}" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')">
+                        @csrf
+                        <input type="hidden" name="unit_id" value="{{ $unitId }}">
+                        <input type="hidden" name="bulan" value="{{ $bulan }}">
+                        <input type="hidden" name="tahun" value="{{ $tahun }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+                    </form>
+                </div>
+            @endif
+        </div>
     </div>
 @endif
 
