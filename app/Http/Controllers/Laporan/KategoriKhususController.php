@@ -3,109 +3,123 @@
 namespace App\Http\Controllers\Laporan;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\InputManual;
 use App\Models\SubKategori;
-use App\Models\LaporanBulanan;
+use App\Models\Unit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class KategoriKhususController extends Controller
 {
+    const KATEGORI_ID = 21;
+
     public function index(Request $request)
     {
-        $subkategoris = SubKategori::where('kategori_id', 21)->get();
         $is_admin = Auth::guard('admin')->check();
         $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
 
-        $query = InputManual::with('subkategori')
-            ->whereIn('subkategori_id', $subkategoris->pluck('id'));
+        $subkategoris = SubKategori::where('kategori_id', self::KATEGORI_ID)->get();
+        $units = Unit::all();
 
-        if (!$is_admin) {
+        $query = InputManual::with(['subkategori', 'unit'])
+            ->where('kategori_id', self::KATEGORI_ID);
+
+        // Filter
+        $unitId = $request->input('unit_id');
+        $status = $request->input('status');
+        $searchName = $request->input('search_name');
+
+        if ($is_admin) {
+            if ($unitId) $query->where('unit_id', $unitId);
+        } else {
             $query->where('unit_id', $authUser->unit_id);
         }
 
-        if ($request->has('filter') && $request->filter !== null) {
-            $query->where('subkategori_id', $request->filter);
+        if ($status) $query->where('status', $status);
+        if ($searchName) $query->where('nama', 'like', '%' . $searchName . '%');
+        
+        $data = $query->orderBy('created_at', 'desc')
+                      ->paginate(10)
+                      ->appends($request->query());
+
+        $viewData = compact('data', 'subkategoris', 'units', 'unitId', 'status', 'searchName');
+
+        if ($request->ajax()) {
+            if ($is_admin) {
+                return view('admin.laporan.partials.kategori-khusus_admin_content', $viewData)->render();
+            }
+            // Partial view untuk user bisa ditambahkan di sini jika perlu
         }
-
-        $data = $query->get();
-
+        
         if ($is_admin) {
-            return view('admin.laporan.kategori-khusus', compact('data', 'subkategoris'));
+            return view('admin.laporan.kategori-khusus', $viewData);
         } else {
-            return view('laporan.kategori-khusus', compact('data', 'subkategoris'));
+            return view('laporan.kategori-khusus', $viewData);
         }
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $is_admin = Auth::guard('admin')->check();
+        $rules = [
             'subkategori_id' => 'required|exists:subkategori,id',
             'nama' => 'required|string|max:255',
             'status' => 'required|string|max:255',
             'jenis_disabilitas' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:255',
-        ]);
+            'bulan' => 'required|integer|min:1|max:12',
+            'tahun' => 'required|integer|min:2020|max:' . date('Y'),
+        ];
+        if ($is_admin) {
+            $rules['unit_id'] = 'required|exists:units,id';
+        }
+        $request->validate($rules);
         
-        $unitId = Auth::user()->unit_id;
-        $userId = Auth::id();
-        $bulan = now()->month;
-        $tahun = now()->year;
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
+        $unitId = $is_admin ? $request->unit_id : $authUser->unit_id;
+        $userId = $is_admin ? null : $authUser->id;
         
-        $inputManual = InputManual::create([
+        InputManual::create([
+            'kategori_id' => self::KATEGORI_ID,
+            'subkategori_id' => $request->subkategori_id,
+            'unit_id' => $unitId,
+            'user_id' => $userId,
+            'bulan' => $request->bulan,
+            'tahun' => $request->tahun,
             'nama' => $request->nama,
             'status' => $request->status,
-            'subkategori_id' => $request->subkategori_id,
             'jenis_disabilitas' => $request->jenis_disabilitas,
             'keterangan' => $request->keterangan,
-            'unit_id' => $unitId,
-            'user_id' => $userId,
-            'bulan' => $bulan,
-            'tahun' => $tahun,
         ]);
         
-        \App\Models\LaporanBulanan::create([
-            'kategori_id' => 21,
-            'subkategori_id' => $request->subkategori_id,
-            'unit_id' => $unitId,
-            'user_id' => $userId,
-            'bulan' => $bulan,
-            'tahun' => $tahun,
-            'jumlah' => 1,
-            'input_manual_id' => $inputManual->id,
-        ]);
-        
-        return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil ditambahkan.');
-    }
-
-    public function edit($id)
-    {
-        $editItem = InputManual::findOrFail($id);
-        $subkategoris = SubKategori::where('kategori_id', 21)->get();
-        $data = InputManual::with('subkategori')->whereIn('subkategori_id', $subkategoris->pluck('id'))->get();
-
-        return view('laporan.kategori-khusus', compact('data', 'subkategoris', 'editItem'));
+        return back()->with('success', 'Data berhasil ditambahkan.');
     }
 
     public function update(Request $request, $id)
     {
+        $item = InputManual::findOrFail($id);
+
         $request->validate([
-            'subkategori_id' => 'required|exists:subkategori,id',
             'nama' => 'required|string|max:255',
             'status' => 'required|string|max:255',
             'jenis_disabilitas' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:500',
         ]);
         
-        $item = InputManual::findOrFail($id);
-        $item->update([
-            'subkategori_id' => $request->subkategori_id,
-            'nama' => $request->nama,
-            'status' => $request->status,
-            'jenis_disabilitas' => $request->jenis_disabilitas,
-            'keterangan' => $request->keterangan,
-        ]);
+        $item->update($request->only(['nama', 'status', 'jenis_disabilitas', 'keterangan']));
         
-        return redirect()->route('laporan.kategori-khusus.index')->with('success', 'Data berhasil diperbarui.');
+        return back()->with('success', 'Data berhasil diperbarui.');
+    }
+    
+    public function destroy($id)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+        }
+
+        $item = InputManual::findOrFail($id);
+        $item->delete();
+
+        return back()->with('success', 'Data berhasil dihapus.');
     }
 }
