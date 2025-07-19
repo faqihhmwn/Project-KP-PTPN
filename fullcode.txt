@@ -2161,113 +2161,201 @@ namespace App\Http\Controllers\Laporan;
 use App\Http\Controllers\Controller;
 use App\Models\LaporanBulanan;
 use App\Models\SubKategori;
+use App\Models\Unit;
+use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MetodeKbController extends Controller
 {
+    const KATEGORI_ID = 8; // ID untuk kategori Metode KB
+
     public function index(Request $request)
     {
-        $subkategori = SubKategori::where('kategori_id', 8)->get();
         $is_admin = Auth::guard('admin')->check();
         $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
-        
+
+        $subkategori = SubKategori::where('kategori_id', self::KATEGORI_ID)->get();
+        $units = Unit::all();
+
         $query = LaporanBulanan::with(['subkategori', 'unit'])
-            ->where('kategori_id', 8);
-        
-        if (!$is_admin) {
+            ->where('kategori_id', self::KATEGORI_ID);
+
+        // Filter
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id');
+
+        if ($is_admin) {
+            if ($unitId) $query->where('unit_id', $unitId);
+        } else {
             $query->where('unit_id', $authUser->unit_id);
         }
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('subkategori', function ($q) use ($search) {
-                $q->where('nama', 'like', '%' . $search . '%');
-            });
+        if ($subkategoriId) {
+            $query->where('subkategori_id', $subkategoriId);
         }
+        
+        if ($bulan) $query->where('bulan', $bulan);
+        if ($tahun) $query->where('tahun', $tahun);
 
-        // Filter bulan
-        if ($request->filled('bulan')) {
-            $query->where('bulan', $request->bulan);
+        $data = $query->orderBy('tahun', 'desc')
+                      ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
+                      ->orderBy('unit_id')
+                      ->orderBy('subkategori_id', 'asc') // Urutkan berdasarkan subkategori
+                      ->paginate(10)
+                      ->appends($request->query());
+            
+        $approvals = LaporanApproval::where('kategori_id', self::KATEGORI_ID)->get()->keyBy(function ($item) {
+            return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
+        });
+
+        $viewData = compact('data', 'subkategori', 'units', 'unitId', 'bulan', 'tahun', 'approvals', 'subkategoriId');
+
+        if ($request->ajax()) {
+            if ($is_admin) {
+                return view('admin.laporan.partials.metode-kb_admin_content', $viewData)->render();
+            } else {
+                return view('laporan.partials.metode-kb_table', $viewData)->render();
+            }
         }
-
-        // Filter tahun
-        if ($request->filled('tahun')) {
-            $query->where('tahun', $request->tahun);
-        }
-
-        $data = $query
-            ->orderBy('tahun', 'desc')
-            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-            ->orderBy(SubKategori::select('nama')
-                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
-            ->paginate(8);
 
         if ($is_admin) {
-            return view('admin.laporan.metode-kb', compact('data', 'subkategori'));
+            return view('admin.laporan.metode-kb', $viewData);
         } else {
-            return view('laporan.metode-kb', compact('data', 'subkategori'));
+            return view('laporan.metode-kb', $viewData);
         }
-    }
-
-    public function create()
-    {
-        $subkategoris = SubKategori::where('kategori_id', 8)->get();
-        return view('laporan.metode-kb', compact('subkategoris'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $is_admin = Auth::guard('admin')->check();
+
+        $rules = [
             'bulan' => 'required|integer|min:1|max:12',
-            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
-            'jumlah' => 'required|array',
-        ]);
+            'tahun' => 'required|integer|min:2020|max:' . date('Y'),
+            'jumlah' => 'present|array',
+            'jumlah.*' => 'nullable|numeric|min:0'
+        ];
+
+        if ($is_admin) {
+            $rules['unit_id'] = 'required|exists:units,id';
+        }
+        $request->validate($rules);
+
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
+        $unitId = $is_admin ? $request->unit_id : $authUser->unit_id;
+        $userId = $is_admin ? null : $authUser->id;
+
+        $isApproved = LaporanApproval::where('unit_id', $unitId)
+            ->where('kategori_id', self::KATEGORI_ID)
+            ->where('bulan', $request->bulan)
+            ->where('tahun', $request->tahun)
+            ->exists();
+
+        if ($isApproved) {
+            return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
+        }
+        
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            $laporan = LaporanBulanan::where([
-                'user_id' => Auth::id(),
-                'unit_id' => Auth::user()->unit_id,
-                'kategori_id' => 8,
-                'subkategori_id' => $subkategori_id,
-                'bulan' => $request->bulan,
-                'tahun' => $request->tahun,
-            ])->first();
-            if (!$laporan && $jumlah !== null) {
-                LaporanBulanan::create([
-                    'user_id' => Auth::id(),
-                    'unit_id' => Auth::user()->unit_id,
-                    'kategori_id' => 8,
-                    'subkategori_id' => $subkategori_id,
-                    'bulan' => $request->bulan,
-                    'tahun' => $request->tahun,
-                    'jumlah' => $jumlah,
-                ]);
-            } elseif ($laporan && $jumlah != 0) {
-                $laporan->update(['jumlah' => $jumlah]);
+            if ($jumlah !== null && $jumlah !== '') {
+                LaporanBulanan::updateOrCreate(
+                    [
+                        'unit_id' => $unitId,
+                        'kategori_id' => self::KATEGORI_ID,
+                        'subkategori_id' => $subkategori_id,
+                        'bulan' => $request->bulan,
+                        'tahun' => $request->tahun,
+                    ],
+                    [
+                        'user_id' => $userId,
+                        'jumlah' => $jumlah,
+                    ]
+                );
             }
         }
 
-        return redirect()->route('laporan.metode-kb.index')->with('success', 'Laporan berhasil ditambahkan');
-    }
-
-    public function edit($id)
-    {
-        $laporan = LaporanBulanan::findOrFail($id);
-        $subkategoris = SubKategori::where('kategori_id', 8)->get();
-        return view('laporan.metode-kb', compact('laporan', 'subkategoris'));
+        return back()->with('success', 'Laporan berhasil disimpan atau diperbarui.');
     }
 
     public function update(Request $request, $id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
-        $laporan->update([
-            'jumlah' => $request->jumlah,
+        
+        $isApproved = LaporanApproval::where('unit_id', $laporan->unit_id)
+            ->where('kategori_id', $laporan->kategori_id)
+            ->where('bulan', $laporan->bulan)
+            ->where('tahun', $laporan->tahun)
+            ->exists();
+
+        if ($isApproved && !Auth::guard('admin')->check()) {
+            return redirect()->back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
+        }
+
+        $request->validate(['jumlah' => 'required|numeric|min:0']);
+        $laporan->update($request->only(['jumlah']));
+        
+        return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
+    }
+    
+    public function destroy($id)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+        }
+
+        $laporan = LaporanBulanan::findOrFail($id);
+        $laporan->delete();
+
+        return back()->with('success', 'Data berhasil dihapus.');
+    }
+
+    public function approve(Request $request)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Hanya admin yang dapat menyetujui laporan.');
+        }
+
+        $request->validate([
+            'unit_id' => 'required|exists:units,id',
+            'bulan' => 'required|numeric|between:1,12',
+            'tahun' => 'required|numeric|min:2020',
+        ]);
+
+        LaporanApproval::updateOrCreate(
+            ['unit_id' => $request->unit_id, 'kategori_id' => self::KATEGORI_ID, 'bulan' => $request->bulan, 'tahun' => $request->tahun],
+            ['approved_by' => Auth::guard('admin')->id(), 'approved_at' => now()]
+        );
+
+        return back()->with('success', 'Data periode berhasil disetujui dan dikunci.');
+    }
+
+    public function unapprove(Request $request)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Hanya admin yang dapat membatalkan persetujuan.');
+        }
+
+        $request->validate([
+            'unit_id' => 'required|exists:units,id',
+            'bulan' => 'required|numeric|between:1,12',
+            'tahun' => 'required|numeric|min:2020',
+        ]);
+
+        $approval = LaporanApproval::where([
+            'unit_id' => $request->unit_id,
+            'kategori_id' => self::KATEGORI_ID,
             'bulan' => $request->bulan,
             'tahun' => $request->tahun,
-            'subkategori_id' => $request->subkategori_id,
-        ]);
-        return redirect()->route('laporan.metode-kb.index')->with('success', 'Laporan berhasil diperbarui');
+        ])->first();
+
+        if ($approval) {
+            $approval->delete();
+            return back()->with('success', 'Persetujuan dibatalkan. Periode ini sekarang bisa diubah.');
+        }
+
+        return back()->with('error', 'Data persetujuan tidak ditemukan.');
     }
 }
 </code>
@@ -7252,176 +7340,128 @@ resources/views/admin/laporan/metode-kb.blade.php:
 @extends('layout.app')
 
 @section('content')
-    <div class="container mt-4">
-        <h3 class="mb-4">Laporan Metode KB</h3>
+<div class="container mt-4">
+    <h3 class="mb-4">Laporan Metode KB (Admin)</h3>
 
-        @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+    {{-- Notifikasi --}}
+    @if (session('success'))<div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+    @if (session('error'))<div class="alert alert-danger alert-dismissible fade show" role="alert">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
-        <!-- Form Edit Jumlah -->
-        @isset($editItem)
-            <div class="card mb-4">
-                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong></div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('laporan.metode-kb.update', $editItem->id) }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="mb-3">
-                            <label for="jumlah" class="form-label">Jumlah</label>
-                            <input type="number" name="jumlah" class="form-control" value="{{ $editItem->jumlah }}" required>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Update</button>
-                        <a href="{{ route('laporan.metode-kb.index') }}" class="btn btn-secondary">Batal</a>
-                    </form>
+    {{-- Form Input Admin --}}
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('laporan.metode-kb.store') }}">
+                @csrf
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="unit_id_input" class="form-label">Unit</label>
+                        <select name="unit_id" id="unit_id_input" class="form-select" required>
+                            <option value="">-- Pilih Unit --</option>
+                            @foreach ($units as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->nama }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="bulan_input" class="form-label">Bulan</label>
+                        <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
+                            @foreach (range(1, 12) as $b)
+                                <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tahun_input" class="form-label">Tahun</label>
+                        <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
+                            @for ($t = date('Y'); $t >= 2020; $t--)
+                                <option value="{{ $t }}">{{ $t }}</option>
+                            @endfor
+                        </select>
+                    </div>
                 </div>
-            </div>
-        @endisset
-
-        <!-- Form Input Laporan -->
-        <form method="POST" action="{{ route('laporan.metode-kb.store') }}">
-            @csrf
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="bulan" class="form-label">Bulan</label>
-                    <select name="bulan" id="bulan" class="form-select" required>
-                        <option value="">-- Pilih Bulan --</option>
-                        @foreach (range(1, 12) as $b)
-                            <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="tahun" class="form-label">Tahun</label>
-                    <select name="tahun" id="tahun" class="form-select" required>
-                        <option value="">-- Pilih Tahun --</option>
-                        @for ($t = date('Y'); $t >= 2020; $t--)
-                            <option value="{{ $t }}">{{ $t }}</option>
-                        @endfor
-                    </select>
-                </div>
-            </div>
-
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Subkategori</th>
-                        <th>Jumlah</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($subkategori as $sub)
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Subkategori</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($subkategori as $sub)
                         <tr>
                             <td>{{ $sub->nama }}</td>
                             <td>
-                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control"
-                                    min="0" required>
+                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
                             </td>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-        </form>
-
-        <!-- Tabel Data yang Sudah Diinputkan -->
-        <hr class="my-5">
-        <h5>Data Tersimpan</h5>
-
-        {{-- Fitur Search --}}
-        <form method="GET" action="{{ route('laporan.metode-kb.index') }}" class="row g-3 mb-3">
-            <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Cari Subkategori"
-                    value="{{ request('search') }}">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Cari</button>
-            </div>
-        </form>
-
-        {{-- Fitur Filter --}}
-        <form method="GET" class="mb-3">
-            <div class="row g-2">
-                <div class="col-md-3">
-                    <select name="bulan" class="form-select">
-                        <option value="">-- Filter Bulan --</option>
-                        @foreach (range(1, 12) as $b)
-                            <option value="{{ $b }}" {{ request('bulan') == $b ? 'selected' : '' }}>
-                                {{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}
-                            </option>
                         @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="tahun" class="form-select">
-                        <option value="">-- Filter Tahun --</option>
-                        @for ($y = date('Y'); $y >= 2020; $y--)
-                            <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>
-                                {{ $y }}</option>
-                        @endfor
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                </div>
-            </div>
-        </form>
-
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Subkategori</th>
-                    <th>Jumlah</th>
-                    <th>Bulan</th>
-                    <th>Tahun</th>
-                    <th>Unit</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($data as $i => $row)
-                    @include('laporan.modal.modal-metode-kb')
-                    <tr>
-                        <td>{{ $data->firstItem() + $i }}</td>
-                        <td>{{ $row->subkategori->nama }}</td>
-                        <td>{{ $row->jumlah }}</td>
-                        <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
-                        <td>{{ $row->tahun }}</td>
-                        <td>{{ $row->unit->nama }}</td>
-                        <td>
-                            <a href="{{ route('laporan.metode-kb.edit', $row->id) }}" class="btn btn-sm btn-warning"
-                                data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">
-                                Edit
-                            </a>
-                            {{-- <form action="{{ route('laporan.metode-kb.destroy', $row->id) }}" method="POST"
-                                class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                            </form> --}}
-                        </td>
-                    </tr>
-
-                @empty
-                    <tr>
-                        <td colspan="7" class="text-center">Belum ada data</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $data->links('pagination::bootstrap-5') }}
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-primary mt-3">Simpan Data</button>
+            </form>
         </div>
     </div>
-@endsection
+    
+    <hr class="my-5">
+    <h5 class="fw-bold">Data Tersimpan</h5>
 
+    {{-- Fitur Filter --}}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Filter Data Laporan</p>
+            <form id="filter-form" method="GET" action="{{ route('laporan.metode-kb.index') }}" class="row g-3 align-items-end">
+                <div class="col-md-3"><label>Filter Unit</label><select name="unit_id" class="form-select"><option value="">Semua Unit</option>@foreach ($units as $unit)<option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>{{ $unit->nama }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label>Filter Bulan</label><select name="bulan" class="form-select"><option value="">Semua Bulan</option>@foreach (range(1, 12) as $b)<option value="{{ $b }}" {{ $bulan == $b ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label>Filter Tahun</label><select name="tahun" class="form-select"><option value="">Semua Tahun</option>@for ($y = date('Y'); $y >= 2020; $y--)<option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}</option>@endfor</select></div>
+                <div class="col-md-3"><label>Filter Subkategori</label><select name="subkategori_id" class="form-select"><option value="">Semua Subkategori</option>@foreach ($subkategori as $sub)<option value="{{ $sub->id }}" {{ $subkategoriId == $sub->id ? 'selected' : '' }}>{{ $sub->nama }}</option>@endforeach</select></div>
+                <div class="col-md-12 mt-3"><button type="submit" class="btn btn-primary w-100">Tampilkan</button></div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Container untuk memuat tombol approve DAN tabel data via AJAX --}}
+    <div id="data-content-container">
+        @include('admin.laporan.partials.metode-kb_admin_content')
+    </div>
+</div>
+
+{{-- Skrip AJAX untuk Filter dan Paginasi --}}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    function fetchData(url) {
+        $.ajax({
+            url: url,
+            success: function(data) {
+                // Target container yang berisi tombol approve dan tabel
+                $('#data-content-container').html(data);
+                // Perbarui URL di browser tanpa reload
+                window.history.pushState({ path: url }, '', url);
+            },
+            error: function() {
+                alert('Gagal memuat data. Silakan coba lagi.');
+            }
+        });
+    }
+
+    // Menangani klik pada link paginasi
+    $(document).on('click', '#data-content-container .pagination a', function(event) {
+        event.preventDefault(); 
+        fetchData($(this).attr('href'));
+    });
+
+    // Menangani submit form filter
+    $('#filter-form').on('submit', function(event) {
+        event.preventDefault();
+        var url = $(this).attr('action') + '?' + $(this).serialize();
+        fetchData(url);
+    });
+});
+</script>
+@endsection
 </code>
 
 resources/views/admin/laporan/opname.blade.php:
@@ -8673,60 +8713,48 @@ resources/views/admin/laporan/modal/modal-konsultasi-klinik.blade.php:
 
 resources/views/admin/laporan/modal/modal-metode-kb.blade.php:
 <code>
- <div class="modal fade" id="editModal{{ $row->id }}" tabindex="-1" aria-labelledby="editModalLabel{{ $row->id }}" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="{{ route('laporan.metode-kb.update', $row->id) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editModalLabel{{ $row->id }}">Edit Laporan</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+<div class="modal fade" id="editModal{{ $row->id }}" tabindex="-1" aria-labelledby="editModalLabel{{ $row->id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('laporan.metode-kb.update', $row->id) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel{{ $row->id }}">Edit Laporan Metode KB</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Unit</label>
+                        <input type="text" class="form-control" value="{{ $row->unit->nama }}" disabled>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="subkategori" class="form-label">Subkategori</label>
-                            <select name="subkategori_id" class="form-select" required>
-                                @foreach($subkategori as $sub)
-                                    <option value="{{ $sub->id }}" {{ $row->subkategori_id == $sub->id ? 'selected' : '' }}>
-                                        {{ $sub->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
+                    <div class="mb-3">
+                        <label class="form-label">Subkategori</label>
+                        <input type="text" class="form-control" value="{{ $row->subkategori->nama }}" disabled>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Bulan</label>
+                            <input type="text" class="form-control" value="{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}" disabled>
                         </div>
-                        <div class="mb-3">
-                            <label for="jumlah" class="form-label">Jumlah</label>
-                            <input type="number" name="jumlah" class="form-control" value="{{ $row->jumlah }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="bulan" class="form-label">Bulan</label>
-                            <select name="bulan" class="form-select" required>
-                                @foreach(range(1, 12) as $b)
-                                    <option value="{{ $b }}" {{ $row->bulan == $b ? 'selected' : '' }}>
-                                        {{ DateTime::createFromFormat('!m', $b)->format('F') }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="tahun" class="form-label">Tahun</label>
-                            <select name="tahun" class="form-select" required>
-                                @for($t = date('Y'); $t >= 2020; $t--)
-                                    <option value="{{ $t }}" {{ $row->tahun == $t ? 'selected' : '' }}>{{ $t }}</option>
-                                @endfor
-                            </select>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tahun</label>
+                            <input type="text" class="form-control" value="{{ $row->tahun }}" disabled>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                    <div class="mb-3">
+                        <label for="jumlah" class="form-label">Jumlah</label>
+                        <input type="number" name="jumlah" class="form-control" value="{{ $row->jumlah }}" required>
                     </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
         </div>
     </div>
-</td>
+</div>
 </code>
 
 resources/views/admin/laporan/modal/modal-opname.blade.php:
@@ -9173,6 +9201,78 @@ resources/views/admin/laporan/partials/konsultasi-klinik_admin_content.blade.php
                     </td>
                 </tr>
                 @include('admin.laporan.modal.modal-konsultasi-klinik')
+                @empty
+                <tr><td colspan="8" class="text-center">Belum ada data.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-3">
+    {{ $data->links('pagination::bootstrap-5') }}
+</div>
+</code>
+
+resources/views/admin/laporan/partials/metode-kb_admin_content.blade.php:
+<code>
+{{-- BAGIAN APPROVE/UNAPPROVE --}}
+@if($unitId && $bulan && $tahun)
+    @php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); @endphp
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Persetujuan Periode</p>
+            @if(!$isApproved)
+                <form action="{{ route('laporan.metode-kb.approve') }}" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')">
+                    @csrf
+                    <input type="hidden" name="unit_id" value="{{ $unitId }}">
+                    <input type="hidden" name="bulan" value="{{ $bulan }}">
+                    <input type="hidden" name="tahun" value="{{ $tahun }}">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
+                </form>
+            @else
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                    <span>Periode ini telah disetujui pada {{ $approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i') }}.</span>
+                    <form action="{{ route('laporan.metode-kb.unapprove') }}" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')">
+                        @csrf
+                        <input type="hidden" name="unit_id" value="{{ $unitId }}">
+                        <input type="hidden" name="bulan" value="{{ $bulan }}">
+                        <input type="hidden" name="tahun" value="{{ $tahun }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+                    </form>
+                </div>
+            @endif
+        </div>
+    </div>
+@endif
+
+{{-- BAGIAN TABEL DATA --}}
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr><th>No</th><th>Unit</th><th>Subkategori</th><th>Jumlah</th><th>Bulan</th><th>Tahun</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody>
+                @forelse($data as $i => $row)
+                @php $isRowApproved = isset($approvals[$row->unit_id . '-' . $row->bulan . '-' . $row->tahun]); @endphp
+                <tr>
+                    <td>{{ $data->firstItem() + $i }}</td>
+                    <td>{{ $row->unit->nama }}</td>
+                    <td>{{ $row->subkategori->nama }}</td>
+                    <td>{{ $row->jumlah }}</td>
+                    <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
+                    <td>{{ $row->tahun }}</td>
+                    <td>@if($isRowApproved)<span class="badge bg-success">Disetujui</span>@else<span class="badge bg-warning text-dark">Menunggu</span>@endif</td>
+                    <td class="d-flex gap-2">
+                        <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">Edit</a>
+                        <form action="{{ route('laporan.metode-kb.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                        </form>
+                    </td>
+                </tr>
+                @include('admin.laporan.modal.modal-metode-kb')
                 @empty
                 <tr><td colspan="8" class="text-center">Belum ada data.</td></tr>
                 @endforelse
@@ -14968,6 +15068,134 @@ storage/framework/views/032432a809234535e69db62b8aa65f32.php:
 </div><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN1/resources/views/admin/laporan/partials/cuti-sakit_admin_content.blade.php ENDPATH**/ ?>
 </code>
 
+storage/framework/views/045436acbf7bf509f94435444621a330.php:
+<code>
+<?php $__env->startSection('content'); ?>
+<div class="container mt-4">
+    <h3 class="mb-4">Laporan Metode KB (Admin)</h3>
+
+    
+    <?php if(session('success')): ?><div class="alert alert-success alert-dismissible fade show" role="alert"><?php echo e(session('success')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+    <?php if(session('error')): ?><div class="alert alert-danger alert-dismissible fade show" role="alert"><?php echo e(session('error')); ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div><?php endif; ?>
+
+    
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
+        <div class="card-body">
+            <form method="POST" action="<?php echo e(route('laporan.metode-kb.store')); ?>">
+                <?php echo csrf_field(); ?>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="unit_id_input" class="form-label">Unit</label>
+                        <select name="unit_id" id="unit_id_input" class="form-select" required>
+                            <option value="">-- Pilih Unit --</option>
+                            <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($unit->id); ?>"><?php echo e($unit->nama); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="bulan_input" class="form-label">Bulan</label>
+                        <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
+                            <?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($b); ?>"><?php echo e(DateTime::createFromFormat('!m', $b)->format('F')); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tahun_input" class="form-label">Tahun</label>
+                        <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
+                            <?php for($t = date('Y'); $t >= 2020; $t--): ?>
+                                <option value="<?php echo e($t); ?>"><?php echo e($t); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Subkategori</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $__currentLoopData = $subkategori; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <tr>
+                            <td><?php echo e($sub->nama); ?></td>
+                            <td>
+                                <input type="number" name="jumlah[<?php echo e($sub->id); ?>]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
+                            </td>
+                        </tr>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-primary mt-3">Simpan Data</button>
+            </form>
+        </div>
+    </div>
+    
+    <hr class="my-5">
+    <h5 class="fw-bold">Data Tersimpan</h5>
+
+    
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Filter Data Laporan</p>
+            <form id="filter-form" method="GET" action="<?php echo e(route('laporan.metode-kb.index')); ?>" class="row g-3 align-items-end">
+                <div class="col-md-3"><label>Filter Unit</label><select name="unit_id" class="form-select"><option value="">Semua Unit</option><?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($unit->id); ?>" <?php echo e($unitId == $unit->id ? 'selected' : ''); ?>><?php echo e($unit->nama); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></div>
+                <div class="col-md-3"><label>Filter Bulan</label><select name="bulan" class="form-select"><option value="">Semua Bulan</option><?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($b); ?>" <?php echo e($bulan == $b ? 'selected' : ''); ?>><?php echo e(\Carbon\Carbon::create()->month($b)->translatedFormat('F')); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></div>
+                <div class="col-md-3"><label>Filter Tahun</label><select name="tahun" class="form-select"><option value="">Semua Tahun</option><?php for($y = date('Y'); $y >= 2020; $y--): ?><option value="<?php echo e($y); ?>" <?php echo e($tahun == $y ? 'selected' : ''); ?>><?php echo e($y); ?></option><?php endfor; ?></select></div>
+                <div class="col-md-3"><label>Filter Subkategori</label><select name="subkategori_id" class="form-select"><option value="">Semua Subkategori</option><?php $__currentLoopData = $subkategori; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($sub->id); ?>" <?php echo e($subkategoriId == $sub->id ? 'selected' : ''); ?>><?php echo e($sub->nama); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?></select></div>
+                <div class="col-md-12 mt-3"><button type="submit" class="btn btn-primary w-100">Tampilkan</button></div>
+            </form>
+        </div>
+    </div>
+
+    
+    <div id="data-content-container">
+        <?php echo $__env->make('admin.laporan.partials.metode-kb_admin_content', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    function fetchData(url) {
+        $.ajax({
+            url: url,
+            success: function(data) {
+                // Target container yang berisi tombol approve dan tabel
+                $('#data-content-container').html(data);
+                // Perbarui URL di browser tanpa reload
+                window.history.pushState({ path: url }, '', url);
+            },
+            error: function() {
+                alert('Gagal memuat data. Silakan coba lagi.');
+            }
+        });
+    }
+
+    // Menangani klik pada link paginasi
+    $(document).on('click', '#data-content-container .pagination a', function(event) {
+        event.preventDefault(); 
+        fetchData($(this).attr('href'));
+    });
+
+    // Menangani submit form filter
+    $('#filter-form').on('submit', function(event) {
+        event.preventDefault();
+        var url = $(this).attr('action') + '?' + $(this).serialize();
+        fetchData(url);
+    });
+});
+</script>
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layout.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN1/resources/views/admin/laporan/metode-kb.blade.php ENDPATH**/ ?>
+</code>
+
 storage/framework/views/06fb8a2b0691cea841b28a7a96ccfb93.php:
 <code>
 <?php $__env->startSection('content'); ?>
@@ -19784,6 +20012,79 @@ storage/framework/views/ab97cf7de2ff0123cd069294d135d163.php:
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('layout.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN/resources/views/admin/laporan/absensi-dokter-honorer.blade.php ENDPATH**/ ?>
+</code>
+
+storage/framework/views/ae0c934dcbe4f12629dad51fbd43126b.php:
+<code>
+
+<?php if($unitId && $bulan && $tahun): ?>
+    <?php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); ?>
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Persetujuan Periode</p>
+            <?php if(!$isApproved): ?>
+                <form action="<?php echo e(route('laporan.metode-kb.approve')); ?>" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>">
+                    <input type="hidden" name="bulan" value="<?php echo e($bulan); ?>">
+                    <input type="hidden" name="tahun" value="<?php echo e($tahun); ?>">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
+                </form>
+            <?php else: ?>
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                    <span>Periode ini telah disetujui pada <?php echo e($approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i')); ?>.</span>
+                    <form action="<?php echo e(route('laporan.metode-kb.unapprove')); ?>" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>">
+                        <input type="hidden" name="bulan" value="<?php echo e($bulan); ?>">
+                        <input type="hidden" name="tahun" value="<?php echo e($tahun); ?>">
+                        <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+                    </form>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
+
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr><th>No</th><th>Unit</th><th>Subkategori</th><th>Jumlah</th><th>Bulan</th><th>Tahun</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody>
+                <?php $__empty_1 = true; $__currentLoopData = $data; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                <?php $isRowApproved = isset($approvals[$row->unit_id . '-' . $row->bulan . '-' . $row->tahun]); ?>
+                <tr>
+                    <td><?php echo e($data->firstItem() + $i); ?></td>
+                    <td><?php echo e($row->unit->nama); ?></td>
+                    <td><?php echo e($row->subkategori->nama); ?></td>
+                    <td><?php echo e($row->jumlah); ?></td>
+                    <td><?php echo e(DateTime::createFromFormat('!m', $row->bulan)->format('F')); ?></td>
+                    <td><?php echo e($row->tahun); ?></td>
+                    <td><?php if($isRowApproved): ?><span class="badge bg-success">Disetujui</span><?php else: ?><span class="badge bg-warning text-dark">Menunggu</span><?php endif; ?></td>
+                    <td class="d-flex gap-2">
+                        <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal<?php echo e($row->id); ?>">Edit</a>
+                        <form action="<?php echo e(route('laporan.metode-kb.destroy', $row->id)); ?>" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')">
+                            <?php echo csrf_field(); ?>
+                            <?php echo method_field('DELETE'); ?>
+                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php echo $__env->make('admin.laporan.modal.modal-metode-kb', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                <tr><td colspan="8" class="text-center">Belum ada data.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-3">
+    <?php echo e($data->links('pagination::bootstrap-5')); ?>
+
+</div><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN1/resources/views/admin/laporan/partials/metode-kb_admin_content.blade.php ENDPATH**/ ?>
 </code>
 
 storage/framework/views/ae217bd5496e72aef83085662d3d0459.php:
