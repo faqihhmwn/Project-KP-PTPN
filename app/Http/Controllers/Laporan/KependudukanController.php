@@ -122,7 +122,7 @@ class KependudukanController extends Controller
             }
         }
 
-        return back()->with('success', 'Laporan berhasil disimpan.');
+        return back()->with('success', 'Laporan berhasil disimpan atau diperbarui.');
     }
 
     public function update(Request $request, $id)
