@@ -108,7 +108,7 @@
             <thead>
                 <tr>
                     <th rowspan="2" class="text-center align-middle">Bulan</th>
-                    <th rowspan="2" class="text-center align-middle">DANA MASUK</th>
+                    <th rowspan="2" class="bg-info text-dark text-center align-middle">DANA MASUK</th>
                     <th colspan="{{ $kategori->count() }}" class="group-header text-center">PEMBAYARAN</th>
                     <th rowspan="2" class="bg-warning text-dark text-center align-middle">Total Pembayaran Menggunakan Biaya Kapitasi</th>
                     <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
@@ -154,7 +154,7 @@
                 <tr>
                     <td class="fw-bold">TOTAL BIAYA</td>
                     {{-- Total Dana Masuk --}}
-                    <td class="bg-primary text-white fw-bold text-end">
+                    <td class="bg-info text-dark fw-bold text-end">
                         {{ number_format($annualTotals['total_dana_masuk'] ?? 0, 0, ',', '.') }}
                     </td>
                     @foreach ($kategori as $k)
