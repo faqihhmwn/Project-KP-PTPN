@@ -49,6 +49,34 @@
     </form>
 
     @if ($selectedTahun)
+        <div class="row mb-4">
+            {{-- CARD: Sisa Saldo Awal Tahun --}}
+            <div class="col-md-6">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">Sisa Saldo Awal Tahun</h5>
+                        <p class="card-text h4">{{ number_format($saldoAwalTahun ?? 0, 0, ',', '.') }}</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editSaldoAwalModal">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- CARD: Sisa Saldo Saat Ini --}}
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">Sisa Saldo Saat Ini</h5>
+                        <p class="card-text h4">{{ number_format($saldoSaatIni ?? 0, 0, ',', '.') }}</p>
+                        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#rincianSaldoModal">
+                            Lihat Rincian
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('rekap.kapitasi.store') }}" id="mainRekapForm">
             @csrf
             <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
@@ -230,8 +258,70 @@
                     </div>
                 </div>
             @endif
-        @endforeach
-    </div>
+
+            {{-- Modal Edit Saldo Awal --}}
+            @if ($selectedTahun)
+                <div class="modal fade" id="editSaldoAwalModal" tabindex="-1" aria-labelledby="editSaldoAwalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        {{-- <form method="POST" action="{{ route('rekap.kapitasi.update', ['tahun' => $selectedTahun]) }}"> --}}
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="editSaldoAwalLabel">Edit Sisa Saldo Awal Tahun {{ $selectedTahun }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <label for="saldo_awal_tahun" class="form-label">Saldo Awal Tahun</label>
+                                    <input type="text" class="form-control rupiah-input" name="saldo_awal_tahun" id="saldo_awal_tahun" value="{{ $saldoAwalTahun ?? 0 }}" required>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Simpan</button>
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            {{-- Modal Rincian Saldo Bulanan --}}
+                <div class="modal fade" id="rincianSaldoModal" tabindex="-1" aria-labelledby="rincianSaldoLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="rincianSaldoLabel">Rincian Sisa Saldo per Bulan - {{ $selectedTahun }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                            </div>
+                            <div class="modal-body">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Bulan</th>
+                                            <th>Sisa Saldo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{-- @forelse ($sisaSaldoPerBulan as $item) --}}
+                                            <tr>
+                                                {{-- <td>{{ $item['nama_bulan'] }}</td>
+                                                <td>{{ number_format($item['sisa_saldo'], 0, ',', '.') }}</td> --}}
+                                            </tr>
+                                        {{-- @empty --}}
+                                            <tr>
+                                                <td colspan="2" class="text-center">Belum ada data sisa saldo per bulan.</td>
+                                            </tr>
+                                        {{-- @endforelse --}}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+    @endforeach
 @endsection
 
 

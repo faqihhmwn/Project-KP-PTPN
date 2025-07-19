@@ -88,12 +88,8 @@ class KapitasiController extends Controller
             'tahun' => 'required|integer|min:2000|max:' . date('Y'),
             'total_biaya_kapitasi' => 'required|array',
             'total_biaya_kapitasi.*' => 'required|numeric|min:0',
-        ]);
-
-        $request->validate([
-            'total_biaya_kapitasi' => 'required|array',
-            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
             'total_dana_masuk' => 'required|numeric|min:0', // Tambahan validasi
+
         ]);
 
         $tahun = $request->tahun;
@@ -144,6 +140,13 @@ class KapitasiController extends Controller
             'total_biaya_kapitasi' => $totalBiayaKapitasiBulanIni,
             'validasi' => null,
         ]);
+
+        DanaMasuk::updateOrCreate([
+            'tahun' => $tahun,
+            'bulan_id' => $bulanId,
+            ], [
+                'total_dana_masuk' => $request->total_dana_masuk,
+            ]);
 
         return redirect()->route('rekap.kapitasi.index', [
             'tahun' => $tahun,
