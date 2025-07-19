@@ -14,12 +14,6 @@ class DanaMasuk extends Model
         'total_dana_masuk',
     ];
 
-    // Relasi ke SisaSaldoKapitasi
-    public function sisaSaldoKapitasi()
-    {
-        return $this->hasOne(SisaSaldoKapitasi::class);
-    }
-
         public function bulan()
     {
         return $this->belongsTo(Bulan::class);

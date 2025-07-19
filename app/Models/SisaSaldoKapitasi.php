@@ -11,8 +11,6 @@ class SisaSaldoKapitasi extends Model
     protected $fillable = [
         'tahun',
         'bulan_id',
-        'dana_masuk_id',
-        'rekap_dana_kapitasi_id',
         'saldo_awal_tahun',
         'sisa_saldo',
     ];
@@ -21,15 +19,4 @@ class SisaSaldoKapitasi extends Model
     {
         return $this->belongsTo(Bulan::class);
     }
-
-        public function danaMasuk()
-    {
-        return $this->belongsTo(DanaMasuk::class);
-    }
-
-        public function rekapDanaKapitasi()
-    {
-        return $this->belongsTo(RekapDanaKapitasi::class);
-    }
-
 }

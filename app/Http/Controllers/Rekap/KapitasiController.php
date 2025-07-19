@@ -40,6 +40,9 @@ class KapitasiController extends Controller
             foreach ($rawData as $row) {
                 $bulanId = $row->bulan_id;
                 $kategoriId = $row->kategori_kapitasi_id;
+                $totalDanaMasuk = DanaMasuk::where('tahun', $selectedTahun)
+                    ->where('bulan_id', $bulanId)
+                    ->value('total_dana_masuk');
 
                 if (!isset($grouped[$bulanId])) {
                     $grouped[$bulanId] = [
@@ -49,7 +52,8 @@ class KapitasiController extends Controller
                         'tahun' => $row->tahun,
                         'validasi' => null,
                         'kategori' => [],
-                        'total_biaya_kapitasi' => 0
+                        'total_biaya_kapitasi' => 0,
+                        'total_dana_masuk' => $totalDanaMasuk
                     ];
                 }
 
@@ -72,6 +76,7 @@ class KapitasiController extends Controller
             // Penting: Setelah loop selesai, urutkan $grouped berdasarkan bulan_id
             }
             ksort($grouped);
+            $annualTotals['total_dana_masuk'] = DanaMasuk::where('tahun', $selectedTahun)->sum('total_dana_masuk');
         }
         return view('rekap.kapitasi', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals'));
 }
@@ -84,6 +89,13 @@ class KapitasiController extends Controller
             'total_biaya_kapitasi' => 'required|array',
             'total_biaya_kapitasi.*' => 'required|numeric|min:0',
         ]);
+
+        $request->validate([
+            'total_biaya_kapitasi' => 'required|array',
+            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
+            'total_dana_masuk' => 'required|numeric|min:0', // Tambahan validasi
+        ]);
+
         $tahun = $request->tahun;
         $bulanId = $request->bulan_id;
 
@@ -139,7 +151,6 @@ class KapitasiController extends Controller
         ])->with('success', '✅ Data berhasil disimpan!');
     }
 
-    // Perbaikan: Ubah parameter $id menjadi $tahun dan $bulan_id
     public function update(Request $request, $tahun, $bulan_id)
     {
         $request->validate([
@@ -185,6 +196,16 @@ class KapitasiController extends Controller
             ],
             [
                 'total_biaya_kapitasi' => $totalBiayaKapitasiBulanIni,
+            ]
+        );
+
+        DanaMasuk::updateOrCreate(
+            [
+                'tahun' => $tahun,
+                'bulan_id' => $bulan_id,
+            ],
+            [
+                'total_dana_masuk' => $request->total_dana_masuk,
             ]
         );
 

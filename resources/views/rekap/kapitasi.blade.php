@@ -66,6 +66,20 @@
         </div>
         @endif
 
+        {{-- Input Total Dana Masuk --}}
+        <div class="mb-4">
+            <label for="total_dana_masuk" class="form-label fw-bold">Total Dana Masuk (Rp)</label>
+            <input type="text"
+                name="total_dana_masuk"
+                id="total_dana_masuk"
+                class="form-control rupiah-input"
+                required
+                pattern="[0-9]*"
+                min="0"
+                value="{{ old('total_dana_masuk') }}">
+        </div>
+
+
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -94,6 +108,7 @@
             <thead>
                 <tr>
                     <th rowspan="2" class="text-center align-middle">Bulan</th>
+                    <th rowspan="2" class="text-center align-middle">DANA MASUK</th>
                     <th colspan="{{ $kategori->count() }}" class="group-header text-center">PEMBAYARAN</th>
                     <th rowspan="2" class="bg-warning text-dark text-center align-middle">Total Pembayaran Menggunakan Biaya Kapitasi</th>
                     <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
@@ -109,6 +124,7 @@
                 @foreach ($grouped as $row)
                         <tr>
                             <td>{{ $row['bulan'] }} {{ $row['tahun'] }}</td>
+                            <td class="bg-primary text-white text-end">{{ number_format($row['total_dana_masuk'] ?? 0, 0, ',', '.') }}</td>
                             @foreach ($kategori as $k)
                                 <td>{{ number_format($row['kategori'][$k->id] ?? 0, 0, ',', '.') }}</td>
                             @endforeach
@@ -137,6 +153,10 @@
                 {{-- Baris: TOTAL 1 TAHUN --}}
                 <tr>
                     <td class="fw-bold">TOTAL BIAYA</td>
+                    {{-- Total Dana Masuk --}}
+                    <td class="bg-primary text-white fw-bold text-end">
+                        {{ number_format($annualTotals['total_dana_masuk'] ?? 0, 0, ',', '.') }}
+                    </td>
                     @foreach ($kategori as $k)
                         <td class="fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
                     @endforeach
@@ -163,6 +183,11 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Dana Masuk</label>
+                                        <input type="text" name="total_dana_masuk" class="form-control rupiah-input" min="0" pattern="[0-9]*" 
+                                            value="{{ number_format($row['total_dana_masuk'] ?? 0, 0, ',', '.') }}" required>
+                                    </div>
                                     @foreach ($kategori as $k)
                                         <div class="mb-3">
                                             <label class="form-label">{{ $k->nama }}</label>
