@@ -1,173 +1,125 @@
 @extends('layout.app')
 
 @section('content')
-    <div class="container mt-4">
-        <h3 class="mb-4">Laporan Absensi Dokter Honorer</h3>
+<div class="container mt-4">
+    <h3 class="mb-4">Laporan Absensi Dokter Honorer (Admin)</h3>
 
-        @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+    {{-- Notifikasi --}}
+    @if (session('success'))<div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+    @if (session('error'))<div class="alert alert-danger alert-dismissible fade show" role="alert">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
-        <!-- Form Edit Jumlah -->
-        @isset($editItem)
-            <div class="card mb-4">
-                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong></div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('laporan.absensi-dokter-honorer.update', $editItem->id) }}">
-                        @csrf
-                        @method('PUT')
-
-                        <div class="mb-3">
-                            <label for="jumlah" class="form-label">Jumlah</label>
-                            <input type="number" name="jumlah" class="form-control" value="{{ $editItem->jumlah }}" required>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Update</button>
-                        <a href="{{ route('laporan.absensi-dokter-honorer.index') }}" class="btn btn-secondary">Batal</a>
-                    </form>
+    {{-- Form Input Admin --}}
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Input Data Atas Nama Unit</div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('laporan.absensi-dokter-honorer.store') }}">
+                @csrf
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="unit_id_input" class="form-label">Unit</label>
+                        <select name="unit_id" id="unit_id_input" class="form-select" required>
+                            <option value="">-- Pilih Unit --</option>
+                            @foreach ($units as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->nama }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="bulan_input" class="form-label">Bulan</label>
+                        <select name="bulan" id="bulan_input" class="form-select" required>
+                            <option value="">-- Pilih Bulan --</option>
+                            @foreach (range(1, 12) as $b)
+                                <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tahun_input" class="form-label">Tahun</label>
+                        <select name="tahun" id="tahun_input" class="form-select" required>
+                            <option value="">-- Pilih Tahun --</option>
+                            @for ($t = date('Y'); $t >= 2020; $t--)
+                                <option value="{{ $t }}">{{ $t }}</option>
+                            @endfor
+                        </select>
+                    </div>
                 </div>
-            </div>
-        @endisset
-
-        <!-- Form Input Laporan -->
-        <form method="POST" action="{{ route('laporan.absensi-dokter-honorer.store') }}">
-            @csrf
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="bulan" class="form-label">Bulan</label>
-                    <select name="bulan" id="bulan" class="form-select" required>
-                        <option value="">-- Pilih Bulan --</option>
-                        @foreach (range(1, 12) as $b)
-                            <option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="tahun" class="form-label">Tahun</label>
-                    <select name="tahun" id="tahun" class="form-select" required>
-                        <option value="">-- Pilih Tahun --</option>
-                        @for ($t = date('Y'); $t >= 2020; $t--)
-                            <option value="{{ $t }}">{{ $t }}</option>
-                        @endfor
-                    </select>
-                </div>
-            </div>
-
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Subkategori</th>
-                        <th>Jumlah</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($subkategori as $sub)
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Subkategori</th>
+                            <th>Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($subkategori as $sub)
                         <tr>
                             <td>{{ $sub->nama }}</td>
                             <td>
-                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control"
-                                    min="0" required>
+                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
                             </td>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-        </form>
-
-        <!-- Tabel Data yang Sudah Diinputkan -->
-        <hr class="my-5">
-        <h5>Data Tersimpan</h5>
-
-        {{-- Fitur Search --}}
-        <form method="GET" action="{{ route('laporan.absensi-dokter-honorer.index') }}" class="row g-3 mb-3">
-            <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Cari Subkategori"
-                    value="{{ request('search') }}">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Cari</button>
-            </div>
-        </form>
-
-        {{-- Fitur Filter --}}
-        <form method="GET" class="mb-3">
-            <div class="row g-2">
-                <div class="col-md-3">
-                    <select name="bulan" class="form-select">
-                        <option value="">-- Filter Bulan --</option>
-                        @foreach (range(1, 12) as $b)
-                            <option value="{{ $b }}" {{ request('bulan') == $b ? 'selected' : '' }}>
-                                {{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}
-                            </option>
                         @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="tahun" class="form-select">
-                        <option value="">-- Filter Tahun --</option>
-                        @for ($y = date('Y'); $y >= 2020; $y--)
-                            <option value="{{ $y }}" {{ request('tahun') == $y ? 'selected' : '' }}>
-                                {{ $y }}</option>
-                        @endfor
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                </div>
-            </div>
-        </form>
-
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Subkategori</th>
-                    <th>Jumlah</th>
-                    <th>Bulan</th>
-                    <th>Tahun</th>
-                    <th>Unit</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($data as $i => $row)
-                    @include('laporan.modal.modal-absensi-dokter-honorer')
-                    <tr>
-                        <td>{{ $data->firstItem() + $i }}</td>
-                        <td>{{ $row->subkategori->nama }}</td>
-                        <td>{{ $row->jumlah }}</td>
-                        <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
-                        <td>{{ $row->tahun }}</td>
-                        <td>{{ $row->unit->nama }}</td>
-                        <td>
-                            <a href="{{ route('laporan.absensi-dokter-honorer.edit', $row->id) }}"
-                                class="btn btn-sm btn-warning" data-bs-toggle="modal"
-                                data-bs-target="#editModal{{ $row->id }}">
-                                Edit
-                            </a>
-                            {{-- <form action="{{ route('laporan.absensi-dokter-honorer.destroy', $row->id) }}" method="POST"
-                                class="d-inline" onsubmit="return confirm('Yakin ingin menghapus data ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                            </form> --}}
-                        </td>
-                    </tr>
-
-                @empty
-                    <tr>
-                        <td colspan="7" class="text-center">Belum ada data</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $data->links('pagination::bootstrap-5') }}
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-primary mt-3">Simpan Data</button>
+            </form>
         </div>
     </div>
+    
+    <hr class="my-5">
+    <h5 class="fw-bold">Data Tersimpan</h5>
+
+    {{-- Fitur Filter --}}
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Filter Data Laporan</p>
+            <form id="filter-form" method="GET" action="{{ route('laporan.absensi-dokter-honorer.index') }}" class="row g-3 align-items-end">
+                <div class="col-md-3"><label>Filter Unit</label><select name="unit_id" class="form-select"><option value="">Semua Unit</option>@foreach ($units as $unit)<option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>{{ $unit->nama }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label>Filter Bulan</label><select name="bulan" class="form-select"><option value="">Semua Bulan</option>@foreach (range(1, 12) as $b)<option value="{{ $b }}" {{ $bulan == $b ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label>Filter Tahun</label><select name="tahun" class="form-select"><option value="">Semua Tahun</option>@for ($y = date('Y'); $y >= 2020; $y--)<option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}</option>@endfor</select></div>
+                <div class="col-md-3"><label>Filter Subkategori</label><select name="subkategori_id" class="form-select"><option value="">Semua Subkategori</option>@foreach ($subkategori as $sub)<option value="{{ $sub->id }}" {{ $subkategoriId == $sub->id ? 'selected' : '' }}>{{ $sub->nama }}</option>@endforeach</select></div>
+                <div class="col-md-12 mt-3"><button type="submit" class="btn btn-primary w-100">Tampilkan</button></div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Container untuk memuat tombol approve DAN tabel data via AJAX --}}
+    <div id="data-content-container">
+        @include('admin.laporan.partials.absensi-dokter-honorer_admin_content')
+    </div>
+</div>
+
+{{-- Skrip AJAX untuk Filter dan Paginasi --}}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    function fetchData(url) {
+        $.ajax({
+            url: url,
+            success: function(data) {
+                // Target container yang berisi tombol approve dan tabel
+                $('#data-content-container').html(data);
+                // Perbarui URL di browser tanpa reload
+                window.history.pushState({ path: url }, '', url);
+            },
+            error: function() {
+                alert('Gagal memuat data. Silakan coba lagi.');
+            }
+        });
+    }
+
+    // Menangani klik pada link paginasi
+    $(document).on('click', '#data-content-container .pagination a', function(event) {
+        event.preventDefault(); 
+        fetchData($(this).attr('href'));
+    });
+
+    // Menangani submit form filter
+    $('#filter-form').on('submit', function(event) {
+        event.preventDefault();
+        var url = $(this).attr('action') + '?' + $(this).serialize();
+        fetchData(url);
+    });
+});
+</script>
 @endsection
