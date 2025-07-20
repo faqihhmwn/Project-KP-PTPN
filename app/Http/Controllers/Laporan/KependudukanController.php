@@ -34,21 +34,17 @@ class KependudukanController extends Controller
         if ($is_admin) {
             if ($unitId) $query->where('unit_id', $unitId);
         } else {
+            // User biasa selalu difilter berdasarkan unitnya
             $query->where('unit_id', $authUser->unit_id);
         }
 
-        if ($subkategoriId) {
-            $query->where('subkategori_id', $subkategoriId);
-        }
-        
+        if ($subkategoriId) $query->where('subkategori_id', $subkategoriId);
         if ($bulan) $query->where('bulan', $bulan);
         if ($tahun) $query->where('tahun', $tahun);
 
-        // ==== PERUBAHAN DI SINI: Tambahkan orderBy untuk subkategori_id ====
         $data = $query->orderBy('tahun', 'desc')
                       ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-                      ->orderBy('unit_id')
-                      ->orderBy('subkategori_id', 'asc') // <-- BARIS INI DITAMBAHKAN
+                      ->orderBy('subkategori_id', 'asc')
                       ->paginate(10)
                       ->appends($request->query());
             
@@ -56,7 +52,7 @@ class KependudukanController extends Controller
             return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
         });
 
-        $viewData = compact('data', 'subkategori', 'units', 'unitId', 'bulan', 'tahun', 'approvals', 'subkategoriId');
+        $viewData = compact('data', 'subkategori', 'units', 'unitId', 'bulan', 'tahun', 'approvals', 'subkategoriId', 'authUser');
 
         if ($request->ajax()) {
             if ($is_admin) {
