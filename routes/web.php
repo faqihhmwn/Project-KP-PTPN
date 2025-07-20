@@ -21,6 +21,10 @@ use App\Http\Controllers\Laporan\AbsensiDokterHonorController;
 use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\RekapitulasiObatController;
+use App\Http\Controllers\RekapitulasiExportController;
+
+// Route untuk export obat
+Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export');
 
 Route::get('/', function () {
     return redirect('/dashboard');
