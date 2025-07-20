@@ -42,13 +42,14 @@ class KategoriKhususController extends Controller
                       ->paginate(10)
                       ->appends($request->query());
 
-        $viewData = compact('data', 'subkategoris', 'units', 'unitId', 'status', 'searchName');
+        $viewData = compact('data', 'subkategoris', 'units', 'unitId', 'status', 'searchName', 'authUser');
 
         if ($request->ajax()) {
             if ($is_admin) {
                 return view('admin.laporan.partials.kategori-khusus_admin_content', $viewData)->render();
+            } else {
+                return view('laporan.partials.kategori-khusus_table', $viewData)->render();
             }
-            // Partial view untuk user bisa ditambahkan di sini jika perlu
         }
         
         if ($is_admin) {
@@ -67,11 +68,13 @@ class KategoriKhususController extends Controller
             'status' => 'required|string|max:255',
             'jenis_disabilitas' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:255',
-            'bulan' => 'required|integer|min:1|max:12',
-            'tahun' => 'required|integer|min:2020|max:' . date('Y'),
         ];
+
+        // Admin masih perlu memilih unit
         if ($is_admin) {
             $rules['unit_id'] = 'required|exists:units,id';
+            $rules['bulan'] = 'required|integer|min:1|max:12';
+            $rules['tahun'] = 'required|integer|min:2020|max:' . date('Y');
         }
         $request->validate($rules);
         
@@ -84,8 +87,8 @@ class KategoriKhususController extends Controller
             'subkategori_id' => $request->subkategori_id,
             'unit_id' => $unitId,
             'user_id' => $userId,
-            'bulan' => $request->bulan,
-            'tahun' => $request->tahun,
+            'bulan' => $is_admin ? $request->bulan : now()->month, // Ambil bulan saat ini untuk user
+            'tahun' => $is_admin ? $request->tahun : now()->year, // Ambil tahun saat ini untuk user
             'nama' => $request->nama,
             'status' => $request->status,
             'jenis_disabilitas' => $request->jenis_disabilitas,
