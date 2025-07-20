@@ -37,17 +37,13 @@ class PesertaKbController extends Controller
             $query->where('unit_id', $authUser->unit_id);
         }
 
-        if ($subkategoriId) {
-            $query->where('subkategori_id', $subkategoriId);
-        }
-        
+        if ($subkategoriId) $query->where('subkategori_id', $subkategoriId);
         if ($bulan) $query->where('bulan', $bulan);
         if ($tahun) $query->where('tahun', $tahun);
 
         $data = $query->orderBy('tahun', 'desc')
                       ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-                      ->orderBy('unit_id')
-                      ->orderBy('subkategori_id', 'asc') // Urutkan berdasarkan subkategori
+                      ->orderBy('subkategori_id', 'asc')
                       ->paginate(10)
                       ->appends($request->query());
             
@@ -55,7 +51,7 @@ class PesertaKbController extends Controller
             return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
         });
 
-        $viewData = compact('data', 'subkategori', 'units', 'unitId', 'bulan', 'tahun', 'approvals', 'subkategoriId');
+        $viewData = compact('data', 'subkategori', 'units', 'unitId', 'bulan', 'tahun', 'approvals', 'subkategoriId', 'authUser');
 
         if ($request->ajax()) {
             if ($is_admin) {
