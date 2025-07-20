@@ -45,6 +45,42 @@ class Obat extends Model
         });
     }
 
+    // Relationship dengan rekapitulasi obat
+    public function rekapitulasiObat()
+    {
+        return $this->hasMany(RekapitulasiObat::class);
+    }
+
+    // Method untuk mendapatkan stok awal berdasarkan bulan dan tahun
+    public function getStokAwalAttribute()
+    {
+        $now = Carbon::now();
+        
+        // Ambil rekapitulasi terakhir dari bulan sebelumnya
+        $rekapBulanSebelumnya = $this->rekapitulasiObat()
+            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
+            ->whereYear('tanggal', $now->copy()->subMonth()->year)
+            ->latest('tanggal')
+            ->first();
+
+        // Jika ada data bulan sebelumnya, gunakan sisa stoknya
+        // Jika tidak, gunakan stok awal dari database
+        return $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $this->attributes['stok_awal'];
+    }
+
+    // Method untuk mendapatkan sisa stok berdasarkan rekapitulasi terbaru
+    public function getStokSisaAttribute()
+    {
+        // Ambil rekapitulasi paling baru
+        $rekapTerbaru = $this->rekapitulasiObat()
+            ->latest('tanggal')
+            ->first();
+
+        // Jika ada rekapitulasi, gunakan sisa stok dari rekapitulasi
+        // Jika tidak ada, gunakan stok awal
+        return $rekapTerbaru ? $rekapTerbaru->sisa_stok : $this->getStokAwalAttribute();
+    }
+
     // Method untuk update stok
     public function updateStok()
     {

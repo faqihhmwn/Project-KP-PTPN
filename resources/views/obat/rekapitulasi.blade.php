@@ -227,18 +227,18 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('obat.export') }}" method="GET">
+            <form action="{{ route('obat.export') }}" method="GET" id="exportForm" target="_blank">
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <label for="start_date" class="form-label">Tanggal Mulai</label>
                             <input type="date" class="form-control" id="start_date" name="start_date" 
-                                   value="{{ \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}" required>
+                                   value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->startOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-6">
                             <label for="end_date" class="form-label">Tanggal Selesai</label>
                             <input type="date" class="form-control" id="end_date" name="end_date" 
-                                   value="{{ \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}" required>
+                                   value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->endOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}" required>
                         </div>
                     </div>
                     <div class="row mt-3">

@@ -89,16 +89,25 @@
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <div class="card">
-                                <div class="card-header bg-warning text-white">
-                                    <h6><i class="fas fa-calendar-alt"></i> Penggunaan Bulan Ini</h6>
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0"><i class="fas fa-calendar-alt"></i> Penggunaan Bulan Ini</h6>
                                 </div>
                                 <div class="card-body">
-                                    @php
-                                        $totalBulanIni = $bulanIni->where('tipe_transaksi', 'keluar')->sum('jumlah_keluar');
-                                        $biayaBulanIni = $totalBulanIni * $obat->harga_satuan;
-                                    @endphp
-                                    <h4 class="text-warning">{{ number_format($totalBulanIni) }} {{ $obat->satuan }}</h4>
-                                    <p class="mb-0">Total Biaya: Rp {{ number_format($biayaBulanIni, 0, ',', '.') }}</p>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h4 class="text-warning mb-0">{{ number_format($totalPenggunaanBulanIni) }} {{ $obat->satuan }}</h4>
+                                            <small class="text-muted">Jumlah Penggunaan</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <h5 class="mb-0">Rp {{ number_format($totalBiayaBulanIni, 0, ',', '.') }}</h5>
+                                            <small class="text-muted">Total Biaya</small>
+                                        </div>
+                                    </div>
+                                    @if($lastUpdateBulanIni)
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> Input terakhir: {{ $lastUpdateBulanIni->created_at->format('d M Y H:i') }}
+                                        </small>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -106,15 +115,24 @@
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header bg-secondary text-white">
-                                    <h6><i class="fas fa-history"></i> Penggunaan Bulan Lalu</h6>
+                                    <h6 class="mb-0"><i class="fas fa-history"></i> Penggunaan Bulan Lalu</h6>
                                 </div>
                                 <div class="card-body">
-                                    @php
-                                        $totalBulanLalu = $bulanLalu->where('tipe_transaksi', 'keluar')->sum('jumlah_keluar');
-                                        $biayaBulanLalu = $totalBulanLalu * $obat->harga_satuan;
-                                    @endphp
-                                    <h4 class="text-secondary">{{ number_format($totalBulanLalu) }} {{ $obat->satuan }}</h4>
-                                    <p class="mb-0">Total Biaya: Rp {{ number_format($biayaBulanLalu, 0, ',', '.') }}</p>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h4 class="text-secondary mb-0">{{ number_format($totalPenggunaanBulanLalu) }} {{ $obat->satuan }}</h4>
+                                            <small class="text-muted">Jumlah Penggunaan</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <h5 class="mb-0">Rp {{ number_format($totalBiayaBulanLalu, 0, ',', '.') }}</h5>
+                                            <small class="text-muted">Total Biaya</small>
+                                        </div>
+                                    </div>
+                                    @if($lastUpdateBulanLalu)
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> Input terakhir: {{ $lastUpdateBulanLalu->created_at->format('d M Y H:i') }}
+                                        </small>
+                                    @endif
                                 </div>
                             </div>
                         </div>

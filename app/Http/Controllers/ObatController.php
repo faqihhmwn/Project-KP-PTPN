@@ -14,7 +14,11 @@ class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Obat::query();
+        // Load data obat dengan relasi rekapitulasiObat
+        $query = Obat::with(['rekapitulasiObat' => function($query) {
+            // Urutkan berdasarkan tanggal terbaru
+            $query->orderBy('tanggal', 'desc');
+        }]);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -73,20 +77,68 @@ class ObatController extends Controller
 
     public function show(Obat $obat)
     {
-        $obat->load('transaksiObats');
+        // Load relasi rekapitulasiObat
+        $obat->load('rekapitulasiObat');
         
-        // Data untuk chart/statistik
-        $bulanIni = $obat->transaksiObats()
-            ->whereMonth('tanggal', Carbon::now()->month)
-            ->whereYear('tanggal', Carbon::now()->year)
+        $now = Carbon::now();
+        
+        // Data bulan ini
+        $bulanIni = $obat->rekapitulasiObat()
+            ->whereMonth('tanggal', $now->month)
+            ->whereYear('tanggal', $now->year)
+            ->orderBy('tanggal', 'desc')
             ->get();
             
-        $bulanLalu = $obat->transaksiObats()
-            ->whereMonth('tanggal', Carbon::now()->subMonth()->month)
-            ->whereYear('tanggal', Carbon::now()->subMonth()->year)
+        // Data bulan lalu    
+        $bulanLalu = $obat->rekapitulasiObat()
+            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
+            ->whereYear('tanggal', $now->copy()->subMonth()->year)
+            ->orderBy('tanggal', 'desc')
             ->get();
         
-        return view('obat.show', compact('obat', 'bulanIni', 'bulanLalu'));
+        // Ambil tanggal update terakhir bulan ini
+        $lastUpdateBulanIni = $obat->rekapitulasiObat()
+            ->whereMonth('tanggal', $now->month)
+            ->whereYear('tanggal', $now->year)
+            ->latest('created_at')
+            ->first();
+            
+        // Ambil tanggal update terakhir bulan lalu
+        $lastUpdateBulanLalu = $obat->rekapitulasiObat()
+            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
+            ->whereYear('tanggal', $now->copy()->subMonth()->year)
+            ->latest('created_at')
+            ->first();
+        
+        // Hitung total penggunaan bulan ini
+        $totalPenggunaanBulanIni = $bulanIni->sum('jumlah_keluar');
+        $totalBiayaBulanIni = $totalPenggunaanBulanIni * $obat->harga_satuan;
+        
+        // Hitung total penggunaan bulan lalu
+        $totalPenggunaanBulanLalu = $bulanLalu->sum('jumlah_keluar');
+        $totalBiayaBulanLalu = $totalPenggunaanBulanLalu * $obat->harga_satuan;
+
+        return view('obat.show', compact(
+            'obat',
+            'bulanIni',
+            'bulanLalu',
+            'totalPenggunaanBulanIni',
+            'totalBiayaBulanIni',
+            'totalPenggunaanBulanLalu',
+            'totalBiayaBulanLalu',
+            'lastUpdateBulanIni',
+            'lastUpdateBulanLalu'
+        ));
+        
+        return view('obat.show', compact(
+            'obat', 
+            'bulanIni', 
+            'bulanLalu',
+            'totalPenggunaanBulanIni',
+            'totalBiayaBulanIni',
+            'totalPenggunaanBulanLalu',
+            'totalBiayaBulanLalu'
+        ));
     }
 
     public function edit(Obat $obat)

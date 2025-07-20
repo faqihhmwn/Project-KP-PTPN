@@ -22,7 +22,6 @@ use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\RekapitulasiObatController;
 
-
 Route::get('/', function () {
     return redirect('/dashboard');
 });
@@ -183,15 +182,15 @@ Route::prefix('obat')->name('obat.')->group(function () {
     // Rekapitulasi
     Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
+    Route::get('/export', [RekapitulasiExportController::class, 'export'])->name('export');
     Route::get('/{obat}/rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
     
     // Transaksi
     Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
     Route::post('/{obat}/transaksi-harian', [ObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
     
-    // Import/Export
+    // Import
     Route::post('/import', [ObatController::class, 'import'])->name('import');
-    Route::get('/export', [ObatController::class, 'exportExcel'])->name('export');
 });
 
 

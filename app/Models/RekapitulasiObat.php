@@ -10,4 +10,15 @@ class RekapitulasiObat extends Model
         'obat_id', 'tanggal', 'stok_awal', 'jumlah_keluar', 'sisa_stok', 'total_biaya', 'bulan', 'tahun'
     ];
     public $timestamps = true;
+
+    protected $dates = [
+        'tanggal',
+        'created_at',
+        'updated_at'
+    ];
+
+    public function obat()
+    {
+        return $this->belongsTo(Obat::class, 'obat_id');
+    }
 }
