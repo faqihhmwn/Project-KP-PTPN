@@ -55,7 +55,7 @@
                         <tr>
                             <td>{{ $sub->nama }}</td>
                             <td>
-                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Isi jika ada">
+                                <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan jumlah">
                             </td>
                         </tr>
                         @endforeach
