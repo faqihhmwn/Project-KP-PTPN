@@ -11,10 +11,19 @@
             </div>
         @endif
 
+        @if (session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                {{ session('warning') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+
         <!-- Form Edit Jumlah -->
         @isset($editItem)
             <div class="card mb-4">
-                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong></div>
+                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('laporan.cuti-sakit.update', $editItem->id) }}">
                         @csrf
@@ -31,7 +40,7 @@
                 </div>
             </div>
         @endisset
-        
+
         <!-- Form Input Laporan -->
         <form method="POST" action="{{ route('laporan.cuti-sakit.store') }}">
             @csrf
@@ -136,9 +145,9 @@
             </thead>
             <tbody>
                 @forelse($data as $i => $row)
-                @include('laporan.modal.modal-cuti-sakit')
+                    @include('laporan.modal.modal-cuti-sakit')
                     <tr>
-                       <td>{{ $data->firstItem() + $i }}</td>
+                        <td>{{ $data->firstItem() + $i }}</td>
                         <td>{{ $row->subkategori->nama }}</td>
                         <td>{{ $row->jumlah }}</td>
                         <td>{{ DateTime::createFromFormat('!m', $row->bulan)->format('F') }}</td>
@@ -157,7 +166,7 @@
                             </form> --}}
                         </td>
                     </tr>
-                    
+
                 @empty
                     <tr>
                         <td colspan="7" class="text-center">Belum ada data</td>
@@ -165,7 +174,7 @@
                 @endforelse
             </tbody>
         </table>
-         <div class="d-flex justify-content-center mt-3">
+        <div class="d-flex justify-content-center mt-3">
             {{ $data->links('pagination::bootstrap-5') }}
         </div>
     </div>

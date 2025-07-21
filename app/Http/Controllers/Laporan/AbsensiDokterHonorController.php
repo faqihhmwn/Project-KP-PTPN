@@ -17,7 +17,7 @@ class AbsensiDokterHonorController extends Controller
         $query = LaporanBulanan::with(['subkategori', 'unit'])
             ->where('kategori_id', 15)
             ->where('unit_id', Auth::user()->unit_id);
-        
+
         // Search
         if ($request->filled('search')) {
             $search = $request->search;
@@ -46,11 +46,11 @@ class AbsensiDokterHonorController extends Controller
         return view('laporan.absensi-dokter-honorer', compact('data', 'subkategori'));
     }
 
-public function create()
-{
-    $subkategoris = SubKategori::where('kategori_id', 15)->get();
-    return view('laporan.absensi-dokter-honorer', compact('subkategoris'));
-}
+    public function create()
+    {
+        $subkategoris = SubKategori::where('kategori_id', 15)->get();
+        return view('laporan.absensi-dokter-honorer', compact('subkategoris'));
+    }
 
     public function store(Request $request)
     {
@@ -60,37 +60,52 @@ public function create()
             'jumlah' => 'required|array',
         ]);
 
+        $unit_id = Auth::user()->unit_id;
+        $user_id = Auth::id();
+        $kategori_id = 15;
+        $duplicated = [];
+
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            $laporan = LaporanBulanan::where([
-                'user_id' => Auth::id(),
-                'unit_id' => Auth::user()->unit_id,
-                'kategori_id' => 15,
+            // Cek apakah kombinasi ini sudah ada
+            $exists = LaporanBulanan::where([
+                'user_id' => $user_id,
+                'unit_id' => $unit_id,
+                'kategori_id' => $kategori_id,
                 'subkategori_id' => $subkategori_id,
                 'bulan' => $request->bulan,
                 'tahun' => $request->tahun,
-            ])->first();
+            ])->exists();
 
-            if (!$laporan && $jumlah !== null) {
-                // Jika belum ada, buat baru
+            if ($exists) {
+                $duplicated[] = $subkategori_id;
+                continue; // Skip simpan duplikat
+            }
+
+            if ($jumlah !== null && $jumlah != 0) {
                 LaporanBulanan::create([
-                    'user_id' => Auth::id(),
-                    'unit_id' => Auth::user()->unit_id,
-                    'kategori_id' => 15,
+                    'user_id' => $user_id,
+                    'unit_id' => $unit_id,
+                    'kategori_id' => $kategori_id,
                     'subkategori_id' => $subkategori_id,
                     'bulan' => $request->bulan,
                     'tahun' => $request->tahun,
                     'jumlah' => $jumlah,
                 ]);
-            } elseif ($laporan && $jumlah != 0) {
-                // Jika sudah ada, update HANYA jika jumlah bukan 0
-                $laporan->update(['jumlah' => $jumlah]);
             }
         }
 
-        return redirect()->route('laporan.absensi-dokter-honorer.index')->with('success', 'Laporan berhasil ditambahkan');
+        // Handle feedback
+        if (!empty($duplicated)) {
+            return redirect()->route('laporan.absensi-dokter-honorer.index')
+                ->with('warning', 'Beberapa data tidak disimpan karena sudah pernah diinputkan.');
+        }
+
+        return redirect()->route('laporan.absensi-dokter-honorer.index')
+            ->with('success', 'Laporan berhasil ditambahkan.');
     }
 
-        public function edit($id)
+
+    public function edit($id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
         $subkategoris = SubKategori::where('kategori_id', 15)->get();
