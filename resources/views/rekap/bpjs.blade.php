@@ -80,7 +80,7 @@
                     <tr>
                         <td>{{ $k->nama }}</td>
                         <td>
-                            <input type="text" name="total_iuran_bpjs[{{ $k->id }}]" class="form-control rupiah-input" min="0" pattern="[0-9]*" required>
+                            <input type="text" name="total_iuran_bpjs[{{ $k->id }}]" class="form-control rupiah-input" min="0" required>
                         </td>
                     </tr>
                 @endforeach
@@ -168,7 +168,7 @@
                                     @foreach ($kategori as $k)
                                         <div class="mb-3">
                                             <label class="form-label">{{ $k->nama }}</label>
-                                            <input type="text" name="total_iuran_bpjs[{{ $k->id }}]" class="form-control rupiah-input" min="0" pattern="[0-9]*" value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
+                                            <input type="text" name="total_iuran_bpjs[{{ $k->id }}]" class="form-control rupiah-input" min="0" value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
                                         </div>
                                     @endforeach
                                 </div>
@@ -213,96 +213,32 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+                document.addEventListener('DOMContentLoaded', function () {
+        const rupiahInputs = document.querySelectorAll('.rupiah-input');
 
-            // Fungsi untuk membersihkan format rupiah menjadi angka murni (tanpa titik, tanpa koma desimal)
-            function parseRupiah(formattedAngka) {
-                if (formattedAngka === null || formattedAngka === undefined || formattedAngka === '') {
-                    // Penting: jika input kosong, kembalikan string kosong atau "0"
-                    // Mengembalikan 0 (number) akan di-string-kan otomatis oleh form submit,
-                    // tapi jika Anda ingin konsisten dengan string dari input, kembalikan ''
-                    return ''; // Mengembalikan string kosong lebih aman untuk validasi backend 'required'
-                }
-                // Hapus semua karakter non-digit (termasuk titik pemisah ribuan) kecuali tanda minus di awal
-                return String(formattedAngka).replace(/[^0-9-]/g, '');
-            }
+        // Format saat mengetik
+        rupiahInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                let value = this.value.replace(/[^\d]/g, '');
+                this.value = formatRupiah(value);
+            });
+        });
 
-            // ==========================================================
-            // LOGIC UTAMA UNTUK INPUT RUPIAH (Berlaku untuk semua input .rupiah-input)
-            // ==========================================================
+        function formatRupiah(angka) {
+            return angka.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
 
-            const rupiahInputs = document.querySelectorAll('.rupiah-input');
-
-            rupiahInputs.forEach(input => {
-                // 1. Initial formatting when page loads (for main form and values loaded from DB)
-                // Pastikan input.value sudah berupa angka bersih dari backend, lalu format untuk display
-                if (input.value) {
-                    input.value = formatRupiah(input.value);
-                }
-
-                // 2. Event listener saat input berubah (real-time formatting)
-                input.addEventListener('input', function(e) {
-                    // Ambil nilai saat ini, bersihkan dulu, lalu format
-                    let cleanValue = parseRupiah(this.value);
-                    this.value = formatRupiah(cleanValue);
-                });
-
-                // 3. Event listener saat input kehilangan fokus (blur)
-                input.addEventListener('blur', function() {
-                    // Pastikan format akhir diterapkan setelah kehilangan fokus
-                    this.value = formatRupiah(parseRupiah(this.value));
-                });
-
-                // 4. Event listener saat input mendapatkan fokus (focus)
-                input.addEventListener('focus', function() {
-                    // Ketika fokus, ubah ke angka mentah agar user mudah mengedit
-                    this.value = parseRupiah(this.value);
-                    // Optional: Select all text when focused for easier full replacement
-                    // this.select();
+        // Bersihkan titik sebelum submit (agar bisa disimpan sebagai BIGINT)
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function () {
+                const inputs = form.querySelectorAll('.rupiah-input');
+                inputs.forEach(input => {
+                    input.value = input.value.replace(/\./g, '');
                 });
             });
-
-
-            // ==========================================================
-            // LOGIC KHUSUS UNTUK FORM SUBMIT (MAIN FORM)
-            // ==========================================================
-
-            const formStore = document.getElementById('mainRekapForm');
-            if (formStore) {
-                formStore.addEventListener('submit', function(event) {
-                    // Iterasi semua input rupiah di dalam form ini
-                    this.querySelectorAll('.rupiah-input').forEach(input => {
-                        // Di sini, kita ingin nilai yang dikirim ke backend itu TANPA titik/koma.
-                        // Jadi gunakan parseRupiah() untuk membersihkan.
-                        input.value = parseRupiah(input.value);
-                        // Hapus console.log originalValue yang error
-                        // console.log('Cleaned Value for submit:', input.value);
-                    });
-                    // console.log('Form utama disubmit, nilai input telah dibersihkan.');
-                });
-            }
-
-
-            // ==========================================================
-            // LOGIC UNTUK NOTIFIKASI SUKSES/ERROR (yang sudah ada)
-            // ==========================================================
-
-            const alertSuccess = document.querySelector('.alert-success');
-            const alertError = document.querySelector('.alert-danger');
-            if (alertSuccess) {
-                setTimeout(() => {
-                    alertSuccess.classList.remove('show');
-                    alertSuccess.classList.add('fade');
-                    alertSuccess.remove();
-                }, 5000);
-            }
-            if (alertError) {
-                setTimeout(() => {
-                    alertError.classList.remove('show');
-                    alertError.classList.add('fade');
-                    alertError.remove();
-                }, 5000);
-            }
         });
+    });
+
     </script>
 @endpush

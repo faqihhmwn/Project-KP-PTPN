@@ -171,39 +171,32 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
     Route::delete('/destroy/{id}', [KategoriKhususController::class, 'destroy'])->name('destroy');
 });
 
-
-// routes/web.php
-
 // REKAPITULASI BIAYA
 Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
-    // PENJELASAN:
-    // Saya menambahkan `->name('rekap.')` di sini. Ini akan memberikan prefix nama 'rekap.'
-    // untuk semua rute di dalam group ini secara otomatis, kecuali jika ditimpa.
-    // Ini membuat penamaan rute lebih ringkas di dalamnya.
 
-    // Rute untuk Rekap Regional
-    Route::prefix('regional')->name('regional.')->group(function () { // nama 'regional.' akan menjadi rekap.regional.
-        Route::get('/', [RegionalController::class, 'index'])->name('index'); // -> rekap.regional.index
-        Route::post('/', [RegionalController::class, 'store'])->name('store'); // -> rekap.regional.store
-        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update'); // -> rekap.regional.update
-        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy'); // -> rekap.regional.destroy
-        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate'); // -> rekap.regional.validate
-
-        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate'); // -> rekap.regional.biayaTersedia.storeOrUpdate
-        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy'); // -> rekap.regional.biayaTersedia.destroy
+    // Regional
+    Route::prefix('regional')->name('regional.')->group(function () {
+        Route::get('/', [RegionalController::class, 'index'])->name('index');
+        Route::post('/', [RegionalController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
+        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate');
+        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy');
     });
 
-    // Rute untuk Rekap Iuran Bpjs
-    Route::prefix('bpjs')->name('bpjs.')->group(function () { // nama 'iuran-bpjs.' akan menjadi rekap.iuran-bpjs.
-        Route::get('/', [BpjsController::class, 'index'])->name('index'); // -> rekap.iuran-bpjs.index
-        Route::post('/', [BpjsController::class, 'store'])->name('store'); // -> rekap.iuran-bpjs.store
-        Route::put('/{tahun}/{bulan_id}', [BpjsController::class, 'update'])->name('update'); // -> rekap.iuran-bpjs.update
-        Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy'); // -> rekap.iuran-bpjs.destroy
-        Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate'); // -> rekap.iuran-bpjs.validate
+    // BPJS
+    Route::prefix('bpjs')->name('bpjs.')->group(function () {
+        Route::get('/', [BpjsController::class, 'index'])->name('index');
+        Route::post('/', [BpjsController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [BpjsController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate');
     });
 
-    // Rute untuk Rekap Kapitasi
+    // Kapitasi
     Route::prefix('kapitasi')->name('kapitasi.')->group(function () {
+        Route::put('/saldo-awal/{tahun}', [KapitasiController::class, 'updateSaldoAwal'])->name('updateSaldoAwal');
         Route::get('/', [KapitasiController::class, 'index'])->name('index');
         Route::post('/', [KapitasiController::class, 'store'])->name('store');
         Route::put('/{tahun}/{bulan_id}', [KapitasiController::class, 'update'])->name('update');

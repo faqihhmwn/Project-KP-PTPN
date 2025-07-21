@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\DB;
 class KapitasiController extends Controller
 {
     public function index(Request $request)
-    {   $tahun = range(date('Y'), 2000);
+    {
+        $tahun = range(date('Y'), 2000);
         $selectedTahun = $request->tahun ?? null;
         $selectedBulan = $request->bulan ?? null;
 
@@ -40,6 +41,7 @@ class KapitasiController extends Controller
             foreach ($rawData as $row) {
                 $bulanId = $row->bulan_id;
                 $kategoriId = $row->kategori_kapitasi_id;
+
                 $totalDanaMasuk = DanaMasuk::where('tahun', $selectedTahun)
                     ->where('bulan_id', $bulanId)
                     ->value('total_dana_masuk');
@@ -57,15 +59,9 @@ class KapitasiController extends Controller
                     ];
                 }
 
-                // Baris ini mengambil status validasi dari salah satu record untuk bulan tersebut.
-                // Jika Anda memiliki banyak record untuk bulan yang sama, ini akan mengambil validasi dari record terakhir yang diproses.
-                // Idealnya, status validasi ini harus disimpan di record 'total_biaya_kesehatan' yang kategori_biaya_id-nya NULL.
-
-                $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
+                // $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
 
                 if ($kategoriId === null) {
-                    // --- LOKASI PERUBAHAN PERTAMA ---
-                    // Mengambil data untuk 'total_biaya_kesehatan' dari kolom 'total_biaya_kesehatan'
                     $grouped[$bulanId]['total_biaya_kapitasi'] = $row->total_biaya_kapitasi;
                     $annualTotals['all_kategoris_total'] += $row->total_biaya_kapitasi;
                 } else {
@@ -73,13 +69,47 @@ class KapitasiController extends Controller
                     $annualTotals[$kategoriId] += $row->total_biaya_kapitasi;
                 }
 
-            // Penting: Setelah loop selesai, urutkan $grouped berdasarkan bulan_id
+                // Penting: Setelah loop selesai, urutkan $grouped berdasarkan bulan_id
             }
             ksort($grouped);
             $annualTotals['total_dana_masuk'] = DanaMasuk::where('tahun', $selectedTahun)->sum('total_dana_masuk');
         }
-        return view('rekap.kapitasi', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals'));
-}
+
+        $saldoAwalTahun = SisaSaldoKapitasi::where('tahun', $selectedTahun)
+            ->whereNull('bulan_id')
+            ->value('saldo_awal_tahun') ?? 0;
+
+        $sisaSaldoPerBulan = [];
+        $previousSaldo = $saldoAwalTahun;
+        $saldoSaatIni = 0;
+
+        if ($selectedTahun) {
+            foreach ($bulan as $b) {
+                $bulanId = $b->id;
+
+                $totalDanaMasuk = DanaMasuk::where('tahun', $selectedTahun)
+                    ->where('bulan_id', $bulanId)
+                    ->value('total_dana_masuk') ?? 0;
+
+                $totalBiayaKapitasi = RekapDanaKapitasi::where('tahun', $selectedTahun)
+                    ->where('bulan_id', $bulanId)
+                    ->whereNull('kategori_kapitasi_id')
+                    ->value('total_biaya_kapitasi') ?? 0;
+
+                $sisaSaldo = $previousSaldo + $totalDanaMasuk - $totalBiayaKapitasi;
+
+                $sisaSaldoPerBulan[] = [
+                    'nama_bulan' => $b->nama,
+                    'sisa_saldo' => $sisaSaldo,
+                ];
+
+                $previousSaldo = $sisaSaldo;
+            }
+
+            $saldoSaatIni = $previousSaldo;
+        }
+        return view('rekap.kapitasi', compact('bulan', 'tahun', 'selectedTahun', 'selectedBulan', 'kategori', 'grouped', 'annualTotals', 'saldoAwalTahun', 'saldoSaatIni', 'sisaSaldoPerBulan'));
+    }
 
     public function store(Request $request)
     {
@@ -97,14 +127,14 @@ class KapitasiController extends Controller
 
         $kategoriCount = KategoriKapitasi::count();
         $existingCount = RekapDanaKapitasi::where('tahun', $tahun)
-                                            ->where('bulan_id', $bulanId)
-                                            ->whereNotNull('kategori_kapitasi_id')
-                                            ->count();
+            ->where('bulan_id', $bulanId)
+            ->whereNotNull('kategori_kapitasi_id')
+            ->count();
 
         $existingTotalRecord = RekapDanaKapitasi::where('tahun', $tahun)
-                                                    ->where('bulan_id', $bulanId)
-                                                    ->whereNull('kategori_kapitasi_id')
-                                                    ->exists();
+            ->where('bulan_id', $bulanId)
+            ->whereNull('kategori_kapitasi_id')
+            ->exists();
 
         if ($existingCount >= $kategoriCount && $existingTotalRecord) {
             return redirect()->route('rekap.kapitasi.index', [
@@ -112,10 +142,10 @@ class KapitasiController extends Controller
                 'bulan_id' => $bulanId,
             ])->with('success', '⚠️ Data input sudah pernah diinputkan, silakan cek tabel kembali.');
         }
-        
+
         RekapDanaKapitasi::where('tahun', $tahun)
-                            ->where('bulan_id', $bulanId)
-                            ->delete();
+            ->where('bulan_id', $bulanId)
+            ->delete();
 
         $totalBiayaKapitasiBulanIni = 0;
 
@@ -141,12 +171,15 @@ class KapitasiController extends Controller
             'validasi' => null,
         ]);
 
-        DanaMasuk::updateOrCreate([
-            'tahun' => $tahun,
-            'bulan_id' => $bulanId,
-            ], [
+        DanaMasuk::updateOrCreate(
+            [
+                'tahun' => $tahun,
+                'bulan_id' => $bulanId,
+            ],
+            [
                 'total_dana_masuk' => $request->total_dana_masuk,
-            ]);
+            ]
+        );
 
         return redirect()->route('rekap.kapitasi.index', [
             'tahun' => $tahun,
@@ -162,9 +195,9 @@ class KapitasiController extends Controller
         ]);
 
         $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
-                                        ->where('bulan_id', $bulan_id)
-                                        ->whereNull('kategori_kapitasi_id')
-                                        ->first();
+            ->where('bulan_id', $bulan_id)
+            ->whereNull('kategori_kapitasi_id')
+            ->first();
 
         if ($totalRecord && $totalRecord->validasi !== null) {
             return redirect()->route('rekap.kapitasi.index', [
@@ -221,9 +254,9 @@ class KapitasiController extends Controller
     public function destroy(Request $request, $tahun, $bulan_id)
     {
         $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
-                                        ->where('bulan_id', $bulan_id)
-                                        ->whereNull('kategori_kapitasi_id')
-                                        ->first();
+            ->where('bulan_id', $bulan_id)
+            ->whereNull('kategori_kapitasi_id')
+            ->first();
 
         if ($totalRecord && $totalRecord->validasi !== null) {
             return redirect()->route('rekap.kapitasi.index', [
@@ -232,9 +265,9 @@ class KapitasiController extends Controller
             ])->with('error', '❌ Data sudah tervalidasi dan tidak bisa dihapus.');
         }
 
-            RekapDanaKapitasi::where('tahun', $tahun)
-                            ->where('bulan_id', $bulan_id)
-                            ->delete();
+        RekapDanaKapitasi::where('tahun', $tahun)
+            ->where('bulan_id', $bulan_id)
+            ->delete();
 
         return redirect()->route('rekap.kapitasi.index', [
             'tahun' => $tahun,
@@ -244,9 +277,9 @@ class KapitasiController extends Controller
     public function validateRekap(Request $request, $tahun, $bulan_id)
     {
         $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
-                                        ->where('bulan_id', $bulan_id)
-                                        ->whereNull('kategori_kapitasi_id')
-                                        ->firstOrFail();
+            ->where('bulan_id', $bulan_id)
+            ->whereNull('kategori_kapitasi_id')
+            ->firstOrFail();
 
         $totalRecord->validasi = 'Tervalidasi';
         $totalRecord->save();
@@ -255,5 +288,28 @@ class KapitasiController extends Controller
             'tahun' => $tahun,
             'bulan' => $bulan_id,
         ])->with('success', '✅ Data berhasil divalidasi!');
+    }
+
+    public function updateSaldoAwal(Request $request, $tahun)
+    {
+        $request->merge([
+            'saldo_awal_tahun' => str_replace('.', '', $request->saldo_awal_tahun),
+        ]);
+
+        $request->validate([
+            'saldo_awal_tahun' => 'required|numeric|min:0',
+        ]);
+
+        $updatedData = SisaSaldoKapitasi::updateOrCreate(
+            ['tahun' => $tahun],
+            [
+                'bulan_id' => null,
+                'saldo_awal_tahun' => $request->saldo_awal_tahun
+            ]
+        );
+
+        return redirect()
+            ->route('rekap.kapitasi.index', ['tahun' => $tahun])
+            ->with('success', '✅ Saldo awal tahun berhasil diperbarui.');
     }
 }

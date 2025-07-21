@@ -79,7 +79,7 @@
                         <tr>
                             <td>{{ $k->nama }}</td>
                             <td>
-                                <input type="text" name="total_biaya_kesehatan[{{ $k->id }}]" class="form-control rupiah-input" min="0" pattern="[0-9]*" required>
+                                <input type="text" name="total_biaya_kesehatan[{{ $k->id }}]" class="form-control rupiah-input" min="0" required>
                             </td>
                         </tr>
                     @endforeach
@@ -209,7 +209,7 @@
                                     @foreach ($kategori as $k)
                                         <div class="mb-3">
                                             <label class="form-label">{{ $k->nama }}</label>
-                                            <input type="text" name="total_biaya_kesehatan[{{ $k->id }}]" class="form-control rupiah-input" min="0" pattern="[0-9]*" value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
+                                            <input type="text" name="total_biaya_kesehatan[{{ $k->id }}]" class="form-control rupiah-input" min="0" value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
                                         </div>
                                     @endforeach
                                 </div>
@@ -267,7 +267,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">{{ $k->nama }}</label>
                                         {{-- Gunakan nilai dari $biayaTersedia untuk mengisi value --}}
-                                        <input type="text" name="total_tersedia[{{ $k->id }}]" class="form-control rupiah-input" min="0" pattern="[0-9]*" value="{{ $biayaTersedia[$k->id] ?? 0 }}" required>
+                                        <input type="text" name="total_tersedia[{{ $k->id }}]" class="form-control rupiah-input" min="0" value="{{ $biayaTersedia[$k->id] ?? 0 }}" required>
                                     </div>
                                 @endforeach
                             </div>
@@ -285,189 +285,66 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+                document.addEventListener('DOMContentLoaded', function () {
+            const saldoInput = document.getElementById('saldo_awal_tahun', 'total_biaya_kapitasi', 'total_dana_masuk');
+            const form = document.getElementById('formSaldoAwal');
 
-            // Fungsi untuk memformat angka menjadi format rupiah (dengan titik pemisah ribuan, tanpa koma desimal)
-            // function formatRupiah(angka) {
-            //     if (angka === null || angka === undefined || angka === '') {
-            //         return '';
-            //     }
-                // Pastikan angka adalah string, lalu hapus semua karakter non-digit kecuali tanda minus di awal
-                // let cleanAngka = String(angka).replace(/[^0-9-]/g, '');
+            if (saldoInput) {
+                // Format awal saat load
+                saldoInput.value = formatRupiah(saldoInput.value);
 
-                // Konversi ke Number, lalu pastikan itu integer
-                // let num = parseInt(cleanAngka, 10);
-
-                // if (isNaN(num)) {
-                //     return ''; // Kembalikan string kosong jika bukan angka yang valid
-                // }
-
-                // Gunakan toLocaleString untuk format ribuan yang lebih baik dan penanganan negatif
-            //     return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-            // }
-
-            // Fungsi untuk membersihkan format rupiah menjadi angka murni (tanpa titik, tanpa koma desimal)
-            function parseRupiah(formattedAngka) {
-                if (formattedAngka === null || formattedAngka === undefined || formattedAngka === '') {
-                    // Penting: jika input kosong, kembalikan string kosong atau "0"
-                    // Mengembalikan 0 (number) akan di-string-kan otomatis oleh form submit,
-                    // tapi jika Anda ingin konsisten dengan string dari input, kembalikan ''
-                    return ''; // Mengembalikan string kosong lebih aman untuk validasi backend 'required'
-                }
-                // Hapus semua karakter non-digit (termasuk titik pemisah ribuan) kecuali tanda minus di awal
-                return String(formattedAngka).replace(/[^0-9-]/g, '');
-            }
-
-            // ==========================================================
-            // LOGIC UTAMA UNTUK INPUT RUPIAH (Berlaku untuk semua input .rupiah-input)
-            // ==========================================================
-
-            const rupiahInputs = document.querySelectorAll('.rupiah-input');
-
-            rupiahInputs.forEach(input => {
-                // 1. Initial formatting when page loads (for main form and values loaded from DB)
-                // Pastikan input.value sudah berupa angka bersih dari backend, lalu format untuk display
-                if (input.value) {
-                    input.value = formatRupiah(input.value);
-                }
-
-                // 2. Event listener saat input berubah (real-time formatting)
-                input.addEventListener('input', function(e) {
-                    // Ambil nilai saat ini, bersihkan dulu, lalu format
-                    let cleanValue = parseRupiah(this.value);
-                    this.value = formatRupiah(cleanValue);
-                });
-
-                // 3. Event listener saat input kehilangan fokus (blur)
-                input.addEventListener('blur', function() {
-                    // Pastikan format akhir diterapkan setelah kehilangan fokus
-                    this.value = formatRupiah(parseRupiah(this.value));
-                });
-
-                // 4. Event listener saat input mendapatkan fokus (focus)
-                input.addEventListener('focus', function() {
-                    // Ketika fokus, ubah ke angka mentah agar user mudah mengedit
-                    this.value = parseRupiah(this.value);
-                    // Optional: Select all text when focused for easier full replacement
-                    // this.select();
-                });
-            });
-
-
-            // ==========================================================
-            // LOGIC KHUSUS UNTUK FORM SUBMIT (MAIN FORM)
-            // ==========================================================
-
-            const formStore = document.getElementById('mainRekapForm');
-            if (formStore) {
-                formStore.addEventListener('submit', function(event) {
-                    // Iterasi semua input rupiah di dalam form ini
-                    this.querySelectorAll('.rupiah-input').forEach(input => {
-                        // Di sini, kita ingin nilai yang dikirim ke backend itu TANPA titik/koma.
-                        // Jadi gunakan parseRupiah() untuk membersihkan.
-                        input.value = parseRupiah(input.value);
-                        // Hapus console.log originalValue yang error
-                        // console.log('Cleaned Value for submit:', input.value);
-                    });
-                    // console.log('Form utama disubmit, nilai input telah dibersihkan.');
+                // Format saat diketik
+                saldoInput.addEventListener('input', function () {
+                    const angka = parseRupiah(this.value);
+                    this.value = formatRupiah(angka);
                 });
             }
 
-            // ==========================================================
-            // LOGIC KHUSUS UNTUK MODAL (EDIT DAN BIAYA TERSEDIA)
-            // ==========================================================
-
-            // Event listener untuk setiap modal Edit Data (per bulan/tahun)
-            document.querySelectorAll('[id^="editModal"]').forEach(modalElement => {
-                modalElement.addEventListener('show.bs.modal', function (event) {
-                    // Dapatkan semua input dengan class 'rupiah-input' di dalam modal ini
-                    const modalRupiahInputs = modalElement.querySelectorAll('.rupiah-input');
-                    modalRupiahInputs.forEach(input => {
-                        // Saat modal dibuka, pastikan nilai yang ada diformat.
-                        // Penting: parse dulu untuk menghilangkan format yang mungkin sudah ada, lalu format lagi
-                        input.value = formatRupiah(parseRupiah(input.value));
-
-                        // Tambahkan juga event listener 'input', 'blur', dan 'focus' untuk input di dalam modal
-                        // Ini memastikan format otomatis bekerja di modal juga.
-                        input.addEventListener('input', function() {
-                            let cleanValue = parseRupiah(this.value);
-                            this.value = formatRupiah(cleanValue);
-                        });
-                        input.addEventListener('blur', function() {
-                            this.value = formatRupiah(parseRupiah(this.value));
-                        });
-                        input.addEventListener('focus', function() {
-                            this.value = parseRupiah(this.value);
-                            // this.select(); // Optional
-                        });
-                    });
-
-                    // Tambahkan event listener submit untuk form di dalam modal
-                    const modalForm = modalElement.querySelector('form');
-                    if (modalForm) {
-                        modalForm.addEventListener('submit', function(event) {
-                            this.querySelectorAll('.rupiah-input').forEach(input => {
-                                input.value = parseRupiah(input.value);
-                            });
-                        });
-                    }
-                });
-            });
-
-            // Event listener untuk modal Edit Biaya Tersedia
-            const editBiayaTersediaModal = document.getElementById('editBiayaTersediaModal');
-            if (editBiayaTersediaModal) {
-                editBiayaTersediaModal.addEventListener('show.bs.modal', function (event) {
-                    const modalRupiahInputs = editBiayaTersediaModal.querySelectorAll('.rupiah-input');
-                    modalRupiahInputs.forEach(input => {
-                        if (input.value) {
-                            input.value = formatRupiah(parseRupiah(input.value));
-                        }
-                        // Tambahkan event listener 'input', 'blur', dan 'focus' untuk input di dalam modal ini
-                        input.addEventListener('input', function() {
-                            let cleanValue = parseRupiah(this.value);
-                            this.value = formatRupiah(cleanValue);
-                        });
-                        input.addEventListener('blur', function() {
-                            this.value = formatRupiah(parseRupiah(this.value));
-                        });
-                        input.addEventListener('focus', function() {
-                            this.value = parseRupiah(this.value);
-                            // this.select(); // Optional
-                        });
-                    });
-
-                    const modalForm = editBiayaTersediaModal.querySelector('form');
-                    if (modalForm) {
-                        modalForm.addEventListener('submit', function(event) {
-                            this.querySelectorAll('.rupiah-input').forEach(input => {
-                                input.value = parseRupiah(input.value);
-                            });
-                        });
+            if (form) {
+                form.addEventListener('submit', function () {
+                    if (saldoInput) {
+                        saldoInput.value = parseRupiah(saldoInput.value);
                     }
                 });
             }
 
-            // ==========================================================
-            // LOGIC UNTUK NOTIFIKASI SUKSES/ERROR (yang sudah ada)
-            // ==========================================================
-
-            const alertSuccess = document.querySelector('.alert-success');
-            const alertError = document.querySelector('.alert-danger');
-            if (alertSuccess) {
-                setTimeout(() => {
-                    alertSuccess.classList.remove('show');
-                    alertSuccess.classList.add('fade');
-                    alertSuccess.remove();
-                }, 5000);
+            // Helper fungsi rupiah
+            function formatRupiah(angka) {
+                angka = angka.toString().replace(/[^0-9]/g, '');
+                return angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
             }
-            if (alertError) {
-                setTimeout(() => {
-                    alertError.classList.remove('show');
-                    alertError.classList.add('fade');
-                    alertError.remove();
-                }, 5000);
+
+            function parseRupiah(rupiah) {
+                return parseInt(rupiah.replace(/[^0-9]/g, '')) || 0;
             }
         });
+
+        document.addEventListener('DOMContentLoaded', function () {
+        const rupiahInputs = document.querySelectorAll('.rupiah-input');
+
+        // Format saat mengetik
+        rupiahInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                let value = this.value.replace(/[^\d]/g, '');
+                this.value = formatRupiah(value);
+            });
+        });
+
+        function formatRupiah(angka) {
+            return angka.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        // Bersihkan titik sebelum submit (agar bisa disimpan sebagai BIGINT)
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function () {
+                const inputs = form.querySelectorAll('.rupiah-input');
+                inputs.forEach(input => {
+                    input.value = input.value.replace(/\./g, '');
+                });
+            });
+        });
+    });
+
     </script>
 @endpush
