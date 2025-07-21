@@ -41,7 +41,7 @@ class KonsultasiKlinikController extends Controller
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
             ->orderBy(SubKategori::select('nama')
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
-            ->paginate(10);
+            ->paginate(8);
 
         return view('laporan.konsultasi-klinik', compact('data', 'subkategori'));
     }

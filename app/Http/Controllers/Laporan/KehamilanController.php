@@ -41,7 +41,7 @@ class KehamilanController extends Controller
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
             ->orderBy(SubKategori::select('nama')
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
-            ->paginate(8);
+            ->paginate(6);
 
     return view('laporan.kehamilan', compact('data', 'subkategori'));
 }
