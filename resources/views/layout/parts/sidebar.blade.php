@@ -31,7 +31,7 @@
 
         <li class="nav-item has-treeview">
           <a href="#" class="nav-link">
-            <i class="nav-icon bi bi-journal-medical"></i>
+            <i class="nav-icon fa-solid fa-money-bill-transfer"></i>
             <p>
               Rekapitulasi Biaya
               <i class="right bi bi-chevron-down"></i>

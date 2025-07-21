@@ -10,11 +10,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     @endif
-
-    @isset ($editItem)
-    {{-- Blok editItem belum digunakan --}}
-    @endisset
-
     
     <form method="GET" action="{{ route('rekap.bpjs.index') }}">
         <div class="row mb-3">
@@ -37,7 +32,7 @@
             {{-- Jika tahun belum dipilih, tampilkan tombol --}}
             @unless ($selectedTahun)
                 <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Tampilkan</button>
+                    <button type="submit" class="btn btn-primary"> <i class="fas fa-filter"></i> Tampilkan</button>
                 </div>
             @endunless
             {{-- Jika tahun sudah dipilih, tambahkan tombol Reset --}}
@@ -86,7 +81,7 @@
                 @endforeach
             </tbody>
         </table>
-        <button type="submit" class="btn btn-primary w-auto">Simpan</button>
+        <button type="submit" class="btn btn-primary w-auto"> <i class="fas fa-save"></i> Simpan</button>
     </form>
 
     <hr class="my-5">
@@ -119,15 +114,20 @@
                             <td>
                                 @if (empty($row['validasi']))
                                     <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row['bulan_id'] }}{{ $row['tahun'] }}">
+                                        <i class="fas fa-edit"></i>
                                         Edit
                                     </button>
                                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#validasiModal{{ $row['bulan_id'] }}{{ $row['tahun'] }}">
+                                        <i class="fas fa-lock"></i>
                                         Validasi
                                     </button>
                                     <form action="{{ route('rekap.bpjs.destroy', ['tahun' => $row['tahun'], 'bulan_id' => $row['bulan_id']]) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus semua data untuk bulan ini?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                            Hapus
+                                        </button>
                                     </form>
                                 @else
                                     <span class="badge bg-success">Tervalidasi</span>

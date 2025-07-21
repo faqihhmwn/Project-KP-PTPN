@@ -10,13 +10,6 @@
         </div>
     @endif
 
-    {{-- Jika $editItem ada (setelah redirect dari aksi edit), modal akan otomatis terbuka via JS, atau bisa ditampilkan langsung --}}
-    @isset($editItem)
-        {{-- Karena editItem dikirim sebagai objek RekapBiayaKesehatan, kita perlu memastikan bahwa ada kategori_biaya_id yang sesuai --}}
-        {{-- Logika ini sepertinya untuk edit satu item. Kita akan menggunakan modal untuk edit per bulan_tahun. --}}
-        {{-- Jadi bagian ini mungkin tidak terlalu diperlukan lagi setelah implementasi modal per bulan/tahun --}}
-    @endisset
-
     <form method="GET" action="{{ route('rekap.regional.index') }}">
         <div class="row mb-3">
             <div class="col-md-3">
@@ -38,7 +31,7 @@
             {{-- Jika tahun belum dipilih, tampilkan tombol --}}
             @unless ($selectedTahun)
                 <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Tampilkan</button>
+                    <button type="submit" class="btn btn-primary"> <i class="fas fa-filter"></i> Tampilkan</button>
                 </div>
             @endunless
             {{-- Jika tahun sudah dipilih, tambahkan tombol Reset --}}
@@ -85,7 +78,7 @@
                     @endforeach
                 </tbody>
             </table>
-            <button type="submit" class="btn btn-primary w-auto">Simpan</button>
+            <button type="submit" class="btn btn-primary w-auto"> <i class="fas fa-save"></i> Simpan</button>
         </form>
 
         <hr class="my-5">
@@ -118,15 +111,20 @@
                             <td>
                                 @if (empty($row['validasi']))
                                     <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row['bulan_id'] }}{{ $row['tahun'] }}">
+                                        <i class="fas fa-edit"></i>
                                         Edit
                                     </button>
                                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#validasiModal{{ $row['bulan_id'] }}{{ $row['tahun'] }}">
+                                        <i class="fas fa-lock"></i>
                                         Validasi
                                     </button>
                                     <form action="{{ route('rekap.regional.destroy', ['tahun' => $row['tahun'], 'bulan_id' => $row['bulan_id']]) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus semua data untuk bulan ini?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                            Hapus
+                                    </button>
                                     </form>
                                 @else
                                     <span class="badge bg-success">Tervalidasi</span>
@@ -157,7 +155,7 @@
                         </td>
                         <td></td> {{-- Kolom Validasi --}} 
                         <td> {{-- Kolom Aksi --}}
-                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editBiayaTersediaModal">
+                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editBiayaTersediaModal"><i class="fas fa-edit"></i>
                                 Edit
                             </button>
                         </td>
@@ -214,7 +212,7 @@
                                     @endforeach
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                    <button type="submit" class="btn btn-primary"> <i class="fas fa-save"></i> Simpan Perubahan</button>
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                                 </div>
                             </form>
@@ -272,7 +270,7 @@
                                 @endforeach
                             </div>
                             <div class="modal-footer">
-                                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                                <button type="submit" class="btn btn-primary"> <i class="fas fa-save"></i> Simpan Perubahan</button>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                             </div>
                         </form>
