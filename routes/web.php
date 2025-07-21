@@ -19,12 +19,17 @@ use App\Http\Controllers\Laporan\KecelakaanKerjaController;
 use App\Http\Controllers\Laporan\SakitBerkepanjanganController;
 use App\Http\Controllers\Laporan\AbsensiDokterHonorController;
 use App\Http\Controllers\Laporan\KategoriKhususController;
+use App\Http\Controllers\ObatController;
+use App\Http\Controllers\RekapitulasiObatController;
+use App\Http\Controllers\RekapitulasiExportController;
 use App\Http\Controllers\DashboardController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+// Route untuk export obat
+Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export');
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -176,3 +181,34 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth')->name('laporan.kate
 });
 
 
+
+// Obat Routes
+Route::prefix('obat')->name('obat.')->group(function () {
+    Route::get('/', [ObatController::class, 'index'])->name('index');
+    Route::get('/dashboard', [ObatController::class, 'dashboard'])->name('dashboard');
+    Route::get('/create', [ObatController::class, 'create'])->name('create');
+    Route::post('/', [ObatController::class, 'store'])->name('store');
+    Route::get('/{obat}', [ObatController::class, 'show'])->name('show');
+    Route::get('/{obat}/edit', [ObatController::class, 'edit'])->name('edit');
+    Route::put('/{obat}', [ObatController::class, 'update'])->name('update');
+    Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
+    
+    // Rekapitulasi
+    Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
+    Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
+    Route::get('/export', [RekapitulasiExportController::class, 'export'])->name('export');
+    Route::get('/{obat}/rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
+    
+    // Transaksi
+    Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
+    Route::post('/{obat}/transaksi-harian', [ObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
+    
+    // Import
+    Route::post('/import', [ObatController::class, 'import'])->name('import');
+});
+
+
+
+Route::get('/login', function () {
+    return view('login');
+})->name('login');

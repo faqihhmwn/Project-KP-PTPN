@@ -28,6 +28,15 @@
           </a>
         </li>
 
+         <li class="nav-item">
+                <a href="{{ route('obat.dashboard') }}" class="nav-link {{ request()->routeIs('obat.*') ? 'active' : '' }}">
+                  <i class="nav-icon bi bi-capsule"></i>
+                  <p>
+                    Farmasi
+                  </p>
+                </a>
+              </li>
+              
         {{-- Tambahan lainnya jika diperlukan --}}
       </ul>
       <!--end::Sidebar Menu-->
@@ -71,6 +80,7 @@
             {{ $nama }}
           </a>
         </li>
+      
       @endforeach
     </ul>
   </div>
