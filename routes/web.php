@@ -22,6 +22,11 @@ use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\RekapitulasiObatController;
 use App\Http\Controllers\RekapitulasiExportController;
+use App\Http\Controllers\DashboardController;
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 // Route untuk export obat
 Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export');
@@ -30,14 +35,19 @@ Route::get('/', function () {
     return redirect('/dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Route::get('/dashboard', function () {
+//     return view('dashboard');
+// })->middleware(['auth', 'verified'])->name('dashboard');
 
+// web.php
 Route::middleware('auth')->group(function () {
-    Route::get('/profile-edit', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile-update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::put('/password', [\App\Http\Controllers\PasswordController::class, 'update'])->middleware('auth')->name('password.update');
+
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 require __DIR__.'/auth.php';

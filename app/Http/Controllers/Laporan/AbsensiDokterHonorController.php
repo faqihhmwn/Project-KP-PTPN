@@ -10,17 +10,41 @@ use Illuminate\Support\Facades\Auth;
 
 class AbsensiDokterHonorController extends Controller
 {
-   public function index()
-{
-    $data = LaporanBulanan::with(['subkategori', 'unit'])
-        ->where('kategori_id', 15)
-        ->where('unit_id', Auth::user()->unit_id)
-        ->get();
+    public function index(Request $request)
+    {
+        $subkategori = SubKategori::where('kategori_id', 15)->get();
 
-    $subkategori = SubKategori::where('kategori_id', 15)->get();
+        $query = LaporanBulanan::with(['subkategori', 'unit'])
+            ->where('kategori_id', 15)
+            ->where('unit_id', Auth::user()->unit_id);
+        
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('subkategori', function ($q) use ($search) {
+                $q->where('nama', 'like', '%' . $search . '%');
+            });
+        }
 
-    return view('laporan.absensi-dokter-honorer', compact('data', 'subkategori'));
-}
+        // Filter bulan
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
+
+        // Filter tahun
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        $data = $query
+            ->orderBy('tahun', 'desc')
+            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
+            ->orderBy(SubKategori::select('nama')
+                ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
+            ->paginate(4);
+
+        return view('laporan.absensi-dokter-honorer', compact('data', 'subkategori'));
+    }
 
 public function create()
 {
@@ -29,27 +53,38 @@ public function create()
 }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'bulan' => 'required|integer|min:1|max:12',
-        'tahun' => 'required|integer|min:2000|max:' . date('Y'),
-        'jumlah' => 'required|array',
-    ]);
+    {
+        $request->validate([
+            'bulan' => 'required|integer|min:1|max:12',
+            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
+            'jumlah' => 'required|array',
+        ]);
 
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            LaporanBulanan::updateOrCreate(
-                [
+            $laporan = LaporanBulanan::where([
+                'user_id' => Auth::id(),
+                'unit_id' => Auth::user()->unit_id,
+                'kategori_id' => 15,
+                'subkategori_id' => $subkategori_id,
+                'bulan' => $request->bulan,
+                'tahun' => $request->tahun,
+            ])->first();
+
+            if (!$laporan && $jumlah !== null) {
+                // Jika belum ada, buat baru
+                LaporanBulanan::create([
                     'user_id' => Auth::id(),
                     'unit_id' => Auth::user()->unit_id,
                     'kategori_id' => 15,
                     'subkategori_id' => $subkategori_id,
                     'bulan' => $request->bulan,
                     'tahun' => $request->tahun,
-                ],
-                [
                     'jumlah' => $jumlah,
-                ]
-            );
+                ]);
+            } elseif ($laporan && $jumlah != 0) {
+                // Jika sudah ada, update HANYA jika jumlah bukan 0
+                $laporan->update(['jumlah' => $jumlah]);
+            }
         }
 
         return redirect()->route('laporan.absensi-dokter-honorer.index')->with('success', 'Laporan berhasil ditambahkan');
@@ -75,12 +110,12 @@ public function create()
         return redirect()->route('laporan.absensi-dokter-honorer.index')->with('success', 'Laporan berhasil diperbarui');
     }
 
-    public function destroy($id)
-    {
-        $laporan = LaporanBulanan::findOrFail($id);
-        $laporan->delete();
+    // public function destroy($id)
+    // {
+    //     $laporan = LaporanBulanan::findOrFail($id);
+    //     $laporan->delete();
 
-        return redirect()->route('laporan.absensi-dokter-honorer.index')->with('success', 'Laporan berhasil dihapus');
-    }
+    //     return redirect()->route('laporan.absensi-dokter-honorer.index')->with('success', 'Laporan berhasil dihapus');
+    // }
 
 }
