@@ -13,20 +13,36 @@ class KategoriKhususController extends Controller
 {
     public function index(Request $request)
     {
-        $subkategoris = SubKategori::where('kategori_id', 21)->get();
+        $query = \App\Models\InputManual::with('subkategori')
+            ->where('unit_id', Auth::user()->unit_id);
 
-        $query = InputManual::with('subkategori')
-            ->whereIn('subkategori_id', $subkategoris->pluck('id'))
-            ->where('unit_id', Auth::user()->unit_id); // Filter berdasarkan unit login
-
-        if ($request->has('filter') && $request->filter !== null) {
+        if ($request->filled('filter')) {
             $query->where('subkategori_id', $request->filter);
         }
 
-        $data = $query->get();
+        if ($request->filled('bulan')) {
+            $query->where('bulan', $request->bulan);
+        }
 
-        return view('laporan.kategori-khusus', compact('data', 'subkategoris'));
+        if ($request->filled('tahun')) {
+            $query->where('tahun', $request->tahun);
+        }
+
+        // ✅ Definisikan $data terlebih dahulu
+        $data = $query->orderByDesc('tahun')->orderByDesc('bulan')->paginate(10);
+
+        // Lalu ambil daftar subkategori dan tahun
+        $subkategoris = \App\Models\SubKategori::where('kategori_id', 21)->get();
+
+        $tahunList = \App\Models\InputManual::where('unit_id', Auth::user()->unit_id)
+            ->select('tahun')
+            ->distinct()
+            ->orderByDesc('tahun')
+            ->pluck('tahun');
+
+        return view('laporan.kategori-khusus', compact('data', 'subkategoris', 'tahunList'));
     }
+
 
     public function store(Request $request)
     {
@@ -41,8 +57,8 @@ class KategoriKhususController extends Controller
 
         $unitId = Auth::user()->unit_id;
         $userId = Auth::id();
-        $bulan = now()->month;
-        $tahun = now()->year;
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
 
         // 1. Simpan data ke input_manual
         $inputManual = InputManual::create([

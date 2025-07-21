@@ -60,6 +60,23 @@
                     <input type="text" name="keterangan" class="form-control">
                 </div>
 
+                <div class="col-md-2">
+                    <label for="bulan" class="form-label">Bulan</label>
+                    <select name="bulan" class="form-select" required>
+                        @for ($i = 1; $i <= 12; $i++)
+                            <option value="{{ $i }}" {{ old('bulan', now()->month) == $i ? 'selected' : '' }}>
+                                {{ DateTime::createFromFormat('!m', $i)->format('F') }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label for="tahun" class="form-label">Tahun</label>
+                    <input type="number" name="tahun" class="form-control" value="{{ old('tahun', now()->year) }}"
+                        required>
+                </div>
+
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary mt-3">Simpan</button>
                 </div>
@@ -70,16 +87,46 @@
         <hr class="my-4">
         <h5>Data Tersimpan</h5>
 
-        <form method="GET" class="mb-3">
-            <label for="filter" class="form-label">Filter Subkategori</label>
-            <select name="filter" class="form-select w-25 d-inline" onchange="this.form.submit()">
-                <option value="">Semua</option>
-                @foreach ($subkategoris as $sub)
-                    <option value="{{ $sub->id }}" {{ request('filter') == $sub->id ? 'selected' : '' }}>
-                        {{ $sub->nama }}
-                    </option>
-                @endforeach
-            </select>
+        <form method="GET" class="mb-3 row g-3">
+            <div class="col-md-3">
+                <label for="filter" class="form-label">Filter Subkategori</label>
+                <select name="filter" class="form-select">
+                    <option value="">Semua</option>
+                    @foreach ($subkategoris as $sub)
+                        <option value="{{ $sub->id }}" {{ request('filter') == $sub->id ? 'selected' : '' }}>
+                            {{ $sub->nama }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Bulan</label>
+                <select name="bulan" class="form-select">
+                    <option value="">Semua</option>
+                    @for ($i = 1; $i <= 12; $i++)
+                        <option value="{{ $i }}" {{ request('bulan') == $i ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                        </option>
+                    @endfor
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Tahun</label>
+                <select name="tahun" class="form-select">
+                    <option value="">Semua</option>
+                    @foreach ($tahunList as $tahun)
+                        <option value="{{ $tahun }}" {{ request('tahun') == $tahun ? 'selected' : '' }}>
+                            {{ $tahun }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary">Terapkan</button>
+            </div>
         </form>
 
         <table class="table table-striped">
@@ -91,6 +138,8 @@
                     <th>Status</th>
                     <th>Jenis Disabilitas</th>
                     <th>Keterangan</th>
+                    <th>Bulan</th>
+                    <th>Tahun</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -103,18 +152,14 @@
                         <td>{{ $item->status }}</td>
                         <td>{{ $item->jenis_disabilitas ?? '-' }}</td>
                         <td>{{ $item->keterangan ?? '-' }}</td>
+                        <td>{{ $item->bulan }}</td>
+                        <td>{{ $item->tahun }}</td>
                         <td>
                             <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
                                 data-bs-target="#editModal{{ $item->id }}">Edit</button>
-
-                            {{-- <form action="{{ route('laporan.kategori-khusus.destroy', $item->id) }}" method="POST"
-                                class="d-inline" onsubmit="return confirm('Yakin hapus data ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm btn-danger">Hapus</button>
-                            </form> --}}
                         </td>
                     </tr>
+
 
                     {{-- Fitur Modal --}}
                     @include('laporan.modal.modal-kategori-khusus', [
