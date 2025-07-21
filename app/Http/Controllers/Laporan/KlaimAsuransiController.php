@@ -43,16 +43,16 @@ class KlaimAsuransiController extends Controller
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
             ->paginate(8);
 
-    return view('laporan.klaim-asuransi', compact('data', 'subkategori'));
-}
+        return view('laporan.klaim-asuransi', compact('data', 'subkategori'));
+    }
 
-public function create()
-{
-    $subkategoris = SubKategori::where('kategori_id', 12)->get();
-    return view('laporan.klaim-asuransi', compact('subkategoris'));
-}
+    public function create()
+    {
+        $subkategoris = SubKategori::where('kategori_id', 12)->get();
+        return view('laporan.klaim-asuransi', compact('subkategoris'));
+    }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'bulan' => 'required|integer|min:1|max:12',
@@ -60,38 +60,53 @@ public function create()
             'jumlah' => 'required|array',
         ]);
 
+        $unit_id = Auth::user()->unit_id;
+        $user_id = Auth::id();
+        $kategori_id = 12;
+        $duplicated = [];
+
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            $laporan = LaporanBulanan::where([
-                'user_id' => Auth::id(),
-                'unit_id' => Auth::user()->unit_id,
-                'kategori_id' => 12,
+            // Cek apakah kombinasi ini sudah ada
+            $exists = LaporanBulanan::where([
+                'user_id' => $user_id,
+                'unit_id' => $unit_id,
+                'kategori_id' => $kategori_id,
                 'subkategori_id' => $subkategori_id,
                 'bulan' => $request->bulan,
                 'tahun' => $request->tahun,
-            ])->first();
+            ])->exists();
 
-            if (!$laporan && $jumlah !== null) {
-                // Jika belum ada, buat baru
+            if ($exists) {
+                $duplicated[] = $subkategori_id;
+                continue; // Skip simpan duplikat
+            }
+
+            if ($jumlah !== null && $jumlah != 0) {
                 LaporanBulanan::create([
-                    'user_id' => Auth::id(),
-                    'unit_id' => Auth::user()->unit_id,
-                    'kategori_id' => 12,
+                    'user_id' => $user_id,
+                    'unit_id' => $unit_id,
+                    'kategori_id' => $kategori_id,
                     'subkategori_id' => $subkategori_id,
                     'bulan' => $request->bulan,
                     'tahun' => $request->tahun,
                     'jumlah' => $jumlah,
                 ]);
-            } elseif ($laporan && $jumlah != 0) {
-                // Jika sudah ada, update HANYA jika jumlah bukan 0
-                $laporan->update(['jumlah' => $jumlah]);
             }
         }
 
-        return redirect()->route('laporan.klaim-asuransi.index')->with('success', 'Laporan berhasil ditambahkan');
+        // Handle feedback
+        if (!empty($duplicated)) {
+            return redirect()->route('laporan.klaim-asuransi.index')
+                ->with('warning', 'Beberapa data tidak disimpan karena sudah pernah diinputkan.');
+        }
+
+        return redirect()->route('laporan.klaim-asuransi.index')
+            ->with('success', 'Laporan berhasil ditambahkan.');
     }
 
 
-        public function edit($id)
+
+    public function edit($id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
         $subkategoris = SubKategori::where('kategori_id', 12)->get();

@@ -61,34 +61,48 @@ class SakitBerkepanjanganController extends Controller
             'jumlah' => 'required|array',
         ]);
 
+        $unit_id = Auth::user()->unit_id;
+        $user_id = Auth::id();
+        $kategori_id = 14;
+        $duplicated = [];
+
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
-            $laporan = LaporanBulanan::where([
-                'user_id' => Auth::id(),
-                'unit_id' => Auth::user()->unit_id,
-                'kategori_id' => 14,
+            // Cek apakah kombinasi ini sudah ada
+            $exists = LaporanBulanan::where([
+                'user_id' => $user_id,
+                'unit_id' => $unit_id,
+                'kategori_id' => $kategori_id,
                 'subkategori_id' => $subkategori_id,
                 'bulan' => $request->bulan,
                 'tahun' => $request->tahun,
-            ])->first();
+            ])->exists();
 
-            if (!$laporan && $jumlah !== null) {
-                // Jika belum ada, buat baru
+            if ($exists) {
+                $duplicated[] = $subkategori_id;
+                continue; // Skip simpan duplikat
+            }
+
+            if ($jumlah !== null && $jumlah != 0) {
                 LaporanBulanan::create([
-                    'user_id' => Auth::id(),
-                    'unit_id' => Auth::user()->unit_id,
-                    'kategori_id' => 14,
+                    'user_id' => $user_id,
+                    'unit_id' => $unit_id,
+                    'kategori_id' => $kategori_id,
                     'subkategori_id' => $subkategori_id,
                     'bulan' => $request->bulan,
                     'tahun' => $request->tahun,
                     'jumlah' => $jumlah,
                 ]);
-            } elseif ($laporan && $jumlah != 0) {
-                // Jika sudah ada, update HANYA jika jumlah bukan 0
-                $laporan->update(['jumlah' => $jumlah]);
             }
         }
 
-        return redirect()->route('laporan.sakit-berkepanjangan.index')->with('success', 'Laporan berhasil ditambahkan');
+        // Handle feedback
+        if (!empty($duplicated)) {
+            return redirect()->route('laporan.sakit-berkepanjangan.index')
+                ->with('warning', 'Beberapa data tidak disimpan karena sudah pernah diinputkan.');
+        }
+
+        return redirect()->route('laporan.sakit-berkepanjangan.index')
+            ->with('success', 'Laporan berhasil ditambahkan.');
     }
 
     public function edit($id)

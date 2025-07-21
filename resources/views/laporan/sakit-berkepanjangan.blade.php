@@ -11,10 +11,18 @@
             </div>
         @endif
 
+        @if (session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                {{ session('warning') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
         <!-- Form Edit Jumlah -->
         @isset($editItem)
             <div class="card mb-4">
-                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong></div>
+                <div class="card-header">Edit Jumlah untuk Subkategori: <strong>{{ $editItem->subkategori->nama }}</strong>
+                </div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('laporan.sakit-berkepanjangan.update', $editItem->id) }}">
                         @csrf
