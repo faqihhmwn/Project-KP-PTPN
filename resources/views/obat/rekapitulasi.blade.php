@@ -258,7 +258,6 @@
                         <i class="fas fa-info-circle"></i>
                         <strong>Catatan:</strong>
                         <ul class="mb-0 mt-2">
-                            <li>Range tanggal maksimal 3 bulan</li>
                             <li>File akan didownload dalam format Excel (.xlsx)</li>
                             <li>Data harian hanya akan disertakan jika range kurang dari 32 hari</li>
                         </ul>
