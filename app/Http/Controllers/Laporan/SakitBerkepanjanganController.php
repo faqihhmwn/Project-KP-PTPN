@@ -41,9 +41,9 @@ class SakitBerkepanjanganController extends Controller
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
             ->orderBy(SubKategori::select('nama')
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
-            ->paginate(10);
+            ->paginate(8);
 
-        return view('laporan.kependudukan', compact('data', 'subkategori'));
+        return view('laporan.sakit-berkepanjangan', compact('data', 'subkategori'));
     }
 
 

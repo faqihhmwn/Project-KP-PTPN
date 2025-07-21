@@ -41,7 +41,7 @@ class CutiSakitController extends Controller
             ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
             ->orderBy(SubKategori::select('nama')
                 ->whereColumn('subkategori.id', 'laporan_bulanan.subkategori_id'))
-            ->paginate(8);
+            ->paginate(4);
 
         return view('laporan.cuti-sakit', compact('data', 'subkategori'));
     }
