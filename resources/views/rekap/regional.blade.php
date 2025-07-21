@@ -83,6 +83,11 @@
 
         <hr class="my-5">
         <h5>Data Tersimpan Tahun {{ $selectedTahun }}</h5>
+        <form action="{{ route('rekap.regional.index', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </form>
         <div class="table-responsive">
             <table class="table table-striped table-bordered text-nowrap">
                 <thead>
@@ -122,8 +127,8 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i>
-                                            Hapus
+                                        <i class="fas fa-trash"></i>
+                                        Hapus
                                     </button>
                                     </form>
                                 @else
@@ -277,13 +282,13 @@
                     </div>
                 </div>
             </div>
-        @endif 
-</div>
+        @endif
+    </div>
 @endsection
 
 @push('scripts')
     <script>
-                document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
             const saldoInput = document.getElementById('saldo_awal_tahun', 'total_biaya_kapitasi', 'total_dana_masuk');
             const form = document.getElementById('formSaldoAwal');
 
