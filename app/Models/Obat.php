@@ -17,7 +17,8 @@ class Obat extends Model
         'satuan',
         'stok_awal',
         'stok_sisa',
-        'keterangan'
+        'keterangan',
+        'unit_id', 
     ];
 
     protected $casts = [
@@ -39,9 +40,9 @@ class Obat extends Model
     // Scope untuk search
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('nama_obat', 'like', "%{$search}%")
-              ->orWhere('jenis_obat', 'like', "%{$search}%");
+                ->orWhere('jenis_obat', 'like', "%{$search}%");
         });
     }
 
@@ -55,7 +56,7 @@ class Obat extends Model
     public function getStokAwalAttribute()
     {
         $now = Carbon::now();
-        
+
         // Ambil rekapitulasi terakhir dari bulan sebelumnya
         $rekapBulanSebelumnya = $this->rekapitulasiObat()
             ->whereMonth('tanggal', $now->copy()->subMonth()->month)
@@ -86,7 +87,7 @@ class Obat extends Model
     {
         $totalMasuk = $this->transaksiObats()->where('tipe_transaksi', 'masuk')->sum('jumlah_masuk');
         $totalKeluar = $this->transaksiObats()->where('tipe_transaksi', 'keluar')->sum('jumlah_keluar');
-        
+
         $this->stok_masuk = $totalMasuk;
         $this->stok_keluar = $totalKeluar;
         $this->stok_sisa = $this->stok_awal + $totalMasuk - $totalKeluar;
@@ -117,7 +118,7 @@ class Obat extends Model
         if (!$this->expired_date) {
             return false;
         }
-        
+
         return $this->expired_date->diffInDays(Carbon::now()) <= $days;
     }
 
@@ -125,5 +126,10 @@ class Obat extends Model
     public function getFormattedHargaAttribute()
     {
         return 'Rp ' . number_format($this->harga_satuan, 0, ',', '.');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
     }
 }

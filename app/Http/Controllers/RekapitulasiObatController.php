@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\RekapitulasiObat;
 use Illuminate\Support\Facades\Validator; // Pastikan ini di-import
 use Illuminate\Support\Facades\Log; // Pastikan ini di-import
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\Unit;
 
 class RekapitulasiObatController extends Controller
 {
@@ -47,10 +50,12 @@ class RekapitulasiObatController extends Controller
                         [
                             'obat_id' => $validated['obat_id'],
                             'tanggal' => $validated['tanggal'],
-                            'bulan' => $validated['bulan'], // <-- PENTING: Pastikan ini di kunci
-                            'tahun' => $validated['tahun'], // <-- PENTING: Pastikan ini di kunci
+                            'bulan' => $validated['bulan'],
+                            'tahun' => $validated['tahun'],
+                            'unit_id' => Auth::user()->unit_id,
                         ],
                         [
+                            'user_id' => Auth::id(),
                             'stok_awal' => $validated['stok_awal'],
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $validated['sisa_stok'],
@@ -98,7 +103,6 @@ class RekapitulasiObatController extends Controller
                 ]
             );
             return response()->json(['success' => true, 'rekap' => $rekap, 'message' => 'Data rekapitulasi harian berhasil disimpan/diperbarui.']);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Validasi gagal untuk single data:', $e->errors());
             return response()->json(['success' => false, 'message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
