@@ -123,11 +123,13 @@
 
                 <hr class="my-5">
                 <h5>Data Tersimpan Tahun {{ $selectedTahun }}</h5>
-                <form action="{{ route('rekap.kapitasi.index', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+                <form action="{{ route('rekap.kapitasi.kapitasi.export', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+                    <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-file-excel"></i> Export Excel
                     </button>
                 </form>
+
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered text-nowrap">
                         <thead>
@@ -169,10 +171,7 @@
                                                 data-bs-target="#validasiModal{{ $row['bulan_id'] }}{{ $row['tahun'] }}"> <i class="fas fa-lock"></i>
                                                 Validasi
                                             </button>
-                                            <form
-                                                action="{{ route('rekap.kapitasi.destroy', ['tahun' => $row['tahun'], 'bulan_id' => $row['bulan_id']]) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('Yakin ingin menghapus semua data untuk bulan ini?')">
+                                            <form action="{{ route('rekap.kapitasi.destroy', ['tahun' => $row['tahun'], 'bulan_id' => $row['bulan_id']]) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus semua data untuk bulan ini?')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Hapus </button>

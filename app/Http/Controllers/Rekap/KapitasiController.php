@@ -269,6 +269,10 @@ class KapitasiController extends Controller
             ->where('bulan_id', $bulan_id)
             ->delete();
 
+        DanaMasuk::where('tahun', $tahun)
+            ->where('bulan_id', $bulan_id)
+            ->delete();
+
         return redirect()->route('rekap.kapitasi.index', [
             'tahun' => $tahun,
         ])->with('success', '🗑️ Semua data untuk bulan ini berhasil dihapus.');

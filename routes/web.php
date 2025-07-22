@@ -27,6 +27,7 @@ use App\Http\Controllers\Rekap\SisaSaldoController;
 
 use App\Http\Controllers\Rekap\RekapBiayaKesehatanExportController;
 use App\Http\Controllers\Rekap\BpjsExportController;
+use App\Http\Controllers\Rekap\KapitasiExportController;
 
 
 Route::get('/', function () {
@@ -207,5 +208,7 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::put('/{tahun}/{bulan_id}', [KapitasiController::class, 'update'])->name('update');
         Route::delete('/{tahun}/{bulan_id}', [KapitasiController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [KapitasiController::class, 'validateRekap'])->name('validate');
+        Route::get('/kapitasi/export', [KapitasiExportController::class, 'export'])->name('kapitasi.export');
+
     });
 });
