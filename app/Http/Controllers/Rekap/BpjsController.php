@@ -52,15 +52,9 @@ class BpjsController extends Controller
                     ];
                 }
 
-                // Baris ini mengambil status validasi dari salah satu record untuk bulan tersebut.
-                // Jika Anda memiliki banyak record untuk bulan yang sama, ini akan mengambil validasi dari record terakhir yang diproses.
-                // Idealnya, status validasi ini harus disimpan di record 'total_biaya_kesehatan' yang kategori_biaya_id-nya NULL.
-
                 $grouped[$bulanId]['validasi'] = $row->validasi ?? null;
 
                 if ($kategoriId === null) {
-                    // --- LOKASI PERUBAHAN PERTAMA ---
-                    // Mengambil data untuk 'total_biaya_kesehatan' dari kolom 'total_biaya_kesehatan'
                     $grouped[$bulanId]['total_iuran_bpjs'] = $row->total_iuran_bpjs;
                     $annualTotals['all_kategoris_total'] += $row->total_iuran_bpjs;
                 } else {

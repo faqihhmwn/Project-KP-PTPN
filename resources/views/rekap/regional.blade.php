@@ -83,7 +83,8 @@
 
         <hr class="my-5">
         <h5>Data Tersimpan Tahun {{ $selectedTahun }}</h5>
-        <form action="{{ route('rekap.regional.index', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+        <form action="{{ route('rekap.regional.biayakesehatan.export', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+            <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
             <button type="submit" class="btn btn-success">
                 <i class="fas fa-file-excel"></i> Export Excel
             </button>
@@ -289,40 +290,6 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const saldoInput = document.getElementById('saldo_awal_tahun', 'total_biaya_kapitasi', 'total_dana_masuk');
-            const form = document.getElementById('formSaldoAwal');
-
-            if (saldoInput) {
-                // Format awal saat load
-                saldoInput.value = formatRupiah(saldoInput.value);
-
-                // Format saat diketik
-                saldoInput.addEventListener('input', function () {
-                    const angka = parseRupiah(this.value);
-                    this.value = formatRupiah(angka);
-                });
-            }
-
-            if (form) {
-                form.addEventListener('submit', function () {
-                    if (saldoInput) {
-                        saldoInput.value = parseRupiah(saldoInput.value);
-                    }
-                });
-            }
-
-            // Helper fungsi rupiah
-            function formatRupiah(angka) {
-                angka = angka.toString().replace(/[^0-9]/g, '');
-                return angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-            }
-
-            function parseRupiah(rupiah) {
-                return parseInt(rupiah.replace(/[^0-9]/g, '')) || 0;
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
         const rupiahInputs = document.querySelectorAll('.rupiah-input');
 
         // Format saat mengetik
@@ -348,6 +315,5 @@
             });
         });
     });
-
     </script>
 @endpush

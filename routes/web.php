@@ -25,6 +25,8 @@ use App\Http\Controllers\Rekap\KapitasiController;
 use App\Http\Controllers\Rekap\BpjsController;
 use App\Http\Controllers\Rekap\SisaSaldoController;
 
+use App\Http\Controllers\Rekap\RekapBiayaKesehatanExportController;
+
 
 
 Route::get('/', function () {
@@ -183,6 +185,7 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
         Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate');
         Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy');
+        Route::get('/rekap-biaya-kesehatan/export', [RekapBiayaKesehatanExportController::class, 'export'])->name('biayakesehatan.export');
     });
 
     // BPJS
