@@ -50,4 +50,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Unit::class);
     }
+
+    public function obats()
+    {
+        return $this->hasMany(Obat::class)->where('unit_id', $this->unit_id);
+    }
 }

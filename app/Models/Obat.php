@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+
 
 class Obat extends Model
 {
@@ -17,7 +19,8 @@ class Obat extends Model
         'satuan',
         'stok_awal',
         'stok_sisa',
-        'keterangan'
+        'keterangan',
+        'unit_id',
     ];
 
     protected $casts = [
@@ -39,9 +42,9 @@ class Obat extends Model
     // Scope untuk search
     public function scopeSearch($query, $search)
     {
-        return $query->where(function($q) use ($search) {
+        return $query->where(function ($q) use ($search) {
             $q->where('nama_obat', 'like', "%{$search}%")
-              ->orWhere('jenis_obat', 'like', "%{$search}%");
+                ->orWhere('jenis_obat', 'like', "%{$search}%");
         });
     }
 
@@ -52,41 +55,41 @@ class Obat extends Model
     }
 
     // Method untuk mendapatkan stok awal berdasarkan bulan dan tahun
-    public function getStokAwalAttribute()
+    public function stokAwal($bulan = null, $tahun = null)
     {
         $now = Carbon::now();
-        
-        // Ambil rekapitulasi terakhir dari bulan sebelumnya
+        $bulan = $bulan ?? $now->subMonth()->month;
+        $tahun = $tahun ?? $now->subMonth()->year;
+
         $rekapBulanSebelumnya = $this->rekapitulasiObat()
-            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
-            ->whereYear('tanggal', $now->copy()->subMonth()->year)
+            ->where('unit_id', Auth::user()->unit_id)
+            ->whereMonth('tanggal', $bulan)
+            ->whereYear('tanggal', $tahun)
             ->latest('tanggal')
             ->first();
 
-        // Jika ada data bulan sebelumnya, gunakan sisa stoknya
-        // Jika tidak, gunakan stok awal dari database
         return $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $this->attributes['stok_awal'];
     }
 
+
     // Method untuk mendapatkan sisa stok berdasarkan rekapitulasi terbaru
-    public function getStokSisaAttribute()
+    public function stokSisa()
     {
-        // Ambil rekapitulasi paling baru
         $rekapTerbaru = $this->rekapitulasiObat()
+            ->where('unit_id', Auth::user()->unit_id)
             ->latest('tanggal')
             ->first();
 
-        // Jika ada rekapitulasi, gunakan sisa stok dari rekapitulasi
-        // Jika tidak ada, gunakan stok awal
-        return $rekapTerbaru ? $rekapTerbaru->sisa_stok : $this->getStokAwalAttribute();
+        return $rekapTerbaru ? $rekapTerbaru->sisa_stok : $this->stokAwal();
     }
+
 
     // Method untuk update stok
     public function updateStok()
     {
         $totalMasuk = $this->transaksiObats()->where('tipe_transaksi', 'masuk')->sum('jumlah_masuk');
         $totalKeluar = $this->transaksiObats()->where('tipe_transaksi', 'keluar')->sum('jumlah_keluar');
-        
+
         $this->stok_masuk = $totalMasuk;
         $this->stok_keluar = $totalKeluar;
         $this->stok_sisa = $this->stok_awal + $totalMasuk - $totalKeluar;
@@ -117,7 +120,7 @@ class Obat extends Model
         if (!$this->expired_date) {
             return false;
         }
-        
+
         return $this->expired_date->diffInDays(Carbon::now()) <= $days;
     }
 
@@ -125,5 +128,23 @@ class Obat extends Model
     public function getFormattedHargaAttribute()
     {
         return 'Rp ' . number_format($this->harga_satuan, 0, ',', '.');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function rekapitulasiObatByUnit()
+    {
+        return $this->hasMany(RekapitulasiObat::class)
+            ->where('unit_id', Auth::user()->unit_id);
+    }
+
+    public function transaksiObatsByUnit()
+    {
+        return $this->hasMany(TransaksiObat::class)->whereHas('obat', function ($q) {
+            $q->where('unit_id', Auth::user()->unit_id);
+        });
     }
 }
