@@ -59,7 +59,7 @@
                     <h5>Informasi Sistem</h5>
                 </div>
                 <div class="card-body">
-                    <p>Sistem Manajemen Obat Puskesmas PTPN Kandir</p>
+                    <p>Sistem Manajemen Obat Puskesmas PTPN</p>
                     <p><strong>Total Obat Terdaftar:</strong> {{ $totalObat }} jenis obat</p>
 
                     <p><strong>Fitur Utama:</strong></p>

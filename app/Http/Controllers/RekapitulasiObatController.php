@@ -9,9 +9,36 @@ use Illuminate\Support\Facades\Log; // Pastikan ini di-import
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Unit;
+use App\Models\Obat;
 
 class RekapitulasiObatController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        $unitId = Auth::user()->unit_id;
+
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
+
+        $obats = Obat::where('unit_id', Auth::user()->unit_id)
+            ->with(['rekapitulasiObatByUnit' => function ($query) use ($bulan, $tahun) {
+                $query->where('bulan', $bulan)
+                    ->where('tahun', $tahun);
+            }])
+            ->get();
+
+
+        $rekapitulasi = RekapitulasiObat::with(['obat', 'user'])
+            ->where('unit_id', $unitId)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->get();
+
+        return view('rekapitulasi-obat', compact('obats', 'rekapitulasi', 'bulan', 'tahun', 'daysInMonth'));
+    }
+
     public function storeOrUpdate(Request $request)
     {
         // --- 1. Logging Data yang Diterima (Untuk Debugging) ---

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class RekapitulasiObat extends Model
@@ -15,7 +16,9 @@ class RekapitulasiObat extends Model
         'sisa_stok',
         'total_biaya',
         'bulan',
-        'tahun'
+        'tahun',
+        'unit_id',
+        'user_id',
     ];
     public $timestamps = true;
 

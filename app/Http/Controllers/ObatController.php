@@ -10,18 +10,23 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ObatImport;
 use App\Exports\ObatExport;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        // Load data obat dengan relasi rekapitulasiObat
+        // Ambil unit_id user yang sedang login
+        $userUnitId = Auth::user()->unit_id;
+
+        // Load data obat milik unit tersebut
         $query = Obat::with(['rekapitulasiObat' => function ($query) {
             // Urutkan berdasarkan tanggal terbaru
             $query->orderBy('tanggal', 'desc');
-        }]);
+        }])
+            ->where('unit_id', $userUnitId); // 🔒 filter berdasarkan unit user
 
-        // Search functionality
+        // Fitur pencarian
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('nama_obat', 'like', "%{$request->search}%")
@@ -29,14 +34,18 @@ class ObatController extends Controller
             });
         }
 
+        // Ambil data obat dan urutkan
         $obats = $query->orderBy('nama_obat')->paginate(10);
 
+        // Jika permintaan AJAX (dari Livewire atau JavaScript), kirim partial
         if ($request->ajax()) {
             return view('partials.obat-table', compact('obats'))->render();
         }
 
+        // Return ke view utama
         return view('obat.index', compact('obats'));
     }
+
 
     public function create()
     {
@@ -194,7 +203,10 @@ class ObatController extends Controller
             return $this->exportExcel($request);
         }
 
+        $userUnitId = Auth::user()->unit_id;
+
         $obats = Obat::query()
+            ->where('unit_id', $userUnitId) 
             ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
                 $query->whereMonth('tanggal', $bulan)
                     ->whereYear('tanggal', $tahun);
@@ -301,8 +313,15 @@ class ObatController extends Controller
     public function dashboard()
     {
         try {
-            $totalObat = Obat::count();
-            $transaksiHariIni = TransaksiObat::whereDate('tanggal', Carbon::today())->count();
+            $unitId = Auth::user()->unit_id;
+
+            $totalObat = Obat::where('unit_id', $unitId)->count();
+
+            $transaksiHariIni = TransaksiObat::whereHas('obat', function ($query) use ($unitId) {
+                $query->where('unit_id', $unitId);
+            })
+                ->whereDate('tanggal', \Carbon\Carbon::today())
+                ->count();
         } catch (\Exception $e) {
             // Fallback values if database error
             $totalObat = 0;
@@ -315,16 +334,17 @@ class ObatController extends Controller
         ));
     }
 
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv',
-        ]);
 
-        Excel::import(new ObatImport, $request->file('file'));
+    // public function import(Request $request)
+    // {
+    //     $request->validate([
+    //         'file' => 'required|mimes:xlsx,xls,csv',
+    //     ]);
 
-        return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
-    }
+    //     Excel::import(new ObatImport, $request->file('file'));
+
+    //     return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
+    // }
 
     public function exportExcel(Request $request)
     {
@@ -351,7 +371,7 @@ class ObatController extends Controller
                 $filename
             );
         } catch (\Exception $e) {
-            \Log::error('Export error: ' . $e->getMessage());
+            Log::error('Export error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal mengexport data: ' . $e->getMessage());
         }
     }
