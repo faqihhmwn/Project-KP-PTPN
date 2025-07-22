@@ -21,6 +21,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     protected $startDate;
     protected $endDate;
     protected $daysInMonth;
+    protected $rowNumber = 0;  // Tambahkan property untuk penomoran
 
     public function __construct($startDate, $endDate)
     {
@@ -72,9 +73,11 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function map($obat): array
     {
+        $this->rowNumber++;  // Increment nomor urut
+        
         // Data dasar obat
         $row = [
-            $obat->id,
+            $this->rowNumber,  // Gunakan nomor urut sebagai pengganti ID
             $obat->nama_obat,
             $obat->jenis_obat ?? '-',
             $obat->harga_satuan,

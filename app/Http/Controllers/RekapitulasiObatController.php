@@ -6,9 +6,39 @@ use Illuminate\Http\Request;
 use App\Models\RekapitulasiObat;
 use Illuminate\Support\Facades\Validator; // Pastikan ini di-import
 use Illuminate\Support\Facades\Log; // Pastikan ini di-import
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\Unit;
+use App\Models\Obat;
 
 class RekapitulasiObatController extends Controller
 {
+
+    public function index(Request $request)
+    {
+        $unitId = Auth::user()->unit_id;
+
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
+
+        $obats = Obat::where('unit_id', Auth::user()->unit_id)
+            ->with(['rekapitulasiObatByUnit' => function ($query) use ($bulan, $tahun) {
+                $query->where('bulan', $bulan)
+                    ->where('tahun', $tahun);
+            }])
+            ->get();
+
+
+        $rekapitulasi = RekapitulasiObat::with(['obat', 'user'])
+            ->where('unit_id', $unitId)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->get();
+
+        return view('rekapitulasi-obat', compact('obats', 'rekapitulasi', 'bulan', 'tahun', 'daysInMonth'));
+    }
+
     public function storeOrUpdate(Request $request)
     {
         // --- 1. Logging Data yang Diterima (Untuk Debugging) ---
@@ -47,10 +77,12 @@ class RekapitulasiObatController extends Controller
                         [
                             'obat_id' => $validated['obat_id'],
                             'tanggal' => $validated['tanggal'],
-                            'bulan' => $validated['bulan'], // <-- PENTING: Pastikan ini di kunci
-                            'tahun' => $validated['tahun'], // <-- PENTING: Pastikan ini di kunci
+                            'bulan' => $validated['bulan'],
+                            'tahun' => $validated['tahun'],
+                            'unit_id' => Auth::user()->unit_id,
                         ],
                         [
+                            'user_id' => Auth::id(),
                             'stok_awal' => $validated['stok_awal'],
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $validated['sisa_stok'],
@@ -98,7 +130,6 @@ class RekapitulasiObatController extends Controller
                 ]
             );
             return response()->json(['success' => true, 'rekap' => $rekap, 'message' => 'Data rekapitulasi harian berhasil disimpan/diperbarui.']);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('Validasi gagal untuk single data:', $e->errors());
             return response()->json(['success' => false, 'message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
