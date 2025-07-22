@@ -221,6 +221,3 @@ Route::prefix('obat')->name('obat.')->group(function () {
     // Import
     Route::post('/import', [ObatController::class, 'import'])->name('import');
 });
-
-
-

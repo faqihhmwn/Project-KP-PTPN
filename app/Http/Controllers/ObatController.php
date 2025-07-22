@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ObatImport;
+use Illuminate\Support\Facades\Log;
 use App\Exports\ObatExport;
 
 class ObatController extends Controller
@@ -312,16 +313,16 @@ class ObatController extends Controller
         ));
     }
 
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv',
-        ]);
+    // public function import(Request $request)
+    // {
+    //     $request->validate([
+    //         'file' => 'required|mimes:xlsx,xls,csv',
+    //     ]);
 
-        Excel::import(new ObatImport, $request->file('file'));
+    //     Excel::import(new ObatImport, $request->file('file'));
 
-        return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
-    }
+    //     return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
+    // }
 
     public function exportExcel(Request $request)
     {
@@ -349,7 +350,7 @@ class ObatController extends Controller
             );
             
         } catch (\Exception $e) {
-            \Log::error('Export error: ' . $e->getMessage());
+            Log::error('Export error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal mengexport data: ' . $e->getMessage());
         }
     }
