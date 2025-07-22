@@ -24,19 +24,33 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $credentials = $request->only('email', 'password');
+        $loginAs = $request->input('login_as');
 
-        $request->session()->regenerate();
+        $guard = ($loginAs === 'admin') ? 'admin' : 'web';
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        if (Auth::guard($guard)->attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
+
+            return redirect()->intended(route('dashboard', absolute: false));
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->onlyInput('email', 'login_as');
     }
+
 
     /**
      * Destroy an authenticated session.
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        if (Auth::guard('admin')->check()) {
+            Auth::guard('admin')->logout();
+        } else {
+            Auth::guard('web')->logout();
+        }
 
         $request->session()->invalidate();
 
@@ -44,5 +58,4 @@ class AuthenticatedSessionController extends Controller
 
         return redirect('/login');
     }
-
 }

@@ -4,11 +4,36 @@
 <div class="container py-4">
     {{-- Welcome --}}
     <div class="alert alert-success" id="welcome-alert">
-        Selamat datang, {{ Auth::user()->name }} dari unit {{ Auth::user()->unit->nama ?? '-' }}!
+        Selamat datang, {{ $authUser->name }}!
+        @if($is_admin)
+            Anda masuk sebagai Admin Pusat.
+        @else
+            Anda masuk dari unit {{ $authUser->unit->nama ?? '-' }}.
+        @endif
     </div>
 
     {{-- Filter Periode dan Search --}}
     <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
+        @if ($is_admin)
+        <div class="col-md-3">
+            <label for="unit_id" class="form-label">Pilih Unit</label>
+            <select name="unit_id" class="form-select" id="unit_id">
+                <option value="">Semua Unit</option>
+                @foreach ($units as $unit)
+                    <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
+                        {{ $unit->nama }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        @else
+        <div class="col-md-3">
+            <label for="unit_id" class="form-label">Unit</label>
+            <input type="text" class="form-control" value="{{ $authUser->unit->nama ?? '' }}" disabled>
+            <input type="hidden" name="unit_id" value="{{ $authUser->unit_id }}">
+        </div>
+        @endif
+        
         <div class="col-md-3">
             <label for="bulan" class="form-label">Bulan</label>
             <select name="bulan" class="form-select" id="bulan">
@@ -79,11 +104,13 @@
                                             </li>
                                         @endforeach
                                     </ul>
+                                    @if(!$is_admin)
                                     <div class="mt-3 text-end">
                                         <a href="{{ url('/laporan/' . $slug) }}" class="btn btn-sm btn-outline-{{ $color }}">
                                             Lihat Detail
                                         </a>
                                     </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
