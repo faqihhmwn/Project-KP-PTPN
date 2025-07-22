@@ -85,11 +85,13 @@
 
     <hr class="my-5">
     <h5>Data Tersimpan Tahun {{ $selectedTahun }}</h5>
-    <form action="{{ route('rekap.bpjs.index', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
-        <button type="submit" class="btn btn-success">
-            <i class="fas fa-file-excel"></i> Export Excel
-        </button>
-    </form>
+        <form action="{{ route('rekap.bpjs.bpjs.export', ['tahun' => $selectedTahun]) }}" method="GET" class="mb-3">
+            <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+        </form>
+
     <div class="table-responsive">
         <table class="table table-striped table-bordered text-nowrap">
             <thead>
