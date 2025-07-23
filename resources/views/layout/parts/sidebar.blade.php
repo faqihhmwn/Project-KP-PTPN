@@ -55,10 +55,6 @@
               <i class="bi bi-chevron-right nav-icon"></i>
               <p>Dana Kapitasi</p>
             </a>
-          </li>
-
-            </ul>
-          </li>
         </ul>
       </li>
 
