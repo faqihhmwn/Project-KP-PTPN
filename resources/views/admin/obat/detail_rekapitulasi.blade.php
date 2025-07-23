@@ -76,6 +76,10 @@
                                 <td class="text-dark">: {{ $obat->nama_obat }}</td>
                             </tr>
                             <tr>
+                                <td class="text-muted"><strong>Unit</strong></td>
+                                <td class="text-dark">: {{ $obat->unit->nama ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
                                 <td class="text-muted"><strong>Jenis/Kategori</strong></td>
                                 <td class="text-dark">: {{ $obat->jenis_obat ?? '-' }}</td>
                             </tr>
@@ -105,13 +109,13 @@
                     <div class="row text-center g-2 mt-2">
                         <div class="col-6">
                             <div class="p-3 rounded bg-primary bg-opacity-10 stat-card">
-                                <h3 class="text-primary mb-1">{{ $rekapHarian->sum('jumlah_keluar') }}</h3>
+                                <h3 class="text-primary mb-1">{{ $rekapitulasi->sum('jumlah_keluar') }}</h3>
                                 <small class="text-muted">Total Keluar</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="p-3 rounded bg-success bg-opacity-10 stat-card">
-                                <h3 class="text-success mb-1">Rp {{ number_format($rekapHarian->sum('jumlah_keluar') * $obat->harga_satuan, 0, ',', '.') }}</h3>
+                                <h3 class="text-success mb-1">Rp {{ number_format($rekapitulasi->sum('jumlah_keluar') * $obat->harga_satuan, 0, ',', '.') }}</h3>
                                 <small class="text-muted">Total Biaya</small>
                             </div>
                         </div>
@@ -148,7 +152,7 @@
                             
                             // Pre-process rekapitulasi data into an array for faster lookup
                             $rekapData = [];
-                            foreach($rekapHarian as $rekap) {
+                            foreach($rekapitulasi as $rekap) { 
                                 $rekapData[intval(date('d', strtotime($rekap->tanggal)))] = $rekap;
                             }
                         @endphp

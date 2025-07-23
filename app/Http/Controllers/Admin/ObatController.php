@@ -13,6 +13,7 @@ use App\Imports\ObatImport;
 use App\Exports\ObatExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\RekapitulasiObat;
 
 class ObatController extends Controller
 {
@@ -417,23 +418,25 @@ public function dashboard(Request $request)
 
     public function showRekapitulasi(Request $request, Obat $obat)
     {
-        // Get bulan & tahun from request or use current
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
+        $obat->load('unit');
+    
+        $bulan = (int) $request->get('bulan', Carbon::now()->month);
+        $tahun = (int) $request->get('tahun', Carbon::now()->year);
 
-        // Get rekap harian for selected month
-        $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+        // Ambil data rekapitulasi harian
+        $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('unit_id', $obat->unit_id)
             ->where('bulan', $bulan)
             ->where('tahun', $tahun)
-            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
             ->orderBy('tanggal', 'asc')
             ->get();
 
-        return view('admin.obat.detail_rekapitulasi', [
-            'obat' => $obat,
-            'rekapHarian' => $rekapHarian,
-            'bulan' => $bulan,
-            'tahun' => $tahun
-        ]);
+        // Kirim data ke view dengan nama variabel 'rekapitulasi'
+        return view('admin.obat.detail_rekapitulasi', compact(
+            'obat', 
+            'rekapitulasi', // Pastikan nama ini yang digunakan
+            'bulan', 
+            'tahun'
+        ));
     }
 }
