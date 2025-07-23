@@ -20,6 +20,7 @@ class InputManual extends Model
         'nama',
         'status',
         'jenis_disabilitas',
+        'keterangan',
         'bulan',
         'tahun',
     ];

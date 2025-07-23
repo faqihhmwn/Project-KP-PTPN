@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\LaporanBulanan;
+use App\Models\Unit;
+
+class DashboardController extends Controller
+{
+
+    public function index(Request $request)
+    {
+
+        $kategoriList = [
+            1 => 'Kependudukan',
+            2 => 'Penyakit',
+            3 => 'Opname',
+            4 => 'Penyakit Kronis',
+            5 => 'Konsultasi Klinik',
+            6 => 'Cuti Sakit',
+            7 => 'Peserta KB',
+            8 => 'Metode KB',
+            9 => 'Kehamilan',
+            10 => 'Imunisasi',
+            11 => 'Kematian',
+            12 => 'Klaim Asuransi',
+            13 => 'Kecelakaan Kerja',
+            14 => 'Sakit Berkepanjangan',
+            15 => 'Absensi Dokter Honorer',
+            21 => 'Kategori Khusus',
+        ];
+
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+
+        $unitId = $request->input('unit_id'); // <-- AMBIL INPUT UNIT
+        $units = Unit::all(); // <-- AMBIL SEMUA DATA UNIT
+
+        $ringkasan = [];
+
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
+        $is_admin = Auth::guard('admin')->check();
+
+        foreach ($kategoriList as $kategoriId => $kategoriNama) {
+            $subkategoriData = \App\Models\SubKategori::where('kategori_id', $kategoriId)->get();
+
+            $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
+
+            // LOGIKA FILTER BERDASARKAN PERAN PENGGUNA DAN UNIT
+            if ($is_admin) {
+                // Jika admin memilih unit spesifik, filter berdasarkan unit_id
+                if ($unitId) {
+                    $laporanQuery->where('unit_id', $unitId);
+                }
+                // Jika admin tidak memilih unit, maka data agregat dari semua unit ditampilkan.
+            } else {
+                // Jika bukan admin, selalu filter berdasarkan unit pengguna yang login
+                $laporanQuery->where('unit_id', $authUser->unit_id);
+            }
+            if ($bulan) {
+                $laporanQuery->where('bulan', $bulan);
+            }
+            if ($tahun) {
+                $laporanQuery->where('tahun', $tahun);
+            }
+
+            $laporan = $laporanQuery->get();
+
+            $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                $jumlah = $laporan->where('subkategori_id', $sub->id)->sum('jumlah');
+                return [
+                    'id' => $sub->id,
+                    'nama' => $sub->nama,
+                    'total' => $jumlah,
+                ];
+            });
+
+            $ringkasan[] = [
+                'id' => $kategoriId,
+                'nama' => $kategoriNama,
+                'total' => $subkategoriRingkasan->sum('total'),
+                'subkategori' => $subkategoriRingkasan,
+            ];
+        }
+
+        // Siapkan data untuk dikirim ke view
+        $viewData = compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId');
+
+        // Tentukan view yang akan ditampilkan berdasarkan peran pengguna
+        if ($is_admin) {
+            return view('admin-dashboard', $viewData);
+        } else {
+            return view('dashboard', $viewData);
+        }
+    }
+}

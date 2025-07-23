@@ -28,7 +28,7 @@
           </a>
         </li>
 
-
+        <!-- rekap biaya -->
         <li class="nav-item has-treeview">
           <a href="#" class="nav-link">
             <i class="nav-icon fa-solid fa-money-bill-transfer"></i>
@@ -62,6 +62,15 @@
         </ul>
       </li>
 
+         <li class="nav-item">
+                <a href="{{ route('obat.dashboard') }}" class="nav-link {{ request()->routeIs('obat.*') ? 'active' : '' }}">
+                  <i class="nav-icon bi bi-capsule"></i>
+                  <p>
+                    Farmasi
+                  </p>
+                </a>
+              </li>
+              
 
         {{-- Tambahan lainnya jika diperlukan --}}
       </ul>
@@ -106,6 +115,7 @@
             {{ $nama }}
           </a>
         </li>
+      
       @endforeach
     </ul>
   </div>
