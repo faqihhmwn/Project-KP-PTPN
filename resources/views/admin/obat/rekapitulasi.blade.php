@@ -72,6 +72,14 @@
                 <!-- Filter Bulan/Tahun -->
                 <div class="col-md-6">
                     <form method="GET" class="d-flex gap-2" id="filterForm">
+                        <select name="unit_id" class="form-select" id="unit_id">
+                            <option value="">-- Pilih Unit --</option>
+                            @foreach ($units as $unit)
+                                <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
+                                    {{ $unit->nama }}
+                                </option>
+                            @endforeach
+                        </select>
                         <select name="bulan" class="form-select" id="bulanSelect">
                             @for ($i = 1; $i <= 12; $i++)
                                 <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
@@ -139,7 +147,7 @@
                             $tahunSebelumnya = $bulan == 1 ? $tahun - 1 : $tahun;
 
                             $rekapBulanSebelumnya = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                ->where('unit_id', Auth::user()->unit_id)
+                                ->where('unit_id', $unitId)
                                 ->where('bulan', $bulanSebelumnya)
                                 ->where('tahun', $tahunSebelumnya)
                                 ->orderBy('tanggal', 'desc')
@@ -156,7 +164,7 @@
                                 $jumlahKeluar = 0;
                                 $tanggal = \Carbon\Carbon::createFromDate($tahun, (int) $bulan, $day);
                                 $rekapitulasi = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                    ->where('unit_id', Auth::user()->unit_id)
+                                    ->where('unit_id', $unitId)
                                     ->where('tanggal', $tanggal->format('Y-m-d'))
                                     ->where('bulan', $bulan)
                                     ->where('tahun', $tahun)
@@ -204,7 +212,7 @@
                 @empty
                     <tr>
                         <td colspan="{{ 11 + $daysInMonth }}" style="text-align: center; padding: 20px;">
-                            Belum ada data obat untuk bulan {{ \Carbon\Carbon::create()->month($bulan)->format('F') }}
+                            Belum ada data obat untuk bulan {{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}
                             {{ $tahun }}
                         </td>
                     </tr>
@@ -294,6 +302,7 @@
         // Deklarasi variabel global untuk bulan dan tahun
         const CURRENT_BULAN = {{ $bulan }};
         const CURRENT_TAHUN = {{ $tahun }};
+        const CURRENT_UNIT_ID = {{ $unitId ?? 'null' }}; // <-- TAMBAHKAN BARIS INI
 
         // Update sisa stok secara dinamis saat input harian berubah
         function updateSisaStok(obatId) {
@@ -338,23 +347,23 @@
             const bulanSelect = document.getElementById('bulanSelect');
             const tahunSelect = document.getElementById('tahunSelect');
 
-            if (filterForm) {
-                bulanSelect.addEventListener('change', function() {
+            // if (filterForm) {
+                // bulanSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
-                    document.querySelectorAll('.daily-input').forEach(input => {
-                        input.value = '0';
-                    });
-                    filterForm.submit();
-                });
+                    // document.querySelectorAll('.daily-input').forEach(input => {
+                        // input.value = '0';
+                    // });
+                    // filterForm.submit();
+                // });
 
-                tahunSelect.addEventListener('change', function() {
+                // tahunSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
-                    document.querySelectorAll('.daily-input').forEach(input => {
-                        input.value = '0';
-                    });
-                    filterForm.submit();
-                });
-            }
+                    // document.querySelectorAll('.daily-input').forEach(input => {
+                        // input.value = '0';
+                    // });
+                    // filterForm.submit();
+                // });
+            // }
 
             // Handle inputs for all rows
             document.querySelectorAll('tr[data-obat-row]').forEach(row => {
@@ -506,6 +515,7 @@
                     },
                     body: JSON.stringify({
                         bulk: bulk,
+                        unit_id: CURRENT_UNIT_ID, // <-- TAMBAHKAN BARIS INI
                         bulan: CURRENT_BULAN,
                         tahun: CURRENT_TAHUN
                     })
@@ -524,9 +534,14 @@
 
                 // Refresh halaman setelah 1 detik
                 setTimeout(() => {
-                    window.location.href = window.location.pathname +
-                        '?bulan=' + CURRENT_BULAN +
+                    // Bangun URL baru dengan semua parameter filter
+                    let newUrl = window.location.pathname +
+                        '?unit_id=' + CURRENT_UNIT_ID +
+                        '&bulan=' + CURRENT_BULAN +
                         '&tahun=' + CURRENT_TAHUN;
+    
+                    // Arahkan ke URL yang baru
+                    window.location.href = newUrl;
                 }, 1000);
 
             } catch (error) {

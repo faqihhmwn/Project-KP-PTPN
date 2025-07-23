@@ -219,28 +219,40 @@ public function index(Request $request)
     // Method rekapitulasi: Filter data rekap berdasarkan unit
     public function rekapitulasi(Request $request)
     {
-        $units = Unit::orderBy('nama')->get();
-        $unitId = $request->input('unit_id');
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
-        
-        $obatsQuery = Obat::query();
+        // Mengambil semua unit untuk dropdown filter
+        $units = \App\Models\Unit::orderBy('nama')->get();
 
+        // Mengambil input dan memastikan tipenya adalah integer
+        $unitId = $request->input('unit_id');
+        $bulan = (int) $request->input('bulan', Carbon::now()->month);
+        $tahun = (int) $request->input('tahun', Carbon::now()->year);
+
+        // Memulai query untuk model Obat
+        $obatsQuery = \App\Models\Obat::query();
+
+        // Terapkan filter unit jika ada yang dipilih
         if ($unitId) {
             $obatsQuery->where('unit_id', $unitId);
         } else {
-            // Jika tidak ada unit dipilih, jangan tampilkan data apapun
-            $obatsQuery->whereRaw('1 = 0'); 
+            // Jika tidak ada unit yang dipilih, jangan tampilkan data apa pun
+            $obatsQuery->whereRaw('1 = 0');
         }
 
-        $obats = $obatsQuery->with(['transaksiObats' => function($query) use ($bulan, $tahun) {
-            $query->whereMonth('tanggal', $bulan)
-                  ->whereYear('tanggal', $tahun);
-        }])->get();
+        // Mengambil data obat yang sudah terfilter
+        $obats = $obatsQuery->orderBy('nama_obat')->get();
 
-        $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
-        
-        return view('admin.obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth', 'units', 'unitId'));
+        // Dapatkan jumlah hari dalam bulan yang dipilih
+        $daysInMonth = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
+    
+        // Kirim semua data yang diperlukan ke view
+        return view('admin.obat.rekapitulasi', compact(
+            'obats', 
+            'bulan', 
+            'tahun', 
+            'daysInMonth', 
+            'units', 
+            'unitId'
+        ));
     }
 
     public function addTransaksi(Request $request, Obat $obat)

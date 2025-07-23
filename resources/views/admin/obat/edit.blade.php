@@ -136,19 +136,22 @@
                         </div>
 
                         <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> Informasi Stok Saat Ini:</h6>
+                            <h6><i class="fas fa-info-circle"></i> Informasi Stok</h6>
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <strong>Stok Awal:</strong><br>
                                     {{ number_format($obat->stok_awal) }} {{ $obat->satuan }}
                                 </div>
-                                <div class="col-md-3">
-                                    <strong>Stok Sisa:</strong><br>
-                                    <span class="badge {{ $obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning' : 'bg-success') }}">
+                                <div class="col-md-4">
+                                    <strong>Stok Sisa (Saat Ini):</strong><br>
+                                    <span class="badge fs-6 {{ $obat->stok_sisa <= 10 ? 'bg-danger' : 'bg-success' }}">
                                         {{ number_format($obat->stok_sisa) }} {{ $obat->satuan }}
                                     </span>
                                 </div>
                             </div>
+                            <small class="form-text text-muted mt-2">
+                                Stok sisa diperbarui secara otomatis berdasarkan data dari rekapitulasi.
+                            </small>
                         </div>
 
                         <div class="d-flex justify-content-between">

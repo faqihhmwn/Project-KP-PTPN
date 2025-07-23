@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\Obat;
+use Illuminate\Support\Facades\DB;
 
 class RekapitulasiObatController extends Controller
 {
@@ -42,104 +43,70 @@ class RekapitulasiObatController extends Controller
 
     public function storeOrUpdate(Request $request)
     {
-        // --- 1. Logging Data yang Diterima (Untuk Debugging) ---
-        // Ini akan membantu Anda melihat apakah data 'tanggal' benar-benar dikirim dari frontend.
-        Log::info('Data diterima untuk storeOrUpdate:', $request->all());
+        // 1. Validasi data yang masuk
+        $validated = $request->validate([
+            'bulk' => 'required|array',
+            'bulk.*.obat_id' => 'required|integer|exists:obats,id',
+            'bulk.*.tanggal' => 'required|date',
+            'bulk.*.jumlah_keluar' => 'required|integer|min:0',
+            'unit_id' => 'required|integer|exists:units,id',
+            'bulan' => 'required|integer|between:1,12',
+            'tahun' => 'required|integer',
+        ]);
 
-        // Jika bulk, simpan banyak data sekaligus
-        if ($request->has('bulk')) {
-            $bulk = $request->input('bulk');
-            $saved = 0;
-            $errors = [];
+        $unitId = $validated['unit_id'];
+        $bulan = $validated['bulan'];
+        $tahun = $validated['tahun'];
+        
+        // Kumpulkan ID obat yang terpengaruh untuk pembaruan
+        $affectedObatIds = collect($validated['bulk'])->pluck('obat_id')->unique();
 
-            foreach ($bulk as $item) {
-                // Validasi manual tiap item
-                $validator = Validator::make($item, [
-                    'obat_id' => 'required|integer',
-                    'tanggal' => 'required|date_format:Y-m-d', // <-- PENTING: Pastikan ini
-                    'jumlah_keluar' => 'required|integer|min:0',
-                    'stok_awal' => 'required|integer|min:0',
-                    'sisa_stok' => 'required|integer|min:0',
-                    'total_biaya' => 'required|integer|min:0',
-                    'bulan' => 'required|integer|min:1|max:12',
-                    'tahun' => 'required|integer|min:2000|max:' . (date('Y') + 1),
-                ]);
-
-                if ($validator->fails()) {
-                    $errors[] = ['item' => $item, 'errors' => $validator->errors()->toArray()];
-                    Log::warning('Validasi gagal untuk item bulk:', $item);
-                    continue;
-                }
-
-                $validated = $validator->validated();
-
-                try {
-                    RekapitulasiObat::updateOrCreate(
-                        [
-                            'obat_id' => $validated['obat_id'],
-                            'tanggal' => $validated['tanggal'],
-                            'bulan' => $validated['bulan'],
-                            'tahun' => $validated['tahun'],
-                            'unit_id' => Auth::user()->unit_id,
-                        ],
-                        [
-                            'user_id' => Auth::id(),
-                            'stok_awal' => $validated['stok_awal'],
-                            'jumlah_keluar' => $validated['jumlah_keluar'],
-                            'sisa_stok' => $validated['sisa_stok'],
-                            'total_biaya' => $validated['total_biaya'],
-                        ]
-                    );
-                    $saved++;
-                } catch (\Exception $e) {
-                    $errors[] = ['item' => $item, 'error_db' => $e->getMessage()];
-                    Log::error('Gagal menyimpan item bulk ke DB: ' . $e->getMessage(), ['item' => $item]);
-                }
-            }
-
-            if (!empty($errors)) {
-                return response()->json(['success' => false, 'message' => 'Beberapa item gagal disimpan.', 'saved_count' => $saved, 'errors' => $errors], 400);
-            }
-            return response()->json(['success' => true, 'count' => $saved, 'message' => 'Data bulk berhasil disimpan/diperbarui.']);
-        }
-
-        // Single data (auto-save) - ini yang dipanggil dari JavaScript di View Anda
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'obat_id' => 'required|integer',
-                'tanggal' => 'required|date_format:Y-m-d', // <-- PENTING: Pastikan ini
-                'jumlah_keluar' => 'required|integer|min:0',
-                'stok_awal' => 'required|integer|min:0',
-                'sisa_stok' => 'required|integer|min:0',
-                'total_biaya' => 'required|integer|min:0',
-                'bulan' => 'required|integer|min:1|max:12',
-                'tahun' => 'required|integer|min:2000|max:' . (date('Y') + 1),
-            ]);
+            // Proses setiap baris data yang dikirim dari frontend
+            foreach ($validated['bulk'] as $data) {
+                RekapitulasiObat::updateOrCreate(
+                    [
+                        'obat_id' => $data['obat_id'],
+                        'tanggal' => $data['tanggal'],
+                        'unit_id' => $unitId,
+                    ],
+                    [
+                        'bulan' => $bulan,
+                        'tahun' => $tahun,
+                        'jumlah_keluar' => $data['jumlah_keluar'],
+                    ]
+                );
+            }
 
-            $rekap = RekapitulasiObat::updateOrCreate(
-                [
-                    'obat_id' => $validated['obat_id'],
-                    'tanggal' => $validated['tanggal'],
-                    'bulan' => $validated['bulan'], // <-- PENTING: Pastikan ini di kunci
-                    'tahun' => $validated['tahun'], // <-- PENTING: Pastikan ini di kunci
-                ],
-                [
-                    'stok_awal' => $validated['stok_awal'],
-                    'jumlah_keluar' => $validated['jumlah_keluar'],
-                    'sisa_stok' => $validated['sisa_stok'],
-                    'total_biaya' => $validated['total_biaya'],
-                ]
-            );
-            return response()->json(['success' => true, 'rekap' => $rekap, 'message' => 'Data rekapitulasi harian berhasil disimpan/diperbarui.']);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning('Validasi gagal untuk single data:', $e->errors());
-            return response()->json(['success' => false, 'message' => 'Validasi gagal.', 'errors' => $e->errors()], 422);
+            // --- PERBAIKAN UTAMA: Perbarui Stok Sisa di Tabel Obat ---
+            foreach ($affectedObatIds as $obatId) {
+                $obat = Obat::find($obatId);
+                if ($obat) {
+                    // Hitung total pemakaian dari semua rekapitulasi untuk obat ini
+                    $totalKeluar = RekapitulasiObat::where('obat_id', $obatId)
+                                                    ->where('unit_id', $unitId)
+                                                    ->sum('jumlah_keluar');
+                    
+                    // Hitung sisa stok yang baru
+                    $stokSisaBaru = $obat->stok_awal - $totalKeluar;
+
+                    // Perbarui kolom 'stok_sisa' di tabel 'obats'
+                    $obat->stok_sisa = $stokSisaBaru;
+                    $obat->save();
+                }
+            }
+            // --- AKHIR PERBAIKAN ---
+
+            DB::commit();
+
+            return response()->json(['message' => 'Data rekapitulasi berhasil disimpan dan stok telah diperbarui!'], 200);
+
         } catch (\Exception $e) {
-            Log::error('Gagal menyimpan single data rekapitulasi obat: ' . $e->getMessage(), [
-                'request_data' => $request->all(),
-                'error_trace' => $e->getTraceAsString()
-            ]);
-            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server: ' . $e->getMessage()], 500);
+            DB::rollBack();
+            Log::error('Gagal menyimpan rekapitulasi: ' . $e->getMessage());
+
+            return response()->json(['message' => 'Terjadi kesalahan di server saat menyimpan data.'], 500);
         }
     }
 }
