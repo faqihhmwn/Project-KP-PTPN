@@ -162,25 +162,43 @@ public function index(Request $request)
 
     public function edit(Obat $obat)
     {
-        return view('admin.obat.edit', compact('obat'));
+        // Fetches all units to populate the dropdown
+        $units = \App\Models\Unit::orderBy('nama')->get();
+    
+        // Sends the specific drug data and the list of units to the view
+        return view('admin.obat.edit', compact('obat', 'units'));
     }
 
     public function update(Request $request, Obat $obat)
     {
+        // 1. Validasi data yang masuk, termasuk unit_id
         $validated = $request->validate([
+            'unit_id' => 'required|exists:units,id',
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
             'stok_awal' => 'required|integer|min:0',
-            'keterangan' => 'nullable|string'
+            'keterangan' => 'nullable|string',
         ]);
 
-        $obat->update($validated);
-        $this->updateStokObat($obat);
+        // 2. Cek duplikasi nama di unit yang sama, kecuali untuk obat ini sendiri
+        $obatExists = \App\Models\Obat::where('unit_id', $validated['unit_id'])
+            ->where('id', '!=', $obat->id)
+            ->whereRaw('UPPER(nama_obat) = ?', [strtoupper($validated['nama_obat'])])
+            ->exists();
 
-        return redirect()->route('obat.index')
-            ->with('success', 'Obat berhasil diperbarui.');
+        if ($obatExists) {
+            return back()
+                ->withInput()
+                ->withErrors(['nama_obat' => 'Obat dengan nama ini sudah terdaftar di unit yang dipilih!']);
+        }
+
+        // 3. Perbarui data obat dengan data yang sudah divalidasi
+        $obat->update($validated);
+
+        // 4. Redirect kembali ke HALAMAN INDEX ADMIN dengan pesan sukses
+        return redirect()->route('admin.obat.index')->with('success', 'Data obat berhasil diperbarui.');
     }
 
     public function destroy(Obat $obat)
