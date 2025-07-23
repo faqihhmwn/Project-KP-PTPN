@@ -16,33 +16,35 @@ class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil unit_id user yang sedang login
-        $userUnitId = Auth::user()->unit_id;
+        // 1. Secara eksplisit gunakan guard 'web' untuk mendapatkan user
+        $user = Auth::guard('web')->user();
+
+        // 2. Lakukan pengecekan jika user tidak ditemukan (pengaman tambahan)
+        if (!$user) {
+            // Arahkan ke halaman login jika tidak ada user yang terotentikasi
+            return redirect()->route('login');
+        }
+
+        // 3. Ambil unit_id dari user yang sudah dipastikan ada
+        $userUnitId = $user->unit_id;
 
         // Load data obat milik unit tersebut
-        $query = Obat::with(['rekapitulasiObat' => function ($query) {
+        $query = \App\Models\Obat::with(['rekapitulasiObat' => function ($query) {
             // Urutkan berdasarkan tanggal terbaru
             $query->orderBy('tanggal', 'desc');
-        }])
-            ->where('unit_id', $userUnitId); // 🔒 filter berdasarkan unit user
+        }])->where('unit_id', $userUnitId); // Filter berdasarkan unit user
 
         // Fitur pencarian
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('nama_obat', 'like', "%{$request->search}%")
-                    ->orWhere('jenis_obat', 'like', "%{$request->search}%");
+                  ->orWhere('jenis_obat', 'like', "%{$request->search}%");
             });
         }
 
-        // Ambil data obat dan urutkan
-        $obats = $query->orderBy('nama_obat')->paginate(10);
+        // Ambil hasil dengan paginasi
+        $obats = $query->latest()->paginate(10);
 
-        // Jika permintaan AJAX (dari Livewire atau JavaScript), kirim partial
-        if ($request->ajax()) {
-            return view('partials.obat-table', compact('obats'))->render();
-        }
-
-        // Return ke view utama
         return view('obat.index', compact('obats'));
     }
 
