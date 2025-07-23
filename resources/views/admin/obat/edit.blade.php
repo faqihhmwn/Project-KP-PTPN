@@ -1,176 +1,143 @@
 @extends('layout.app')
 
-@section('title', 'Edit Obat')
+@section('title', 'Daftar Obat - Admin')
 
 @section('content')
+<style>
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .table-responsive {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+</style>
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>Edit Obat: {{ $obat->nama_obat }}</h4>
-                    <!-- <a href="{{ route('admin.obat.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Kembali -->
-                     <a href="{{ request()->get('return_url', route('admin.obat.index')) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Kembali ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
-                    </a>
+                    <h3>Daftar Obat (Admin)</h3>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.obat.dashboard') }}" class="btn btn-info btn-sm">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
+                        </a>
+                        <a href="{{ route('admin.obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-chart-bar"></i> Rekapitulasi
+                        </a>
+                        <a href="{{ route('admin.obat.create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Tambah Obat
+                        </a>
+                    </div>
                 </div>
 
                 <div class="card-body">
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
+                    <?php if(session('success')): ?>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <?php echo e(session('success')); ?>
+
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
-                    <form action="{{ route('admin.obat.update', $obat) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="nama_obat" class="form-label">Nama Obat <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('nama_obat') is-invalid @enderror" 
-                                           id="nama_obat" name="nama_obat" value="{{ old('nama_obat', $obat->nama_obat) }}" required>
-                                    @error('nama_obat')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <form method="GET" action="<?php echo e(route('admin.obat.index')); ?>" class="d-flex gap-2">
+                                <select name="unit_id" class="form-select" onchange="this.form.submit()">
+                                    <option value="">-- Tampilkan Semua Unit --</option>
+                                    <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($unit->id); ?>" <?php echo e(request('unit_id') == $unit->id ? 'selected' : ''); ?>>
+                                            <?php echo e($unit->nama); ?>
 
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="jenis_obat" class="form-label">Jenis/Kategori Obat</label>
-                                    <input type="text" class="form-control @error('jenis_obat') is-invalid @enderror" 
-                                           id="jenis_obat" name="jenis_obat" value="{{ old('jenis_obat', $obat->jenis_obat) }}"
-                                           placeholder="Contoh: Antibiotik, Analgesik, dll">
-                                    @error('jenis_obat')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                                        </option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </select>
+                                <input type="text" name="search" class="form-control" placeholder="Cari nama/jenis obat..." value="<?php echo e(request('search')); ?>">
+                                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                                <a href="<?php echo e(route('admin.obat.index')); ?>" class="btn btn-secondary"><i class="fas fa-times"></i></a>
+                            </form>
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="harga_satuan" class="form-label">Harga Satuan <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">Rp</span>
-                                        <input type="number" class="form-control @error('harga_satuan') is-invalid @enderror" 
-                                               id="harga_satuan" name="harga_satuan" value="{{ old('harga_satuan', $obat->harga_satuan) }}" 
-                                               min="0" step="0.01" required>
-                                    </div>
-                                    @error('harga_satuan')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="satuan" class="form-label">Satuan <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('satuan') is-invalid @enderror" 
-                                            id="satuan" name="satuan" required>
-                                        <option value="">Pilih Satuan</option>
-                                        <option value="tablet" {{ old('satuan', $obat->satuan) == 'tablet' ? 'selected' : '' }}>Tablet</option>
-                                        <option value="kapsul" {{ old('satuan', $obat->satuan) == 'kapsul' ? 'selected' : '' }}>Kapsul</option>
-                                        <option value="botol" {{ old('satuan', $obat->satuan) == 'botol' ? 'selected' : '' }}>Botol</option>
-                                        <option value="ml" {{ old('satuan', $obat->satuan) == 'ml' ? 'selected' : '' }}>ML</option>
-                                        <option value="tube" {{ old('satuan', $obat->satuan) == 'tube' ? 'selected' : '' }}>Tube</option>
-                                        <option value="ampul" {{ old('satuan', $obat->satuan) == 'ampul' ? 'selected' : '' }}>Ampul</option>
-                                        <option value="vial" {{ old('satuan', $obat->satuan) == 'vial' ? 'selected' : '' }}>Vial</option>
-                                        <option value="strip" {{ old('satuan', $obat->satuan) == 'strip' ? 'selected' : '' }}>Strip</option>
-                                        <option value="pcs" {{ old('satuan', $obat->satuan) == 'pcs' ? 'selected' : '' }}>Pcs</option>
-                                    </select>
-                                    @error('satuan')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                        <div class="col-md-4 text-end">
+                            <span class="text-muted">Total: <?php echo e($obats->total()); ?> obat</span>
                         </div>
+                    </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="stok_awal" class="form-label">Stok Awal <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control @error('stok_awal') is-invalid @enderror" 
-                                           id="stok_awal" name="stok_awal" value="{{ old('stok_awal', $obat->stok_awal) }}" 
-                                           min="0" required>
-                                    @error('stok_awal')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <div class="form-text">
-                                        <small>Stok saat ini: {{ $obat->stok_sisa }} {{ $obat->satuan }}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center">No</th>
+                                    <th>Nama Obat</th>
+                                    <th>Unit</th>
+                                    <th class="text-center">Jenis</th>
+                                    <th class="text-end">Harga Satuan</th>
+                                    <th class="text-center">Stok Awal</th>
+                                    <th class="text-center">Stok Sisa</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $__empty_1 = true; $__currentLoopData = $obats; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $obat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                    <tr>
+                                        <td class="text-center"><?php echo e($obats->firstItem() + $index); ?></td>
+                                        <td class="fw-medium"><?php echo e($obat->nama_obat ?? '-'); ?></td>
+                                        <td><span class="badge bg-secondary"><?php echo e($obat->unit->nama ?? 'N/A'); ?></span></td>
+                                        <td class="text-center"><?php echo e($obat->jenis_obat ?? '-'); ?></td>
+                                        <td class="text-end fw-medium">Rp <?php echo e(number_format($obat->harga_satuan, 0, ',', '.')); ?></td>
+                                        <td class="text-center"><?php echo e(number_format($obat->stok_awal)); ?></td>
+                                        <td class="text-center">
+                                            <span class="badge <?php echo e($obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning text-dark' : 'bg-success')); ?>">
+                                                <?php echo e(number_format($obat->stok_sisa)); ?>
 
-                        <div class="mb-3">
-                            <label for="keterangan" class="form-label">Keterangan</label>
-                            <textarea class="form-control @error('keterangan') is-invalid @enderror" 
-                                      id="keterangan" name="keterangan" rows="3" 
-                                      placeholder="Keterangan tambahan tentang obat ini...">{{ old('keterangan', $obat->keterangan) }}</textarea>
-                            @error('keterangan')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="<?php echo e(route('admin.obat.show', $obat)); ?>" class="btn btn-info" title="Detail">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="<?php echo e(route('admin.obat.edit', $obat)); ?>" class="btn btn-warning" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form action="<?php echo e(route('admin.obat.destroy', $obat)); ?>" method="POST" class="d-inline">
+                                                    <?php echo csrf_field(); ?>
+                                                    <?php echo method_field('DELETE'); ?>
+                                                    <button type="submit" class="btn btn-danger" 
+                                                            onclick="return confirm('Anda yakin ingin menghapus obat ini secara permanen? Tindakan ini tidak bisa dibatalkan.')" 
+                                                            title="Hapus Permanen">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form> 
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <p class="text-muted">Data obat tidak ditemukan. Coba filter unit yang lain atau tambahkan obat baru.</p>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
 
-                        <!-- Info Stok -->
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> Informasi Stok Saat Ini:</h6>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <strong>Stok Awal:</strong><br>
-                                    {{ number_format($obat->stok_awal) }} {{ $obat->satuan }}
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Stok Sisa:</strong><br>
-                                    <span class="badge {{ $obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning' : 'bg-success') }}">
-                                        {{ number_format($obat->stok_sisa) }} {{ $obat->satuan }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.obat.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Batal
-                            </a>
+                    <?php if($obats->hasPages()): ?>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
-                               
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Update Obat
-                                </button>
+                                Menampilkan <?php echo e($obats->firstItem() ?? 0); ?> - <?php echo e($obats->lastItem() ?? 0); ?> 
+                                dari <?php echo e($obats->total()); ?> data
+                            </div>
+                            <div>
+                                <?php echo e($obats->links()); ?>
+
                             </div>
                         </div>
-                    </form>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-// Format input harga saat user mengetik
-document.getElementById('harga_satuan').addEventListener('input', function() {
-    let value = this.value.replace(/[^\d]/g, '');
-    this.value = value;
-});
-
-// Preview stok awal
-document.getElementById('stok_awal').addEventListener('input', function() {
-    if (this.value < 0) {
-        this.value = 0;
-    }
-});
-</script>
-
-@endsection
+<?php $__env->stopSection(); ?>

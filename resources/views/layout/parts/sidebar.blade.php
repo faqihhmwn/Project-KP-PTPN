@@ -66,7 +66,7 @@
       <li class="nav-item">
         <a href="{{ $obat_route }}" class="nav-link {{ $is_active ? 'active' : '' }}">
           <i class="nav-icon bi bi-capsule"></i>
-          < p>
+          <p>
           Farmasi
           </p>
         </a>

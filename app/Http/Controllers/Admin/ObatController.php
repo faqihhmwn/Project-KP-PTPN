@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Obat;
+use App\Models\Unit;
 use App\Models\TransaksiObat;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -15,47 +16,44 @@ use Illuminate\Support\Facades\Log;
 
 class ObatController extends Controller
 {
+    // Method index: Filter daftar obat berdasarkan unit
     public function index(Request $request)
     {
-        // Ambil unit_id user yang sedang login
-        $userUnitId = Auth::user()->unit_id;
+        $units = Unit::orderBy('nama')->get();
+        $unitId = $request->input('unit_id');
 
-        // Load data obat milik unit tersebut
-        $query = Obat::with(['rekapitulasiObat' => function ($query) {
-            // Urutkan berdasarkan tanggal terbaru
-            $query->orderBy('tanggal', 'desc');
-        }])
-            ->where('unit_id', $userUnitId); // 🔒 filter berdasarkan unit user
+        $query = Obat::query();
 
-        // Fitur pencarian
+        // Filter berdasarkan unit jika dipilih
+        if ($unitId) {
+            $query->where('unit_id', $unitId);
+        }
+
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
+            $query->where(function($q) use ($request) {
                 $q->where('nama_obat', 'like', "%{$request->search}%")
-                    ->orWhere('jenis_obat', 'like', "%{$request->search}%");
+                  ->orWhere('jenis_obat', 'like', "%{$request->search}%");
             });
         }
 
-        // Ambil data obat dan urutkan
-        $obats = $query->orderBy('nama_obat')->paginate(10);
+        $obats = $query->with('unit')->orderBy('nama_obat')->paginate(10)->withQueryString();
 
-        // Jika permintaan AJAX (dari Livewire atau JavaScript), kirim partial
-        if ($request->ajax()) {
-            return view('partials.obat-table', compact('obats'))->render();
-        }
-
-        // Return ke view utama
-        return view('admin.obat.index', compact('obats'));
+        return view('admin.obat.index', compact('obats', 'units', 'unitId'));
     }
 
 
+    // Method create: Kirim data unit ke form
     public function create()
     {
-        return view('admin.obat.create');
+        $units = Unit::orderBy('nama')->get();
+        return view('admin.obat.create', compact('units'));
     }
 
+    // Method store: Simpan obat beserta unit_id-nya
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'unit_id' => 'required|exists:units,id', // <-- TAMBAHKAN VALIDASI
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
@@ -64,26 +62,26 @@ class ObatController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
-        // Format nama obat menjadi kapital semua
         $validated['nama_obat'] = strtoupper($validated['nama_obat']);
-
-        // Cek apakah nama obat sudah ada (case-insensitive)
-        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])->exists();
+        
+        // Cek duplikat obat PADA UNIT YANG SAMA
+        $obatExists = \App\Models\Obat::where('unit_id', $validated['unit_id'])
+            ->whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
+            ->exists();
+            
         if ($obatExists) {
             return back()
                 ->withInput()
-                ->withErrors(['nama_obat' => 'Obat sudah ada!']);
+                ->withErrors(['nama_obat' => 'Obat dengan nama ini sudah ada di unit yang dipilih!']);
         }
-
-        // Tambahan data stok dan unit_id
+        
         $validated['stok_sisa'] = $validated['stok_awal'];
         $validated['stok_masuk'] = 0;
         $validated['stok_keluar'] = 0;
-        $validated['unit_id'] = Auth::user()->unit_id;
 
-        Obat::create($validated);
+        \App\Models\Obat::create($validated);
 
-        return redirect()->route('obat.index')
+        return redirect()->route('admin.obat.index')
             ->with('success', 'Obat berhasil ditambahkan.');
     }
 
@@ -194,30 +192,31 @@ class ObatController extends Controller
         }
     }
 
+    // Method rekapitulasi: Filter data rekap berdasarkan unit
     public function rekapitulasi(Request $request)
     {
+        $units = Unit::orderBy('nama')->get();
+        $unitId = $request->input('unit_id');
         $bulan = $request->get('bulan', Carbon::now()->month);
         $tahun = $request->get('tahun', Carbon::now()->year);
+        
+        $obatsQuery = Obat::query();
 
-        // Check if export is requested
-        if ($request->get('export') == '1') {
-            return $this->exportExcel($request);
+        if ($unitId) {
+            $obatsQuery->where('unit_id', $unitId);
+        } else {
+            // Jika tidak ada unit dipilih, jangan tampilkan data apapun
+            $obatsQuery->whereRaw('1 = 0'); 
         }
 
-        $userUnitId = Auth::user()->unit_id;
+        $obats = $obatsQuery->with(['transaksiObats' => function($query) use ($bulan, $tahun) {
+            $query->whereMonth('tanggal', $bulan)
+                  ->whereYear('tanggal', $tahun);
+        }])->get();
 
-        $obats = Obat::query()
-            ->where('unit_id', $userUnitId) 
-            ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
-                $query->whereMonth('tanggal', $bulan)
-                    ->whereYear('tanggal', $tahun);
-            }])
-            ->get();
-
-        // Generate data untuk setiap hari dalam bulan
         $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
-
-        return view('admin.obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
+        
+        return view('admin.obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth', 'units', 'unitId'));
     }
 
     public function addTransaksi(Request $request, Obat $obat)
@@ -311,29 +310,32 @@ class ObatController extends Controller
         }
     }
 
-    public function dashboard()
-    {
-        try {
-            $unitId = Auth::user()->unit_id;
+public function dashboard(Request $request)
+{
+    // 1. Mengambil semua unit untuk ditampilkan di dropdown
+    $units = \App\Models\Unit::orderBy('nama')->get();
+    
+    // 2. Mengambil unit_id yang dipilih dari filter
+    $unitId = $request->input('unit_id');
 
-            $totalObat = Obat::where('unit_id', $unitId)->count();
+    // 3. Memulai query untuk model Obat
+    $obatQuery = \App\Models\Obat::query();
 
-            $transaksiHariIni = TransaksiObat::whereHas('obat', function ($query) use ($unitId) {
-                $query->where('unit_id', $unitId);
-            })
-                ->whereDate('tanggal', \Carbon\Carbon::today())
-                ->count();
-        } catch (\Exception $e) {
-            // Fallback values if database error
-            $totalObat = 0;
-            $transaksiHariIni = 0;
-        }
-
-        return view('admin.obat.dashboard', compact(
-            'totalObat',
-            'transaksiHariIni'
-        ));
+    // 4. Jika ada unit yang dipilih, tambahkan filter ke query
+    if ($unitId) {
+        $obatQuery->where('unit_id', $unitId);
     }
+
+    // 5. Hitung total obat berdasarkan query
+    $totalObat = $obatQuery->count();
+    
+    // 6. Kirim semua data yang diperlukan ke view
+    return view('admin.obat.dashboard', compact(
+        'totalObat',
+        'units',
+        'unitId'
+    ));
+}
 
 
     // public function import(Request $request)
