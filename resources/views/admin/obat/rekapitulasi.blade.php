@@ -117,6 +117,7 @@
             <thead>
                 <tr>
                     <th rowspan="2">No</th>
+                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Nama Obat</th>
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
@@ -138,6 +139,7 @@
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
                         <td>{{ $index + 1 }}</td>
+                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
@@ -219,21 +221,23 @@
                 @endforelse
             </tbody>
         </table>
-        <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-            <button id="validasiBulanBtn" class="btn btn-success">
-                <i class="fas fa-lock"></i> Validasi Data Bulan Ini
-            </button>
-            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="fas fa-file-excel"></i> Export Excel
-            </button>
-            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
-                <i class="fas fa-save"></i> Simpan Rekapitulasi
-            </button>
-        </div>
+
         <div id="validasiInfo" class="alert alert-success mt-3 d-none">
             <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
             dinonaktifkan untuk menjaga integritas laporan.
         </div>
+    </div>
+
+    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+        <button id="validasiBulanBtn" class="btn btn-success">
+            <i class="fas fa-lock"></i> Validasi Data Bulan Ini
+        </button>
+        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+        <button id="simpanRekapBtn" class="btn btn-primary ms-2">
+            <i class="fas fa-save"></i> Simpan Rekapitulasi
+        </button>
     </div>
 
     <!-- Export Modal -->
