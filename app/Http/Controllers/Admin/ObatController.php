@@ -17,29 +17,37 @@ use Illuminate\Support\Facades\Log;
 class ObatController extends Controller
 {
     // Method index: Filter daftar obat berdasarkan unit
-    public function index(Request $request)
-    {
-        $units = Unit::orderBy('nama')->get();
-        $unitId = $request->input('unit_id');
+public function index(Request $request)
+{
+    // 1. Mengambil semua unit untuk ditampilkan di dropdown
+    $units = \App\Models\Unit::orderBy('nama')->get();
+    
+    // 2. Mengambil unit_id yang dipilih dari filter
+    $unitId = $request->input('unit_id');
 
-        $query = Obat::query();
+    // 3. Memulai query untuk model Obat
+    $query = \App\Models\Obat::query()->with('unit'); // Eager load relasi unit
 
-        // Filter berdasarkan unit jika dipilih
-        if ($unitId) {
-            $query->where('unit_id', $unitId);
-        }
-
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('nama_obat', 'like', "%{$request->search}%")
-                  ->orWhere('jenis_obat', 'like', "%{$request->search}%");
-            });
-        }
-
-        $obats = $query->with('unit')->orderBy('nama_obat')->paginate(10)->withQueryString();
-
-        return view('admin.obat.index', compact('obats', 'units', 'unitId'));
+    // 4. Jika ada unit yang dipilih, tambahkan filter ke query
+    if ($unitId) {
+        $query->where('unit_id', $unitId);
     }
+
+    // 5. Tambahkan filter pencarian jika ada
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('nama_obat', 'like', "%{$search}%")
+              ->orWhere('jenis_obat', 'like', "%{$search}%");
+        });
+    }
+
+    // 6. Ambil hasil dengan paginasi dan pertahankan query string
+    $obats = $query->orderBy('nama_obat')->paginate(10)->withQueryString();
+    
+    // 7. Kirim semua data yang diperlukan ke view
+    return view('admin.obat.index', compact('obats', 'units', 'unitId'));
+}
 
 
     // Method create: Kirim data unit ke form
