@@ -204,17 +204,15 @@ public function index(Request $request)
     public function destroy(Obat $obat)
     {
         try {
-            // Hapus semua transaksi terkait terlebih dahulu
-            $obat->transaksiObats()->delete();
-
-            // Hapus obat
+            // Lakukan proses penghapusan data
             $obat->delete();
+            
+            // Redirect kembali ke HALAMAN INDEX ADMIN dengan pesan sukses
+            return redirect()->route('admin.obat.index')->with('success', 'Data obat berhasil dihapus.');
 
-            return redirect()->route('obat.index')
-                ->with('success', 'Obat dan semua transaksi terkait berhasil dihapus.');
         } catch (\Exception $e) {
-            return redirect()->route('obat.index')
-                ->with('error', 'Gagal menghapus obat: ' . $e->getMessage());
+            // Jika terjadi error, redirect kembali dengan pesan error
+            return redirect()->route('admin.obat.index')->with('error', 'Gagal menghapus data obat.');
         }
     }
 
