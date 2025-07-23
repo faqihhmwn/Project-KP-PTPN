@@ -58,14 +58,19 @@
         </ul>
       </li>
 
-         <li class="nav-item">
-                <a href="{{ route('obat.dashboard') }}" class="nav-link {{ request()->routeIs('obat.*') ? 'active' : '' }}">
-                  <i class="nav-icon bi bi-capsule"></i>
-                  <p>
-                    Farmasi
-                  </p>
-                </a>
-              </li>
+      @php
+        $is_admin = Auth::guard('admin')->check();
+        $obat_route = $is_admin ? route('admin.obat.dashboard') : route('obat.dashboard');
+        $is_active = $is_admin ? request()->routeIs('admin.obat.*') : request()->routeIs('obat.*');
+      @endphp
+      <li class="nav-item">
+        <a href="{{ $obat_route }}" class="nav-link {{ $is_active ? 'active' : '' }}">
+          <i class="nav-icon bi bi-capsule"></i>
+          < p>
+          Farmasi
+          </p>
+        </a>
+      </li>
               
 
         {{-- Tambahan lainnya jika diperlukan --}}

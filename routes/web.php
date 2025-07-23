@@ -23,6 +23,9 @@ use App\Http\Controllers\ObatController;
 use App\Http\Controllers\RekapitulasiObatController;
 use App\Http\Controllers\RekapitulasiExportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\ObatController as AdminObatController;
+use App\Http\Controllers\Admin\RekapitulasiObatController as AdminRekapitulasiObatController;
+use App\Http\Controllers\Admin\RekapitulasiExportController as AdminRekapitulasiExportController;
 
 
 use App\Http\Controllers\Rekap\RegionalController;
@@ -272,3 +275,27 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
     });
 });
 
+// Admin Obat Routes
+Route::prefix('admin/obat')->name('admin.obat.')->middleware('auth:admin')->group(function () {
+    Route::get('/', [AdminObatController::class, 'index'])->name('index');
+    Route::get('/dashboard', [AdminObatController::class, 'dashboard'])->name('dashboard');
+    Route::get('/create', [AdminObatController::class, 'create'])->name('create');
+    Route::post('/', [AdminObatController::class, 'store'])->name('store');
+    Route::get('/{obat}', [AdminObatController::class, 'show'])->name('show');
+    Route::get('/{obat}/edit', [AdminObatController::class, 'edit'])->name('edit');
+    Route::put('/{obat}', [AdminObatController::class, 'update'])->name('update');
+    Route::delete('/{obat}', [AdminObatController::class, 'destroy'])->name('destroy');
+
+    // Rekapitulasi
+    Route::post('/rekapitulasi-obat/input-harian', [AdminRekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
+    Route::get('/rekapitulasi/bulanan', [AdminObatController::class, 'rekapitulasi'])->name('rekapitulasi');
+    Route::get('/export', [AdminRekapitulasiExportController::class, 'export'])->name('export');
+    Route::get('/{obat}/rekapitulasi', [AdminObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
+
+    // Transaksi
+    Route::post('/{obat}/transaksi', [AdminObatController::class, 'addTransaksi'])->name('transaksi.store');
+    Route::post('/{obat}/transaksi-harian', [AdminObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
+
+    // Import
+    Route::post('/import', [AdminObatController::class, 'import'])->name('import');
+});
