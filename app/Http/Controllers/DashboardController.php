@@ -6,12 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LaporanBulanan;
 use App\Models\Unit;
+use App\Models\Obat;
+use Illuminate\Support\Str;
 
 class DashboardController extends Controller
 {
-
     public function index(Request $request)
     {
+        $tab = $request->input('tab', 'laporan');
 
         $kategoriList = [
             1 => 'Kependudukan',
@@ -34,9 +36,10 @@ class DashboardController extends Controller
 
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
+        $unitId = $request->input('unit_id');
+        $search = $request->input('search');
 
-        $unitId = $request->input('unit_id'); // <-- AMBIL INPUT UNIT
-        $units = Unit::all(); // <-- AMBIL SEMUA DATA UNIT
+        $units = Unit::all();
 
         $ringkasan = [];
 
@@ -48,17 +51,14 @@ class DashboardController extends Controller
 
             $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
 
-            // LOGIKA FILTER BERDASARKAN PERAN PENGGUNA DAN UNIT
             if ($is_admin) {
-                // Jika admin memilih unit spesifik, filter berdasarkan unit_id
                 if ($unitId) {
                     $laporanQuery->where('unit_id', $unitId);
                 }
-                // Jika admin tidak memilih unit, maka data agregat dari semua unit ditampilkan.
             } else {
-                // Jika bukan admin, selalu filter berdasarkan unit pengguna yang login
                 $laporanQuery->where('unit_id', $authUser->unit_id);
             }
+
             if ($bulan) {
                 $laporanQuery->where('bulan', $bulan);
             }
@@ -85,10 +85,26 @@ class DashboardController extends Controller
             ];
         }
 
-        // Siapkan data untuk dikirim ke view
-        $viewData = compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId');
+        // Tab obat
+        $obats = collect();
+        if ($tab === 'obat') {
+            $obatQuery = Obat::query();
 
-        // Tentukan view yang akan ditampilkan berdasarkan peran pengguna
+            if ($is_admin && $unitId) {
+                $obatQuery->where('unit_id', $unitId);
+            } elseif (!$is_admin) {
+                $obatQuery->where('unit_id', $authUser->unit_id);
+            }
+
+            if ($search) {
+                $obatQuery->where('nama_obat', 'like', '%' . $search . '%');
+            }
+
+            $obats = $obatQuery->get();
+        }
+
+        $viewData = compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'tab', 'obats');
+
         if ($is_admin) {
             return view('admin-dashboard', $viewData);
         } else {
