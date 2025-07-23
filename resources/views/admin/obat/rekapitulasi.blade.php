@@ -182,7 +182,7 @@
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
-                            {{ $obat->stokSisa() }}
+                            {{ $obat->stok_sisa }}
                         </td>
                         <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp
                                 {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>

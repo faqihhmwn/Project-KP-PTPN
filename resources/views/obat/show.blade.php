@@ -87,6 +87,10 @@
 
                     <!-- Statistik Penggunaan -->
                     <div class="row mb-4">
+                        @php
+                            $penggunaanBulanIni = $obat->getPenggunaanBulanIni();
+                            $penggunaanBulanLalu = $obat->getPenggunaanBulanLalu();
+                        @endphp
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header bg-warning text-dark">
@@ -95,17 +99,17 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div>
-                                            <h4 class="text-warning mb-0">{{ number_format($totalPenggunaanBulanIni) }} {{ $obat->satuan }}</h4>
+                                            <h4 class="text-warning mb-0">{{ number_format($penggunaanBulanIni['jumlah']) }} {{ $obat->satuan }}</h4>
                                             <small class="text-muted">Jumlah Penggunaan</small>
                                         </div>
                                         <div class="text-end">
-                                            <h5 class="mb-0">Rp {{ number_format($totalBiayaBulanIni, 0, ',', '.') }}</h5>
+                                            <h5 class="mb-0">Rp {{ number_format($penggunaanBulanIni['biaya'], 0, ',', '.') }}</h5>
                                             <small class="text-muted">Total Biaya</small>
                                         </div>
                                     </div>
-                                    @if($lastUpdateBulanIni)
+                                    @if($penggunaanBulanIni['last_update'])
                                         <small class="text-muted">
-                                            <i class="fas fa-clock"></i> Input terakhir: {{ $lastUpdateBulanIni->created_at->format('d M Y H:i') }}
+                                            <i class="fas fa-clock"></i> Input terakhir: {{ $penggunaanBulanIni['last_update']->format('d M Y H:i') }}
                                         </small>
                                     @endif
                                 </div>
@@ -120,11 +124,11 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div>
-                                            <h4 class="text-secondary mb-0">{{ number_format($totalPenggunaanBulanLalu) }} {{ $obat->satuan }}</h4>
+                                            <h4 class="text-secondary mb-0">{{ number_format($penggunaanBulanLalu['jumlah']) }} {{ $obat->satuan }}</h4>
                                             <small class="text-muted">Jumlah Penggunaan</small>
                                         </div>
                                         <div class="text-end">
-                                            <h5 class="mb-0">Rp {{ number_format($totalBiayaBulanLalu, 0, ',', '.') }}</h5>
+                                            <h5 class="mb-0">Rp {{ number_format($penggunaanBulanLalu['biaya'], 0, ',', '.') }}</h5>
                                             <small class="text-muted">Total Biaya</small>
                                         </div>
                                     </div>

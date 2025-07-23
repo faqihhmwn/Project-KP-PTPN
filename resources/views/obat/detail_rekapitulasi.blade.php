@@ -102,17 +102,37 @@
                         </h5>
                     </div>
 
+                    @php
+                        $penggunaanBulanIni = $obat->getPenggunaanBulanIni($bulan, $tahun);
+                        $penggunaanBulanLalu = $obat->getPenggunaanBulanLalu($bulan, $tahun);
+                    @endphp
                     <div class="row text-center g-2 mt-2">
-                        <div class="col-6">
-                            <div class="p-3 rounded bg-primary bg-opacity-10 stat-card">
-                                <h3 class="text-primary mb-1">{{ $rekapHarian->sum('jumlah_keluar') }}</h3>
-                                <small class="text-muted">Total Keluar</small>
+                        <!-- Penggunaan Bulan Ini -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">Penggunaan Bulan Ini</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="mb-2">{{ $penggunaanBulanIni['jumlah'] }} {{ $obat->satuan }}</h4>
+                                    <p class="mb-0 text-success">
+                                        Rp {{ number_format($penggunaanBulanIni['biaya'], 0, ',', '.') }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="p-3 rounded bg-success bg-opacity-10 stat-card">
-                                <h3 class="text-success mb-1">Rp {{ number_format($rekapHarian->sum('jumlah_keluar') * $obat->harga_satuan, 0, ',', '.') }}</h3>
-                                <small class="text-muted">Total Biaya</small>
+                        <!-- Penggunaan Bulan Lalu -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0">Penggunaan Bulan Lalu</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="mb-2">{{ $penggunaanBulanLalu['jumlah'] }} {{ $obat->satuan }}</h4>
+                                    <p class="mb-0 text-success">
+                                        Rp {{ number_format($penggunaanBulanLalu['biaya'], 0, ',', '.') }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

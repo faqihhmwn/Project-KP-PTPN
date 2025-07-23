@@ -174,7 +174,7 @@
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
-                            {{ $obat->stokSisa() }}
+                            {{ $obat->stok_sisa }}
                         </td>
                         <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp
                                 {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
@@ -212,8 +212,13 @@
             </tbody>
         </table>
         <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+            <!-- Tombol Validasi -->
             <button id="validasiBulanBtn" class="btn btn-success">
                 <i class="fas fa-lock"></i> Validasi Data Bulan Ini
+            </button>
+            <!-- Tombol Batal Validasi (hidden by default) -->
+            <button id="batalValidasiBtn" class="btn btn-warning d-none">
+                <i class="fas fa-unlock"></i> Batal Validasi
             </button>
             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
                 <i class="fas fa-file-excel"></i> Export Excel
@@ -223,8 +228,12 @@
             </button>
         </div>
         <div id="validasiInfo" class="alert alert-success mt-3 d-none">
-            <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
-            dinonaktifkan untuk menjaga integritas laporan.
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
+                    dinonaktifkan untuk menjaga integritas laporan.
+                </div>
+            </div>
         </div>
     </div>
 
@@ -404,6 +413,8 @@
             const validasiInfo = document.getElementById('validasiInfo');
 
             function setLockedState(locked) {
+                const batalValidasiBtn = document.getElementById('batalValidasiBtn');
+
                 // Set all daily inputs to readonly
                 document.querySelectorAll('.daily-input').forEach(input => {
                     input.readOnly = locked;
@@ -421,25 +432,37 @@
                         btn.removeAttribute('aria-disabled');
                     }
                 });
-                // Hide or show validasi button/info
+                // Hide or show validasi and batal validasi buttons/info
                 if (locked) {
                     if (validasiBtn) validasiBtn.classList.add('d-none');
+                    if (batalValidasiBtn) batalValidasiBtn.classList.remove('d-none');
                     if (validasiInfo) validasiInfo.classList.remove('d-none');
                 } else {
                     if (validasiBtn) validasiBtn.classList.remove('d-none');
+                    if (batalValidasiBtn) batalValidasiBtn.classList.add('d-none');
                     if (validasiInfo) validasiInfo.classList.add('d-none');
                 }
             }
 
             setLockedState(isLocked);
 
+            // Handle Validasi Button
             if (validasiBtn) {
                 validasiBtn.addEventListener('click', function() {
-                    if (confirm(
-                            'Setelah divalidasi, semua data bulan ini akan dikunci dan tidak dapat diubah. Lanjutkan?'
-                        )) {
+                    if (confirm('Setelah divalidasi, semua data bulan ini akan dikunci dan tidak dapat diubah. Lanjutkan?')) {
                         localStorage.setItem(lockKey, '1');
                         setLockedState(true);
+                    }
+                });
+            }
+
+            // Handle Batal Validasi Button
+            const batalValidasiBtn = document.getElementById('batalValidasiBtn');
+            if (batalValidasiBtn) {
+                batalValidasiBtn.addEventListener('click', function() {
+                    if (confirm('Anda yakin ingin membatalkan validasi? Data akan dapat diubah kembali.')) {
+                        localStorage.removeItem(lockKey);
+                        setLockedState(false);
                     }
                 });
             }
