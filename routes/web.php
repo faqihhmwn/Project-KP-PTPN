@@ -24,6 +24,17 @@ use App\Http\Controllers\RekapitulasiObatController;
 use App\Http\Controllers\RekapitulasiExportController;
 use App\Http\Controllers\DashboardController;
 
+
+use App\Http\Controllers\Rekap\RegionalController;
+use App\Http\Controllers\Rekap\KapitasiController;
+use App\Http\Controllers\Rekap\BpjsController;
+use App\Http\Controllers\Rekap\SisaSaldoController;
+
+use App\Http\Controllers\Rekap\RekapBiayaKesehatanExportController;
+use App\Http\Controllers\Rekap\BpjsExportController;
+use App\Http\Controllers\Rekap\KapitasiExportController;
+
+
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth:web,admin')
     ->name('dashboard');
@@ -221,3 +232,43 @@ Route::prefix('obat')->name('obat.')->group(function () {
     // Import
     Route::post('/import', [ObatController::class, 'import'])->name('import');
 });
+
+// REKAPITULASI BIAYA
+Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
+
+    // Regional
+    Route::prefix('regional')->name('regional.')->group(function () {
+        Route::get('/', [RegionalController::class, 'index'])->name('index');
+        Route::post('/', [RegionalController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [RegionalController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [RegionalController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [RegionalController::class, 'validateRekap'])->name('validate');
+        Route::post('biaya-tersedia', [RegionalController::class, 'storeOrUpdateBiayaTersedia'])->name('biayaTersedia.storeOrUpdate');
+        Route::delete('biaya-tersedia/{tahun}', [RegionalController::class, 'destroyBiayaTersedia'])->name('biayaTersedia.destroy');
+        Route::get('/rekap-biaya-kesehatan/export', [RekapBiayaKesehatanExportController::class, 'export'])->name('biayakesehatan.export');
+    });
+
+    // BPJS
+    Route::prefix('bpjs')->name('bpjs.')->group(function () {
+        Route::get('/', [BpjsController::class, 'index'])->name('index');
+        Route::post('/', [BpjsController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [BpjsController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate');
+        Route::get('/bpjs/export', [BpjsExportController::class, 'export'])->name('bpjs.export');
+
+    });
+
+    // Kapitasi
+    Route::prefix('kapitasi')->name('kapitasi.')->group(function () {
+        Route::put('/saldo-awal/{tahun}', [KapitasiController::class, 'updateSaldoAwal'])->name('updateSaldoAwal');
+        Route::get('/', [KapitasiController::class, 'index'])->name('index');
+        Route::post('/', [KapitasiController::class, 'store'])->name('store');
+        Route::put('/{tahun}/{bulan_id}', [KapitasiController::class, 'update'])->name('update');
+        Route::delete('/{tahun}/{bulan_id}', [KapitasiController::class, 'destroy'])->name('destroy');
+        Route::put('/{tahun}/{bulan_id}/validate', [KapitasiController::class, 'validateRekap'])->name('validate');
+        Route::get('/kapitasi/export', [KapitasiExportController::class, 'export'])->name('kapitasi.export');
+
+    });
+});
+

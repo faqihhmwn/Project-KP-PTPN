@@ -63,6 +63,10 @@
     <link
       rel="stylesheet"
       href="{{ asset('assets/css/admin.css') }}" />
+
+      <!-- Font Awesome CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
   </head>
   <!--end::Head-->
   <!--begin::Body-->
@@ -335,8 +339,8 @@
     </script>
 
     {{-- Script alert otomatis hilang --}}
-     {{-- Notifikasi session --}}
-     <script>
+    {{-- Notifikasi session --}}
+    <script>
         @if (session('success'))
             <div id="session-alert" class="alert alert-success alert-dismissible fade show m-4" role="alert">
                 {{ session('success') }}
@@ -351,7 +355,7 @@
         @endisset
 
         <main>
-           @yield('content')
+          @yield('content')
         </main>
     </div>
     </script>
@@ -366,8 +370,10 @@
                 setTimeout(() => alert.remove(), 500);
             }
         }, 3000);
+        
     </script>
     <!--end::Script-->
+    @stack('scripts')
   </body>
   <!--end::Body-->
 </html>

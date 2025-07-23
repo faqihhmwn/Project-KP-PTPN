@@ -28,6 +28,40 @@
           </a>
         </li>
 
+        <!-- rekap biaya -->
+        <li class="nav-item has-treeview">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fa-solid fa-money-bill-transfer"></i>
+            <p>
+              Rekapitulasi Biaya
+              <i class="right bi bi-chevron-down"></i>
+            </p>
+          </a>
+        <ul class="nav nav-treeview ps-3">
+          <li class="nav-item">
+            <a href="{{ route('rekap.regional.index') }}" class="nav-link">
+              <i class="bi bi-chevron-right nav-icon"></i>
+              <p>PTPN I Regional 7</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('rekap.bpjs.index') }}" class="nav-link">
+              <i class="bi bi-chevron-right nav-icon"></i>
+              <p>Iuran BPJS</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('rekap.kapitasi.index') }}" class="nav-link">
+              <i class="bi bi-chevron-right nav-icon"></i>
+              <p>Dana Kapitasi</p>
+            </a>
+          </li>
+
+            </ul>
+          </li>
+        </ul>
+      </li>
+
          <li class="nav-item">
                 <a href="{{ route('obat.dashboard') }}" class="nav-link {{ request()->routeIs('obat.*') ? 'active' : '' }}">
                   <i class="nav-icon bi bi-capsule"></i>
@@ -37,6 +71,7 @@
                 </a>
               </li>
               
+
         {{-- Tambahan lainnya jika diperlukan --}}
       </ul>
       <!--end::Sidebar Menu-->
