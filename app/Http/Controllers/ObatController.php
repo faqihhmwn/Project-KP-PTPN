@@ -38,7 +38,7 @@ class ObatController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('nama_obat', 'like', "%{$request->search}%")
-                  ->orWhere('jenis_obat', 'like', "%{$request->search}%");
+                    ->orWhere('jenis_obat', 'like', "%{$request->search}%");
             });
         }
 
@@ -69,7 +69,10 @@ class ObatController extends Controller
         $validated['nama_obat'] = strtoupper($validated['nama_obat']);
 
         // Cek apakah nama obat sudah ada (case-insensitive)
-        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])->exists();
+        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
+            ->where('unit_id', Auth::user()->unit_id)
+            ->exists();
+
         if ($obatExists) {
             return back()
                 ->withInput()
@@ -208,7 +211,7 @@ class ObatController extends Controller
         $userUnitId = Auth::user()->unit_id;
 
         $obats = Obat::query()
-            ->where('unit_id', $userUnitId) 
+            ->where('unit_id', $userUnitId)
             ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
                 $query->whereMonth('tanggal', $bulan)
                     ->whereYear('tanggal', $tahun);
