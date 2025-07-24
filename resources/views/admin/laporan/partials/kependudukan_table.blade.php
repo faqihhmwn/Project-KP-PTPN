@@ -28,7 +28,11 @@
     </div>
 @endif
 
+
+
+{{-- Tabel Data --}}
 <table class="table table-striped">
+    {{-- ... sisa kode tabel Anda tidak berubah ... --}}
     <thead>
         <tr><th>No</th><th>Unit</th><th>Subkategori</th><th>Jumlah</th><th>Bulan</th><th>Tahun</th><th>Status</th><th>Aksi</th></tr>
     </thead>
@@ -44,10 +48,7 @@
             <td>{{ $row->tahun }}</td>
             <td>@if($isRowApproved)<span class="badge bg-success">Disetujui</span>@else<span class="badge bg-warning text-dark">Menunggu</span>@endif</td>
             <td>
-                {{-- Tombol Edit selalu aktif untuk Admin --}}
                 <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">Edit</a>
-
-                {{-- Tombol Hapus hanya untuk Admin --}}
                 <!-- <form action="{{ route('laporan.kependudukan.destroy', $row->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')"> -->
                     <!-- @csrf -->
                     <!-- @method('DELETE') -->

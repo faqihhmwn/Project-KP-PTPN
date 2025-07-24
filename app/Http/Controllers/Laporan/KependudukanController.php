@@ -9,6 +9,8 @@ use App\Models\Unit;
 use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LaporanKependudukanExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KependudukanController extends Controller
 {
@@ -154,24 +156,20 @@ class KependudukanController extends Controller
         return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
     }
     
-    // public function destroy($id)
-    // {
-        // if (!Auth::guard('admin')->check()) {
-            // return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
-        // }
+    public function destroy($id)
+    {
+        if (!Auth::guard('admin')->check()) {
+           return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+        }
 
-        // $laporan = LaporanBulanan::findOrFail($id);
-        // $laporan->delete();
+        $laporan = LaporanBulanan::findOrFail($id);
+        $laporan->delete();
 
-        // return back()->with('success', 'Data berhasil dihapus.');
-    // }
+        return back()->with('success', 'Data berhasil dihapus.');
+    }
 
     public function approve(Request $request)
     {
-        if (!Auth::guard('admin')->check()) {
-            return back()->with('error', 'Hanya admin yang dapat menyetujui laporan.');
-        }
-
         $request->validate([
             'unit_id' => 'required|exists:units,id',
             'bulan' => 'required|numeric|between:1,12',
@@ -231,5 +229,22 @@ class KependudukanController extends Controller
             ->exists();
             
         return response()->json(['exists' => $existingData]);
+    }
+
+    public function export(Request $request)
+    {       
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id'); // Ambil filter subkategori
+
+        if (Auth::guard('web')->check()) {
+            $unitId = Auth::guard('web')->user()->unit_id;
+        }
+
+        $fileName = 'laporan_kependudukan_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Langsung panggil class export dengan parameter filter
+        return Excel::download(new LaporanKependudukanExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }

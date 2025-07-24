@@ -1,3 +1,10 @@
+{{-- TOMBOL EXPORT DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.kependudukan.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
 <div class="card">
     <div class="card-body">
         <table class="table table-striped">

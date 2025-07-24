@@ -73,6 +73,8 @@ Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('lapor
     Route::delete('/destroy/{id}', [KependudukanController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KependudukanController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KependudukanController::class, 'unapprove'])->name('unapprove');
+    
+    Route::get('/export', [KependudukanController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/penyakit')->middleware('auth:web,admin')->name('laporan.penyakit.')->group(function () {
