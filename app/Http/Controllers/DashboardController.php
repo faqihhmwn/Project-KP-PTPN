@@ -8,6 +8,8 @@ use App\Models\LaporanBulanan;
 use App\Models\Unit;
 use App\Models\Obat;
 use Illuminate\Support\Str;
+use App\Exports\LaporanKesehatanRekapExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
@@ -86,5 +88,21 @@ class DashboardController extends Controller
         );
 
         return $is_admin ? view('admin-dashboard', $viewData) : view('dashboard', $viewData);
+    }
+
+    public function exportRekap(Request $request)
+    {
+        $request->validate([
+            'bulan' => 'required|integer|between:1,12',
+            'tahun' => 'required|integer|min:2000',
+        ]);
+
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        
+        $namaBulan = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->format('F');
+        $fileName = 'REKAP_LAPORAN_KESEHATAN_' . strtoupper($namaBulan) . '_' . $tahun . '.xlsx';
+
+        return Excel::download(new LaporanKesehatanRekapExport($bulan, $tahun), $fileName);
     }
 }

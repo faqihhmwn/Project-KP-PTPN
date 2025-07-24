@@ -78,6 +78,11 @@
                     <div class="col-md-12">
                         <button class="btn btn-primary mt-2 w-100" type="submit">Tampilkan Laporan</button>
                     </div>
+                    <div class="d-flex justify-content-end mb-4">
+                        <a href="{{ route('dashboard.export-rekap', ['bulan' => $bulan, 'tahun' => $tahun]) }}" class="btn btn-outline-success @if(!$bulan || !$tahun) disabled @endif" target="_blank">
+                            <i class="fas fa-file-excel"></i> Export Rekap Laporan
+                        </a>
+                    </div>
                 </form>
 
                 {{-- Konten Laporan --}}
