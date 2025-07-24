@@ -133,23 +133,11 @@
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
-                        @php
-                            // Ambil sisa stok dari bulan sebelumnya
-                            $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
-                            $tahunSebelumnya = $bulan == 1 ? $tahun - 1 : $tahun;
-
-                            $rekapBulanSebelumnya = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                ->where('unit_id', Auth::user()->unit_id)
-                                ->where('bulan', $bulanSebelumnya)
-                                ->where('tahun', $tahunSebelumnya)
-                                ->orderBy('tanggal', 'desc')
-                                ->first();
-
-                            $stokAwal = $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $obat->stok_awal;
-                        @endphp
+                       
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
-                            {{ $obat->stokAwal($bulan, $tahun) }}
-                        </td>
+                        {{ $obat->stokAwal($bulan, $tahun) }}
+                    </td>
+
                         @php $totalBiaya = 0; @endphp
                         @for ($day = 1; $day <= $daysInMonth; $day++)
                             @php

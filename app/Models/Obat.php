@@ -65,8 +65,9 @@ class Obat extends Model
     // Relationship dengan rekapitulasi obat
     public function rekapitulasiObat()
     {
-        return $this->hasMany(RekapitulasiObat::class);
-    }
+    return $this->hasMany(RekapitulasiObat::class)
+                ->where('unit_id', Auth::user()->unit_id);
+}
 
     public function last_rekapitulasi()
     {
@@ -265,11 +266,6 @@ class Obat extends Model
         return $this->belongsTo(Unit::class);
     }
 
-    public function rekapitulasiObatByUnit()
-    {
-        return $this->hasMany(RekapitulasiObat::class)
-            ->where('unit_id', Auth::user()->unit_id);
-    }
 
     public function transaksiObatsByUnit()
     {

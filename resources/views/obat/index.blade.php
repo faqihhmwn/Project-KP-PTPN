@@ -136,7 +136,6 @@
                                     <th class="text-center" style="width: 15%; min-width: 120px;">Jenis</th>
                                     <th class="text-center" style="width: 12%; min-width: 100px;">Harga Satuan</th>
                                     <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
-                                    <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                     <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
                                     <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th>
                                 </tr>
@@ -149,7 +148,6 @@
                                         <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
                                         <td class="text-center fw-medium">Rp {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
                                         <td class="text-center">{{ $obat->satuan }}</td>
-                                        <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
                                         <td class="text-center">
                                             <span class="badge {{ $obat->stok_sisa <= 10 ? 'bg-danger' : ($obat->stok_sisa <= 50 ? 'bg-warning text-dark' : 'bg-success') }}">
                                                 {{ number_format($obat->stok_sisa) }}
