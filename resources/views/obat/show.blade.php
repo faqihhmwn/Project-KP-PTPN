@@ -8,10 +8,10 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Detail Obat: {{ $obat->nama_obat }}</h3>
                     <div class="btn-group">
-                        <!-- <a href="{{ route('obat.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Kembali
-                        </a> -->
-                         <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
+                        <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#tambahStokModal">
+                            <i class="fas fa-plus"></i> Tambah Stok
+                        </button>
+                        <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali Ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
                         </a>
                     </div>
@@ -150,5 +150,34 @@
 </div>
 
 
+
+<!-- Modal Tambah Stok -->
+<div class="modal fade" id="tambahStokModal" tabindex="-1" aria-labelledby="tambahStokModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tambahStokModalLabel">Tambah Stok {{ $obat->nama_obat }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('obat.tambah-stok', $obat) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="jumlah_tambah" class="form-label">Jumlah Tambah</label>
+                        <input type="number" class="form-control" id="jumlah_tambah" name="jumlah_tambah" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="keterangan" class="form-label">Keterangan (Opsional)</label>
+                        <textarea class="form-control" id="keterangan" name="keterangan" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Obat;
+use App\Models\Unit;
 use App\Models\TransaksiObat;
+use App\Models\RekapitulasiObat;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -15,6 +17,9 @@ class ObatController extends Controller
     {
         // Load data obat dengan rekapitulasi terbaru
         $query = Obat::query();
+
+        // Filter berdasarkan unit_id user yang login
+        $query->where('unit_id', auth()->user()->unit_id);
 
         // Search functionality
         if ($request->filled('search')) {
@@ -64,19 +69,28 @@ class ObatController extends Controller
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'stok_awal' => 'required|integer|min:0',
             'keterangan' => 'nullable|string'
         ]);
+
+        // Tambahkan unit_id dari user yang login dan set stok awal 0
+        $validated['unit_id'] = auth()->user()->unit_id;
+        $validated['stok_awal'] = 0;
+        $validated['stok_sisa'] = 0;
+        $validated['stok_masuk'] = 0;
+        $validated['stok_keluar'] = 0;
 
         // Format nama obat menjadi kapital semua
         $validated['nama_obat'] = strtoupper($validated['nama_obat']);
 
-        // Cek apakah nama obat sudah ada (case-insensitive)
-        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])->exists();
+        // Cek apakah nama obat sudah ada di unit yang sama
+        $obatExists = \App\Models\Obat::where('unit_id', auth()->user()->unit_id)
+            ->whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
+            ->exists();
+            
         if ($obatExists) {
             return back()
                 ->withInput()
-                ->withErrors(['nama_obat' => 'Obat sudah ada!']);
+                ->withErrors(['nama_obat' => 'Obat dengan nama tersebut sudah ada di unit Anda!']);
         }
 
         // Set stok_sisa = stok_awal for new obat (no transactions yet)
@@ -92,6 +106,11 @@ class ObatController extends Controller
 
     public function show(Obat $obat)
     {
+        // Verifikasi bahwa obat belongs to unit yang sama dengan user
+        if ($obat->unit_id !== auth()->user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Load relasi rekapitulasiObat
         $obat->load('rekapitulasiObat');
         
@@ -144,16 +163,6 @@ class ObatController extends Controller
             'lastUpdateBulanIni',
             'lastUpdateBulanLalu'
         ));
-        
-        return view('obat.show', compact(
-            'obat', 
-            'bulanIni', 
-            'bulanLalu',
-            'totalPenggunaanBulanIni',
-            'totalBiayaBulanIni',
-            'totalPenggunaanBulanLalu',
-            'totalBiayaBulanLalu'
-        ));
     }
 
     public function edit(Obat $obat)
@@ -172,11 +181,62 @@ class ObatController extends Controller
             'keterangan' => 'nullable|string'
         ]);
 
-        $obat->update($validated);
-        $this->updateStokObat($obat);
+        // Get the old stok_awal value before updating
+        $oldStokAwal = $obat->stok_awal;
 
-        return redirect()->route('obat.index')
-            ->with('success', 'Obat berhasil diperbarui.');
+        try {
+            DB::beginTransaction();
+
+            // Update basic obat information
+            $obat->update($validated);
+
+            // Calculate the difference in stok_awal
+            $stokAwalDiff = $validated['stok_awal'] - $oldStokAwal;
+
+            // Update all rekapitulasi records for this obat
+            if ($stokAwalDiff != 0) {
+                $now = Carbon::now();
+                
+                // Update current month's rekapitulasi
+                $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
+                    ->where('unit_id', auth()->user()->unit_id)
+                    ->where('bulan', $now->month)
+                    ->where('tahun', $now->year)
+                    ->orderBy('tanggal', 'asc')
+                    ->get();
+
+                foreach ($rekapitulasi as $rekap) {
+                    $rekap->stok_awal += $stokAwalDiff;
+                    $rekap->sisa_stok = $rekap->stok_awal - $rekap->jumlah_keluar;
+                    $rekap->save();
+                }
+
+                // If no rekapitulasi exists for current month, create one
+                if ($rekapitulasi->isEmpty()) {
+                    RekapitulasiObat::create([
+                        'obat_id' => $obat->id,
+                        'unit_id' => auth()->user()->unit_id,
+                        'tanggal' => $now->format('Y-m-d'),
+                        'bulan' => $now->month,
+                        'tahun' => $now->year,
+                        'stok_awal' => $validated['stok_awal'],
+                        'jumlah_keluar' => 0,
+                        'sisa_stok' => $validated['stok_awal']
+                    ]);
+                }
+            }
+
+            // Update final stok calculations
+            $this->updateStokObat($obat);
+
+            DB::commit();
+            return redirect()->route('obat.index')
+                ->with('success', 'Obat berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Gagal memperbarui obat: ' . $e->getMessage());
+        }
     }
 
     public function destroy(Obat $obat)
@@ -207,10 +267,12 @@ class ObatController extends Controller
         }
         
         $obats = Obat::query()
+            ->where('unit_id', auth()->user()->unit_id)
             ->with(['transaksiObats' => function($query) use ($bulan, $tahun) {
                 $query->whereMonth('tanggal', $bulan)
                       ->whereYear('tanggal', $tahun);
             }])
+            ->with('unit') // Load unit relationship
             ->get();
 
         // Generate data untuk setiap hari dalam bulan
@@ -253,12 +315,32 @@ class ObatController extends Controller
         return back()->with('success', 'Transaksi berhasil ditambahkan.');
     }
 
+    public function getRekapitulasiData(Request $request)
+    {
+        $bulan = $request->get('bulan', Carbon::now()->month);
+        $tahun = $request->get('tahun', Carbon::now()->year);
+        
+        $rekapitulasi = RekapitulasiObat::where('unit_id', auth()->user()->unit_id)
+            ->whereMonth('tanggal', $bulan)
+            ->whereYear('tanggal', $tahun)
+            ->with('obat')
+            ->get()
+            ->groupBy('obat_id');
+            
+        return response()->json($rekapitulasi);
+    }
+
     public function updateTransaksiHarian(Request $request, Obat $obat)
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
             'jumlah_keluar' => 'required|integer|min:0'
         ]);
+
+        // Verify that the obat belongs to the user's unit
+        if ($obat->unit_id !== auth()->user()->unit_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         $tanggal = Carbon::parse($validated['tanggal']);
         $bulan = $tanggal->month;
@@ -319,25 +401,145 @@ class ObatController extends Controller
         return response()->json(['success' => true]);
     }
 
+    private function getStokAwalBulan(Obat $obat, $bulan, $tahun)
+    {
+        // Ambil rekapitulasi terakhir dari bulan sebelumnya
+        $lastMonth = Carbon::createFromDate($tahun, $bulan, 1)->subMonth();
+        
+        $lastRekapitulasi = $obat->rekapitulasiObat()
+            ->where(function($query) use ($lastMonth) {
+                $query->where('tahun', $lastMonth->year)
+                    ->where('bulan', $lastMonth->month);
+            })
+            ->orderBy('tanggal', 'desc')
+            ->first();
+
+        // Jika ada rekapitulasi bulan lalu, gunakan sisa stoknya
+        // Jika tidak, gunakan stok awal dari data obat
+        return $lastRekapitulasi ? $lastRekapitulasi->sisa_stok : $obat->stok_awal;
+    }
+
+    public function tambahStok(Request $request, Obat $obat)
+    {
+        // Verifikasi bahwa obat belongs to unit yang sama dengan user
+        if ($obat->unit_id !== auth()->user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'jumlah_tambah' => 'required|integer|min:1',
+            'keterangan' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Buat transaksi masuk
+            $transaksi = new TransaksiObat([
+                'obat_id' => $obat->id,
+                'tanggal' => Carbon::now(),
+                'tipe_transaksi' => 'masuk',
+                'jumlah_masuk' => $validated['jumlah_tambah'],
+                'keterangan' => $validated['keterangan']
+            ]);
+            $transaksi->save();
+
+            // Update stok obat
+            $obat->increment('stok_masuk', $validated['jumlah_tambah']);
+            $obat->increment('stok_sisa', $validated['jumlah_tambah']);
+
+            // Update rekapitulasi untuk bulan ini
+            $now = Carbon::now();
+            $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('unit_id', auth()->user()->unit_id)
+                ->where('bulan', $now->month)
+                ->where('tahun', $now->year)
+                ->orderBy('tanggal', 'desc')
+                ->first();
+
+            if ($rekapitulasi) {
+                $rekapitulasi->increment('stok_awal', $validated['jumlah_tambah']);
+                $rekapitulasi->increment('sisa_stok', $validated['jumlah_tambah']);
+            } else {
+                RekapitulasiObat::create([
+                    'obat_id' => $obat->id,
+                    'unit_id' => auth()->user()->unit_id,
+                    'tanggal' => $now->format('Y-m-d'),
+                    'bulan' => $now->month,
+                    'tahun' => $now->year,
+                    'stok_awal' => $validated['jumlah_tambah'],
+                    'jumlah_keluar' => 0,
+                    'sisa_stok' => $validated['jumlah_tambah']
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Stok berhasil ditambahkan');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menambahkan stok: ' . $e->getMessage());
+        }
+    }
+
     private function updateStokObat(Obat $obat)
     {
         try {
-            // Check if transaksi_obats table exists and has the required columns
-            $totalMasuk = $obat->transaksiObats()
+            $now = Carbon::now();
+            $currentMonth = $now->month;
+            $currentYear = $now->year;
+
+            // Get last month's final stock
+            $lastMonth = Carbon::now()->subMonth();
+            $lastMonthStock = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('unit_id', auth()->user()->unit_id)
+                ->where('bulan', $lastMonth->month)
+                ->where('tahun', $lastMonth->year)
+                ->orderBy('tanggal', 'desc')
+                ->first();
+
+            // Calculate initial stock for current month
+            $stokAwal = $lastMonthStock ? $lastMonthStock->sisa_stok : $obat->stok_awal;
+
+            // Get current month's transactions
+            $currentMonthTransactions = $obat->transaksiObats()
+                ->whereMonth('tanggal', $currentMonth)
+                ->whereYear('tanggal', $currentYear)
+                ->get();
+
+            $totalMasuk = $currentMonthTransactions
                 ->where('tipe_transaksi', 'masuk')
                 ->sum('jumlah_masuk') ?? 0;
                 
-            $totalKeluar = $obat->transaksiObats()
+            $totalKeluar = $currentMonthTransactions
                 ->where('tipe_transaksi', 'keluar')
                 ->sum('jumlah_keluar') ?? 0;
-            
+
+            // Update obat with current month's data
             $obat->update([
                 'stok_masuk' => $totalMasuk,
                 'stok_keluar' => $totalKeluar,
-                'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
+                'stok_sisa' => max(0, $stokAwal + $totalMasuk - $totalKeluar)
             ]);
+
+            // Update or create rekapitulasi for current month
+            RekapitulasiObat::updateOrCreate(
+                [
+                    'obat_id' => $obat->id,
+                    'unit_id' => auth()->user()->unit_id,
+                    'bulan' => $currentMonth,
+                    'tahun' => $currentYear,
+                    'tanggal' => $now->format('Y-m-d'),
+                ],
+                [
+                    'stok_awal' => $stokAwal,
+                    'jumlah_keluar' => $totalKeluar,
+                    'sisa_stok' => max(0, $stokAwal + $totalMasuk - $totalKeluar)
+                ]
+            );
+
         } catch (\Exception $e) {
-            // If there's an error (like missing columns), just set stok_sisa = stok_awal
+            \Log::error('Error updating stock: ' . $e->getMessage());
+            // If there's an error, set basic values
             $obat->update([
                 'stok_masuk' => 0,
                 'stok_keluar' => 0,
@@ -349,18 +551,14 @@ class ObatController extends Controller
     public function dashboard()
     {
         try {
-            $totalObat = Obat::count();
-            $transaksiHariIni = TransaksiObat::whereDate('tanggal', Carbon::today())->count();
+            // Hitung total obat berdasarkan unit_id user yang login
+            $totalObat = Obat::where('unit_id', auth()->user()->unit_id)->count();
         } catch (\Exception $e) {
             // Fallback values if database error
             $totalObat = 0;
-            $transaksiHariIni = 0;
         }
         
-        return view('obat.dashboard', compact(
-            'totalObat', 
-            'transaksiHariIni'
-        ));
+        return view('obat.dashboard', compact('totalObat'));
     }
 
     public function import(Request $request)
@@ -414,34 +612,6 @@ class ObatController extends Controller
         // Get rekap harian for selected month
         $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
             ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
-            ->orderBy('tanggal', 'asc')
-            ->get();
-
-        return view('obat.detail_rekapitulasi', [
-            'obat' => $obat,
-            'rekapHarian' => $rekapHarian,
-            'bulan' => $bulan,
-            'tahun' => $tahun
-        ]);
-    }
-}
-ere('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
-            ->orderBy('tanggal', 'asc')
-            ->get();
-
-        return view('obat.detail_rekapitulasi', [
-            'obat' => $obat,
-            'rekapHarian' => $rekapHarian,
-            'bulan' => $bulan,
-            'tahun' => $tahun
-        ]);
-    }
-}
-ere('bulan', $bulan)
             ->where('tahun', $tahun)
             ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
             ->orderBy('tanggal', 'asc')

@@ -137,7 +137,7 @@
                                     <th class="text-center" style="width: 12%; min-width: 100px;">Harga Satuan</th>
                                     <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                     <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
-                                    <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th>
+                                    <!-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> -->
                                 </tr>
                             </thead>
                             <tbody class="table-group-divider">
@@ -153,25 +153,7 @@
                                                 {{ number_format($obat->stok_sisa) }}
                                             </span>
                                         </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm" title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('obat.edit', $obat) }}" class="btn btn-warning btn-sm" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm" 
-                                                            onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')" 
-                                                            title="Hapus Permanen">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form> 
-                                            </div>
-                                        </td>
+                                        <!-- -->
                                     </tr>
                                 @empty
                                     <tr>

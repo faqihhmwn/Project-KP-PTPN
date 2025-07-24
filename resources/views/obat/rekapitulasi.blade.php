@@ -135,8 +135,35 @@
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
                        
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
-                        {{ $obat->stokAwal($bulan, $tahun) }}
-                    </td>
+                            @php
+                                $previousMonth = $bulan == 1 ? 12 : $bulan - 1;
+                                $previousYear = $bulan == 1 ? $tahun - 1 : $tahun;
+                                
+                                $currentMonthStocks = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                                    ->where('unit_id', Auth::user()->unit_id)
+                                    ->where('bulan', $bulan)
+                                    ->where('tahun', $tahun)
+                                    ->get();
+
+                                // Get last stock from previous month
+                                $previousMonthStock = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                                    ->where('unit_id', Auth::user()->unit_id)
+                                    ->where('bulan', $previousMonth)
+                                    ->where('tahun', $previousYear)
+                                    ->orderBy('tanggal', 'desc')
+                                    ->first();
+
+                                // Calculate current month's total stock additions
+                                $currentMonthAdditions = $currentMonthStocks->sum('stok_tambahan') ?? 0;
+                                
+                                // Initial stock is previous month's remaining stock + any additions in current month
+                                $stokAwal = ($previousMonthStock ? $previousMonthStock->sisa_stok : 0) + $currentMonthAdditions;
+                                
+                                // Store for use in sisa_stok calculation
+                                $row_stok_awal = $stokAwal;
+                            @endphp
+                            {{ number_format($stokAwal, 0, ',', '.') }}
+                        </td>
 
                         @php $totalBiaya = 0; @endphp
                         @for ($day = 1; $day <= $daysInMonth; $day++)
@@ -162,7 +189,14 @@
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
-                            {{ $obat->stok_sisa }}
+                            @php
+                                // Calculate total usage for this month
+                                $totalKeluar = $currentMonthStocks->sum('jumlah_keluar') ?? 0;
+                                
+                                // Calculate remaining stock
+                                $sisaStok = max(0, $row_stok_awal - $totalKeluar);
+                            @endphp
+                            {{ number_format($sisaStok, 0, ',', '.') }}
                         </td>
                         <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp
                                 {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
@@ -172,6 +206,8 @@
                                     class="btn btn-info btn-sm" title="Detail Rekapitulasi">
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
+
+
 
                                 <a href="{{ route('obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}"
                                     class="btn btn-warning btn-sm" title="Edit">
@@ -221,6 +257,55 @@
                     <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
                     dinonaktifkan untuk menjaga integritas laporan.
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Stok -->
+    <div class="modal fade" id="tambahStokModal" tabindex="-1" aria-labelledby="tambahStokModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tambahStokModalLabel">
+                        <i class="fas fa-plus-circle"></i> Tambah Stok Obat
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="formTambahStok" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Obat</label>
+                            <input type="text" class="form-control" id="namaObatStok" readonly>
+                            <input type="hidden" id="obatIdStok" name="obat_id">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stok Awal (Dari Bulan Sebelumnya)</label>
+                            <div class="form-control-plaintext">
+                                <span id="stokAwalInfo">0</span> <span id="satuanObatStok"></span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="jumlah_tambah" class="form-label">Jumlah Stok Tambahan</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="jumlah_tambah" name="jumlah_tambah" 
+                                       required min="1" placeholder="Masukkan jumlah">
+                                <span class="input-group-text" id="satuanObatStokInput"></span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="keterangan" class="form-label">Keterangan (Opsional)</label>
+                            <input type="text" class="form-control" id="keterangan" name="keterangan" 
+                                   placeholder="Contoh: Pengadaan baru, dll">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Simpan
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -292,23 +377,63 @@
         const CURRENT_BULAN = {{ $bulan }};
         const CURRENT_TAHUN = {{ $tahun }};
 
+        // Function untuk mengambil data rekapitulasi dari backend
+        async function getRekapitulasiData() {
+            try {
+                const response = await fetch(`/obat/rekapitulasi-data?bulan=${CURRENT_BULAN}&tahun=${CURRENT_TAHUN}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching rekapitulasi data:', error);
+                return {};
+            }
+        }
+
         // Update sisa stok secara dinamis saat input harian berubah
         function updateSisaStok(obatId) {
             const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
             if (!row) return;
+            
+            // Get stok awal (selalu 0 sekarang)
             const stokAwalCell = row.querySelector('.stok-awal');
             let stokAwal = 0;
-            if (stokAwalCell) {
-                stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
-            }
+            
+            // Get stok tambahan
+            const stokTambahanInput = row.querySelector('.stok-tambahan');
+            let stokTambahan = parseInt(stokTambahanInput?.value) || 0;
+            
+            // Calculate total stok available
+            let totalStokTersedia = stokAwal + stokTambahan;
+            
+            // Calculate total used
             let totalKeluar = 0;
             row.querySelectorAll('.daily-input').forEach(input => {
                 totalKeluar += parseInt(input.value) || 0;
             });
-            const sisaStok = stokAwal - totalKeluar;
+            
+            // Calculate remaining stock
+            const sisaStok = totalStokTersedia - totalKeluar;
             const sisaStokCell = row.querySelector('.sisa-stok');
+            
             if (sisaStokCell) {
-                sisaStokCell.textContent = sisaStok < 0 ? 0 : sisaStok;
+                if (sisaStok < 0) {
+                    alert('Peringatan: Total penggunaan melebihi stok yang tersedia!');
+                    sisaStokCell.textContent = '0';
+                    sisaStokCell.style.color = 'red';
+                } else {
+                    sisaStokCell.textContent = sisaStok;
+                    sisaStokCell.style.color = '';
+                }
             }
         }
 
@@ -358,6 +483,15 @@
                 const obatId = row.getAttribute('data-obat-row');
                 updateSisaStok(obatId);
                 updateTotalBiaya(obatId);
+
+                // Add event listener for stok tambahan
+                const stokTambahanInput = row.querySelector('.stok-tambahan');
+                if (stokTambahanInput) {
+                    stokTambahanInput.addEventListener('input', function() {
+                        if (this.value < 0) this.value = 0;
+                        updateSisaStok(obatId);
+                    });
+                }
 
                 // Add event listeners to each input
                 row.querySelectorAll('.daily-input').forEach(input => {
@@ -476,7 +610,10 @@
                     const obatId = row.getAttribute('data-obat-row');
                     const harga = parseInt(row.getAttribute('data-harga')) || 0;
                     const stokAwalCell = row.querySelector('.stok-awal');
-                    const stokAwal = parseInt(stokAwalCell?.textContent.replace(/[^\d]/g, '')) || 0;
+                    const stokAwal = 0; // Stok awal selalu 0
+                    const stokTambahanInput = row.querySelector('.stok-tambahan');
+                    const stokTambahan = parseInt(stokTambahanInput?.value) || 0;
+                    const totalStokTersedia = stokAwal + stokTambahan;
 
                     // Untuk setiap input harian
                     const inputs = row.querySelectorAll('.daily-input');
@@ -499,8 +636,9 @@
                                 bulan: CURRENT_BULAN,
                                 tahun: CURRENT_TAHUN,
                                 jumlah_keluar: jumlahKeluar,
-                                stok_awal: stokAwal,
-                                sisa_stok: Math.max(0, stokAwal - totalKeluar),
+                                stok_awal: totalStokTersedia,
+                                stok_tambahan: stokTambahan,
+                                sisa_stok: Math.max(0, totalStokTersedia - totalKeluar),
                                 total_biaya: jumlahKeluar * harga
                             });
                         }
@@ -690,6 +828,59 @@
             });
         });
         // Hapus auto-save, hanya simpan manual lewat tombol
+
+        // Handle Tambah Stok Modal
+        document.querySelectorAll('.tambah-stok-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const obatId = this.getAttribute('data-obat-id');
+                const obatNama = this.getAttribute('data-obat-nama');
+                const stokAwal = parseInt(this.getAttribute('data-stok-awal')) || 0;
+                const obatSatuan = this.getAttribute('data-obat-satuan');
+                
+                // Set nilai di modal
+                document.getElementById('namaObatStok').value = obatNama;
+                document.getElementById('obatIdStok').value = obatId;
+                document.getElementById('stokAwalInfo').textContent = stokAwal;
+                document.getElementById('satuanObatStok').textContent = obatSatuan;
+                
+                // Reset form
+                document.getElementById('jumlah_tambah').value = '';
+                document.getElementById('keterangan').value = '';
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('formTambahStok').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const obatId = document.getElementById('obatIdStok').value;
+
+            try {
+                const response = await fetch(`/obat/${obatId}/tambah-stok`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        jumlah_tambah: document.getElementById('jumlah_tambah').value,
+                        keterangan: document.getElementById('keterangan').value
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Gagal menambahkan stok');
+                }
+
+                // Tutup modal
+                bootstrap.Modal.getInstance(document.getElementById('tambahStokModal')).hide();
+                
+                // Refresh halaman
+                window.location.reload();
+                
+            } catch (error) {
+                alert('Terjadi kesalahan: ' + error.message);
+            }
+        });
     </script>
 
 

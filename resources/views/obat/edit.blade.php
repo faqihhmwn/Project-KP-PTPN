@@ -111,7 +111,17 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="stok_tambahan" class="form-label">Tambahkan Obat <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control @error('stok_tambahan') is-invalid @enderror" 
+                                        id="stok_tambahan" name="stok_tambahan" value="{{ old('stok_tambahan', $obat->stok_tambahan) }}" 
+                                        min="0" required>
+                                    @error('stok_tambahan')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
 
                         <div class="mb-3">
                             <label for="keterangan" class="form-label">Keterangan</label>

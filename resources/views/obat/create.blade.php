@@ -5,13 +5,10 @@
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-8 pt-5">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Tambah Obat Baru</h4>
-                    <a href="/obat/dashboard" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
-                    </a>
                 </div>
 
                 <div class="card-body">
@@ -84,20 +81,6 @@
                                         <option value="pcs" {{ old('satuan') == 'pcs' ? 'selected' : '' }}>Pcs</option>
                                     </select>
                                     @error('satuan')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="stok_awal" class="form-label">Stok Awal <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control @error('stok_awal') is-invalid @enderror" 
-                                           id="stok_awal" name="stok_awal" value="{{ old('stok_awal', 0) }}" 
-                                           min="0" required>
-                                    @error('stok_awal')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

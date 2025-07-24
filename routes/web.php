@@ -221,13 +221,15 @@ Route::prefix('obat')->name('obat.')->group(function () {
     Route::get('/{obat}/edit', [ObatController::class, 'edit'])->name('edit');
     Route::put('/{obat}', [ObatController::class, 'update'])->name('update');
     Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
+    Route::post('/{obat}/tambah-stok', [ObatController::class, 'tambahStok'])->name('tambah-stok');
     
     // Rekapitulasi
     Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
     Route::get('/export', [RekapitulasiExportController::class, 'export'])->name('export');
     Route::get('/{obat}/rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
-    
+    Route::get('/obat/rekapitulasi-data', [ObatController::class, 'getRekapitulasiData'])->name('obat.rekapitulasi-data');
+
     // Transaksi
     Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
     Route::post('/{obat}/transaksi-harian', [ObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');

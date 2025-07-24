@@ -18,7 +18,8 @@ class TransaksiObat extends Model
         'total_biaya',
         'tipe_transaksi',
         'keterangan',
-        'petugas'
+        'petugas',
+        'unit_id'
     ];
 
     protected $casts = [
