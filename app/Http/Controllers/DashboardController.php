@@ -16,99 +16,75 @@ class DashboardController extends Controller
         $tab = $request->input('tab', 'laporan');
 
         $kategoriList = [
-            1 => 'Kependudukan',
-            2 => 'Penyakit',
-            3 => 'Opname',
-            4 => 'Penyakit Kronis',
-            5 => 'Konsultasi Klinik',
-            6 => 'Cuti Sakit',
-            7 => 'Peserta KB',
-            8 => 'Metode KB',
-            9 => 'Kehamilan',
-            10 => 'Imunisasi',
-            11 => 'Kematian',
-            12 => 'Klaim Asuransi',
-            13 => 'Kecelakaan Kerja',
-            14 => 'Sakit Berkepanjangan',
-            15 => 'Absensi Dokter Honorer',
+            1 => 'Kependudukan', 2 => 'Penyakit', 3 => 'Opname', 4 => 'Penyakit Kronis',
+            5 => 'Konsultasi Klinik', 6 => 'Cuti Sakit', 7 => 'Peserta KB', 8 => 'Metode KB',
+            9 => 'Kehamilan', 10 => 'Imunisasi', 11 => 'Kematian', 12 => 'Klaim Asuransi',
+            13 => 'Kecelakaan Kerja', 14 => 'Sakit Berkepanjangan', 15 => 'Absensi Dokter Honorer',
             21 => 'Kategori Khusus',
         ];
 
+        // Filter untuk Laporan
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
         $unitId = $request->input('unit_id');
-        $search = $request->input('search');
+        $searchSubkategori = $request->input('search');
 
+        // Filter terpisah untuk Obat
+        $unitIdObat = $request->input('unit_id_obat');
+        $bulanObat = $request->input('bulan_obat');
+        $tahunObat = $request->input('tahun_obat');
+        $searchNamaObat = $request->input('search_nama');
+        $searchJenisObat = $request->input('search_jenis');
+        
         $units = Unit::all();
-
-        $ringkasan = [];
-
         $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
         $is_admin = Auth::guard('admin')->check();
 
-        foreach ($kategoriList as $kategoriId => $kategoriNama) {
-            $subkategoriData = \App\Models\SubKategori::where('kategori_id', $kategoriId)->get();
+        // Logika untuk Tab Laporan
+        $ringkasan = [];
+        if ($tab === 'laporan') {
+            foreach ($kategoriList as $kategoriId => $kategoriNama) {
+                $subkategoriData = \App\Models\SubKategori::where('kategori_id', $kategoriId)->get();
+                $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
 
-            $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
+                if ($is_admin && $unitId) $laporanQuery->where('unit_id', $unitId);
+                if (!$is_admin) $laporanQuery->where('unit_id', $authUser->unit_id);
+                if ($bulan) $laporanQuery->where('bulan', $bulan);
+                if ($tahun) $laporanQuery->where('tahun', $tahun);
 
-            if ($is_admin) {
-                if ($unitId) {
-                    $laporanQuery->where('unit_id', $unitId);
-                }
-            } else {
-                $laporanQuery->where('unit_id', $authUser->unit_id);
-            }
+                $laporan = $laporanQuery->get();
+                $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                    return ['nama' => $sub->nama, 'total' => $laporan->where('subkategori_id', $sub->id)->sum('jumlah')];
+                });
 
-            if ($bulan) {
-                $laporanQuery->where('bulan', $bulan);
-            }
-            if ($tahun) {
-                $laporanQuery->where('tahun', $tahun);
-            }
-
-            $laporan = $laporanQuery->get();
-
-            $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
-                $jumlah = $laporan->where('subkategori_id', $sub->id)->sum('jumlah');
-                return [
-                    'id' => $sub->id,
-                    'nama' => $sub->nama,
-                    'total' => $jumlah,
+                $ringkasan[] = [
+                    'nama' => $kategoriNama,
+                    'total' => $subkategoriRingkasan->sum('total'),
+                    'subkategori' => $subkategoriRingkasan,
                 ];
-            });
-
-            $ringkasan[] = [
-                'id' => $kategoriId,
-                'nama' => $kategoriNama,
-                'total' => $subkategoriRingkasan->sum('total'),
-                'subkategori' => $subkategoriRingkasan,
-            ];
+            }
         }
 
-        // Tab obat
+        // Logika untuk Tab Obat
         $obats = collect();
         if ($tab === 'obat') {
             $obatQuery = Obat::query();
 
-            if ($is_admin && $unitId) {
-                $obatQuery->where('unit_id', $unitId);
-            } elseif (!$is_admin) {
-                $obatQuery->where('unit_id', $authUser->unit_id);
-            }
+            if ($is_admin && $unitIdObat) $obatQuery->where('unit_id', $unitIdObat);
+            if (!$is_admin) $obatQuery->where('unit_id', $authUser->unit_id);
+            if ($searchNamaObat) $obatQuery->where('nama_obat', 'like', '%' . $searchNamaObat . '%');
+            if ($searchJenisObat) $obatQuery->where('jenis_obat', 'like', '%' . $searchJenisObat . '%');
 
-            if ($search) {
-                $obatQuery->where('nama_obat', 'like', '%' . $search . '%');
-            }
-
+            // Filter bulan dan tahun pada rekapitulasi obat (jika diperlukan)
+            // Untuk saat ini, kita hanya filter berdasarkan unit dan nama
             $obats = $obatQuery->get();
         }
 
-        $viewData = compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'tab', 'obats');
+        $viewData = compact(
+            'ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'searchSubkategori',
+            'tab', 'obats', 'unitIdObat', 'bulanObat', 'tahunObat', 'searchNamaObat'
+        );
 
-        if ($is_admin) {
-            return view('admin-dashboard', $viewData);
-        } else {
-            return view('dashboard', $viewData);
-        }
+        return $is_admin ? view('admin-dashboard', $viewData) : view('dashboard', $viewData);
     }
 }
