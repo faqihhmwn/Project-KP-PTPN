@@ -12,9 +12,9 @@
                     <h4>Edit Obat: {{ $obat->nama_obat }}</h4>
                     <!-- <a href="{{ route('obat.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali -->
-                     <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
+                     <!-- <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
-                    </a>
+                    </a> -->
                 </div>
 
                 <div class="card-body">
@@ -113,10 +113,11 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="stok_tambahan" class="form-label">Tambahkan Obat <span class="text-danger">*</span></label>
+                                    <label for="stok_tambahan" class="form-label">Tambahkan Obat</label>
                                     <input type="number" class="form-control @error('stok_tambahan') is-invalid @enderror" 
                                         id="stok_tambahan" name="stok_tambahan" value="{{ old('stok_tambahan', $obat->stok_tambahan) }}" 
-                                        min="0" required>
+                                        min="0">
+                                    <small class="form-text text-muted">Kosongkan jika tidak ingin menambah stok</small>
                                     @error('stok_tambahan')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

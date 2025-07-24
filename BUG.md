@@ -2,11 +2,11 @@
 
 ## Fitur Obat
 
-### Export Excel Issues
+<!-- ### Export Excel Issues
 - [ ] Export Excel belum memfilter berdasarkan unit
   - Perlu menambahkan filter unit_id pada query export
   - Pastikan hanya data unit yang sesuai yang diexport
-  - Update ObatExport.php untuk menyertakan kondisi unit_id
+  - Update ObatExport.php untuk menyertakan kondisi unit_id -->
 
 ### Tabel Rekapitulasi Issues
 - [ ] Bug stok tidak tampil di tabel rekapitulasi

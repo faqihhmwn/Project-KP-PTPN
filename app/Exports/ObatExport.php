@@ -21,26 +21,30 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     protected $startDate;
     protected $endDate;
     protected $daysInMonth;
-    protected $rowNumber = 0;  // Tambahkan property untuk penomoran
+    protected $rowNumber = 0;
+    protected $unitId;  // Tambah property untuk unit_id
 
     public function __construct($startDate, $endDate)
     {
         $this->startDate = Carbon::parse($startDate);
         $this->endDate = Carbon::parse($endDate);
         $this->daysInMonth = $this->startDate->daysInMonth;
+        $this->unitId = auth()->user()->unit_id; // Ambil unit_id dari user yang sedang login
     }
 
     public function collection()
     {
-        return Obat::with(['rekapitulasiObat' => function($query) {
-            $query->whereBetween('tanggal', [
-                $this->startDate->format('Y-m-d'),
-                $this->endDate->format('Y-m-d')
-            ])
-            ->where('bulan', $this->startDate->month)
-            ->where('tahun', $this->startDate->year)
-            ->orderBy('tanggal');
-        }])->get();
+        return Obat::where('unit_id', $this->unitId) // Filter berdasarkan unit_id
+            ->with(['rekapitulasiObat' => function($query) {
+                $query->whereBetween('tanggal', [
+                    $this->startDate->format('Y-m-d'),
+                    $this->endDate->format('Y-m-d')
+                ])
+                ->where('bulan', $this->startDate->month)
+                ->where('tahun', $this->startDate->year)
+                ->where('unit_id', $this->unitId) // Filter rekapitulasi berdasarkan unit_id
+                ->orderBy('tanggal');
+            }])->get();
     }
 
     public function headings(): array
@@ -83,8 +87,9 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             $obat->harga_satuan,
         ];
 
-        // Hitung stok awal
+        // Hitung stok awal dengan filter unit
         $stokAwal = $obat->rekapitulasiObat()
+            ->where('unit_id', $this->unitId)
             ->where('tanggal', '<', $this->startDate->format('Y-m-d'))
             ->orderBy('tanggal', 'desc')
             ->first();
@@ -97,6 +102,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             for ($day = 1; $day <= $this->daysInMonth; $day++) {
                 $tanggal = Carbon::create($this->startDate->year, $this->startDate->month, $day);
                 $rekapHarian = RekapitulasiObat::where('obat_id', $obat->id)
+                    ->where('unit_id', $this->unitId)
                     ->where('tanggal', $tanggal->format('Y-m-d'))
                     ->where('bulan', $this->startDate->month)
                     ->where('tahun', $this->startDate->year)

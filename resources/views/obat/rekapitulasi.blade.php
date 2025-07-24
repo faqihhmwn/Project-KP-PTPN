@@ -135,10 +135,11 @@
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
                        
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
-                            @php
+                                @php
                                 $previousMonth = $bulan == 1 ? 12 : $bulan - 1;
                                 $previousYear = $bulan == 1 ? $tahun - 1 : $tahun;
                                 
+                                // Get current month's rekapitulasi
                                 $currentMonthStocks = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
                                     ->where('unit_id', Auth::user()->unit_id)
                                     ->where('bulan', $bulan)
@@ -153,11 +154,20 @@
                                     ->orderBy('tanggal', 'desc')
                                     ->first();
 
-                                // Calculate current month's total stock additions
-                                $currentMonthAdditions = $currentMonthStocks->sum('stok_tambahan') ?? 0;
+                                // Get the initial stock from the obat table
+                                $stokAwal = $obat->stok_awal;
                                 
-                                // Initial stock is previous month's remaining stock + any additions in current month
-                                $stokAwal = ($previousMonthStock ? $previousMonthStock->sisa_stok : 0) + $currentMonthAdditions;
+                                // If we have previous month's data, add its remaining stock
+                                if ($previousMonthStock) {
+                                    $stokAwal = $previousMonthStock->sisa_stok;
+                                }
+                                
+                                // Add any additional stock for this month
+                                $currentMonthAdditions = $currentMonthStocks->sum('stok_tambahan') ?? 0;
+                                $stokAwal += $currentMonthAdditions;
+                                
+                                // Ensure final stock value is not negative
+                                $stokAwal = max(0, $stokAwal);
                                 
                                 // Store for use in sisa_stok calculation
                                 $row_stok_awal = $stokAwal;
@@ -404,16 +414,12 @@
             const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
             if (!row) return;
             
-            // Get stok awal (selalu 0 sekarang)
+            // Get stok awal dari sel tabel
             const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = 0;
+            let stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
             
-            // Get stok tambahan
-            const stokTambahanInput = row.querySelector('.stok-tambahan');
-            let stokTambahan = parseInt(stokTambahanInput?.value) || 0;
-            
-            // Calculate total stok available
-            let totalStokTersedia = stokAwal + stokTambahan;
+            // Calculate total stock available (stok awal sudah termasuk tambahan dari bulan sebelumnya)
+            let totalStokTersedia = stokAwal;
             
             // Calculate total used
             let totalKeluar = 0;
@@ -610,10 +616,8 @@
                     const obatId = row.getAttribute('data-obat-row');
                     const harga = parseInt(row.getAttribute('data-harga')) || 0;
                     const stokAwalCell = row.querySelector('.stok-awal');
-                    const stokAwal = 0; // Stok awal selalu 0
-                    const stokTambahanInput = row.querySelector('.stok-tambahan');
-                    const stokTambahan = parseInt(stokTambahanInput?.value) || 0;
-                    const totalStokTersedia = stokAwal + stokTambahan;
+                    const stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+                    const totalStokTersedia = stokAwal; // Use the initial stock as total available
 
                     // Untuk setiap input harian
                     const inputs = row.querySelectorAll('.daily-input');
@@ -759,25 +763,25 @@
             const jumlahKeluar = parseInt(input.value) || 0;
             const row = input.closest('tr[data-obat-row]');
             const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = 0;
-            if (stokAwalCell) {
-                stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
-            }
+            let stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+            
             let totalKeluar = 0;
             row.querySelectorAll('.daily-input').forEach(inp => {
                 totalKeluar += parseInt(inp.value) || 0;
             });
+            
             if (totalKeluar > stokAwal) {
                 alert('Input melebihi kapasitas stok awal!');
+                input.value = '0';
+                updateSisaStok(obatId);
+                updateTotalBiaya(obatId);
                 return;
             }
+            
             // Hitung sisa stok dan total biaya
-            const sisaStok = stokAwal - totalKeluar;
+            const sisaStok = Math.max(0, stokAwal - totalKeluar);
             const harga = parseInt(row.getAttribute('data-harga')) || 0;
-            let totalBiaya = 0;
-            row.querySelectorAll('.daily-input').forEach(inp => {
-                totalBiaya += (parseInt(inp.value) || 0) * harga;
-            });
+            const totalBiaya = jumlahKeluar * harga;
             // Kirim data ke endpoint rekapitulasi
             fetch('/obat/rekapitulasi-obat/input-harian', {
                     method: 'POST',

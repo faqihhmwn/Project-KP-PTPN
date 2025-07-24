@@ -7,6 +7,7 @@ use App\Models\Unit;
 use App\Models\TransaksiObat;
 use App\Models\RekapitulasiObat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ObatImport;

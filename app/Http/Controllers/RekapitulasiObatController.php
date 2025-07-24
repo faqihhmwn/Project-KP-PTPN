@@ -41,9 +41,11 @@ class RekapitulasiObatController extends Controller
 
     public function storeOrUpdate(Request $request)
     {
-        // --- 1. Logging Data yang Diterima (Untuk Debugging) ---
-        // Ini akan membantu Anda melihat apakah data 'tanggal' benar-benar dikirim dari frontend.
+        // Log received data
         Log::info('Data diterima untuk storeOrUpdate:', $request->all());
+        
+        // Get authenticated user
+        $user = Auth::user();
 
         // Jika bulk, simpan banyak data sekaligus
         if ($request->has('bulk')) {
