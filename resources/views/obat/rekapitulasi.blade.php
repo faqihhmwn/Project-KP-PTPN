@@ -113,6 +113,9 @@
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
                     <th rowspan="2">Stok Awal</th>
+                    <th rowspan="2">Unit</th>
+                    <th rowspan="2">Bulan</th>
+                    <th rowspan="2">Tahun</th>
                     <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
                     <th rowspan="2">Sisa Stok</th>
                     <th rowspan="2">Total Biaya</th>
@@ -150,6 +153,9 @@
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
                             {{ $obat->stokAwal($bulan, $tahun) }}
                         </td>
+                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
+                        <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
+                        <td>{{ $tahun }}</td>
                         @php $totalBiaya = 0; @endphp
                         @for ($day = 1; $day <= $daysInMonth; $day++)
                             @php

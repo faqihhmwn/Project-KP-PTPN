@@ -117,11 +117,13 @@
             <thead>
                 <tr>
                     <th rowspan="2">No</th>
-                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Nama Obat</th>
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
                     <th rowspan="2">Stok Awal</th>
+                    <th rowspan="2">Unit</th>
+                    <th rowspan="2">Bulan</th>
+                    <th rowspan="2">Tahun</th>
                     <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
                     <th rowspan="2">Sisa Stok</th>
                     <th rowspan="2">Total Biaya</th>
@@ -139,7 +141,6 @@
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
@@ -160,6 +161,9 @@
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
                             {{ $obat->stokAwal($bulan, $tahun) }}
                         </td>
+                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
+                        <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
+                        <td>{{ $tahun }}</td>
                         @php $totalBiaya = 0; @endphp
                         @for ($day = 1; $day <= $daysInMonth; $day++)
                             @php
