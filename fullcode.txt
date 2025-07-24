@@ -29429,6 +29429,115 @@ class KapitasiExport implements FromArray, WithTitle, WithStyles, WithColumnForm
 
 </code>
 
+app\Exports\LaporanKependudukanExport.php:
+<code>
+<?php
+
+namespace App\Exports;
+
+use App\Models\LaporanBulanan; // Ganti model ke LaporanBulanan
+use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+
+class LaporanKependudukanExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+{
+    protected $unitId;
+    protected $bulan;
+    protected $tahun;
+    protected $subkategoriId;
+
+    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
+    {
+        $this->unitId = $unitId;
+        $this->bulan = $bulan;
+        $this->tahun = $tahun;
+        $this->subkategoriId = $subkategoriId;
+    }
+
+    /**
+     * @return \Illuminate\Database\Query\Builder
+     */
+    public function query()
+    {
+        $query = LaporanBulanan::query()
+            ->with(['unit', 'subkategori'])
+            ->where('kategori_id', 1); // Filter hanya untuk kategori Kependudukan
+
+        if ($this->unitId) {
+            $query->where('unit_id', $this->unitId);
+        }
+        if ($this->bulan) {
+            $query->where('bulan', $this->bulan);
+        }
+        if ($this->tahun) {
+            $query->where('tahun', $this->tahun);
+        }
+        if ($this->subkategoriId) {
+            $query->where('subkategori_id', $this->subkategoriId);
+        }
+
+        // Urutkan berdasarkan ID untuk menjaga urutan seperti di tabel
+        return $query->orderBy('id', 'asc');
+    }
+
+    /**
+     * @return array
+     */
+    public function headings(): array
+    {
+        // Kolom header sesuai permintaan
+        return [
+            'No',
+            'Unit',
+            'Subkategori',
+            'Jumlah',
+            'Bulan',
+            'Tahun',
+        ];
+    }
+
+    /**
+     * @param LaporanBulanan $laporan
+     * @return array
+     */
+    public function map($laporan): array
+    {
+        // Format setiap baris data
+        static $index = 0;
+        $index++;
+        
+        return [
+            $index,
+            $laporan->unit->nama ?? 'N/A',
+            $laporan->subkategori->nama ?? 'N/A',
+            $laporan->jumlah,
+            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
+            $laporan->tahun,
+        ];
+    }
+
+    /**
+     * @param Worksheet $sheet
+     * @return array
+     */
+    public function styles(Worksheet $sheet)
+    {
+        // Memberi gaya pada header (baris pertama)
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+
+        // Memberi garis pada seluruh tabel
+        $lastRow = $sheet->getHighestRow();
+        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        
+        return [];
+    }
+}
+</code>
+
 app\Exports\ObatExport.php:
 <code>
 <?php
@@ -30723,6 +30832,11 @@ class RekapitulasiObatController extends Controller
         }
     }
 }
+</code>
+
+app\Http\Controllers\Admin\LaporanKependudukanController.php:
+<code>
+
 </code>
 
 app\Http\Controllers\Admin\ObatController.php:
@@ -33313,6 +33427,8 @@ use App\Models\Unit;
 use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LaporanKependudukanExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KependudukanController extends Controller
 {
@@ -33458,24 +33574,20 @@ class KependudukanController extends Controller
         return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
     }
     
-    // public function destroy($id)
-    // {
-        // if (!Auth::guard('admin')->check()) {
-            // return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
-        // }
+    public function destroy($id)
+    {
+        if (!Auth::guard('admin')->check()) {
+           return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+        }
 
-        // $laporan = LaporanBulanan::findOrFail($id);
-        // $laporan->delete();
+        $laporan = LaporanBulanan::findOrFail($id);
+        $laporan->delete();
 
-        // return back()->with('success', 'Data berhasil dihapus.');
-    // }
+        return back()->with('success', 'Data berhasil dihapus.');
+    }
 
     public function approve(Request $request)
     {
-        if (!Auth::guard('admin')->check()) {
-            return back()->with('error', 'Hanya admin yang dapat menyetujui laporan.');
-        }
-
         $request->validate([
             'unit_id' => 'required|exists:units,id',
             'bulan' => 'required|numeric|between:1,12',
@@ -33535,6 +33647,23 @@ class KependudukanController extends Controller
             ->exists();
             
         return response()->json(['exists' => $existingData]);
+    }
+
+    public function export(Request $request)
+    {       
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id'); // Ambil filter subkategori
+
+        if (Auth::guard('web')->check()) {
+            $unitId = Auth::guard('web')->user()->unit_id;
+        }
+
+        $fileName = 'laporan_kependudukan_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Langsung panggil class export dengan parameter filter
+        return Excel::download(new LaporanKependudukanExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }
 </code>
@@ -36723,6 +36852,60 @@ class LaporanBulanan extends Model
     }
 }
 
+</code>
+
+app\Models\LaporanKependudukan.php:
+<code>
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class LaporanKependudukan extends Model
+{
+    use HasFactory;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'laporan_bulanan';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'unit_id',
+        'subkategori_id',
+        'bulan',
+        'tahun',
+        'laki_laki',
+        'perempuan',
+        'total',
+        'is_approved',
+    ];
+
+    /**
+     * Get the unit that owns the report.
+     */
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    /**
+     * Get the subcategory for the report.
+     */
+    public function subkategori()
+    {
+        return $this->belongsTo(Subkategori::class);
+    }
+}
 </code>
 
 app\Models\Obat.php:
@@ -43643,7 +43826,11 @@ resources\views\admin\laporan\partials\kependudukan_table.blade.php:
     </div>
 @endif
 
+
+
+{{-- Tabel Data --}}
 <table class="table table-striped">
+    {{-- ... sisa kode tabel Anda tidak berubah ... --}}
     <thead>
         <tr><th>No</th><th>Unit</th><th>Subkategori</th><th>Jumlah</th><th>Bulan</th><th>Tahun</th><th>Status</th><th>Aksi</th></tr>
     </thead>
@@ -43659,10 +43846,7 @@ resources\views\admin\laporan\partials\kependudukan_table.blade.php:
             <td>{{ $row->tahun }}</td>
             <td>@if($isRowApproved)<span class="badge bg-success">Disetujui</span>@else<span class="badge bg-warning text-dark">Menunggu</span>@endif</td>
             <td>
-                {{-- Tombol Edit selalu aktif untuk Admin --}}
                 <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $row->id }}">Edit</a>
-
-                {{-- Tombol Hapus hanya untuk Admin --}}
                 <!-- <form action="{{ route('laporan.kependudukan.destroy', $row->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')"> -->
                     <!-- @csrf -->
                     <!-- @method('DELETE') -->
@@ -43712,6 +43896,13 @@ resources\views\admin\laporan\partials\klaim-asuransi_admin_content.blade.php:
         </div>
     </div>
 @endif
+
+{{-- TOMBOL EXPORT DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.klaim-asuransi.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
 
 {{-- BAGIAN TABEL DATA --}}
 <div class="card">
@@ -50032,6 +50223,13 @@ resources\views\laporan\partials\kematian_table.blade.php:
 
 resources\views\laporan\partials\kependudukan_table.blade.php:
 <code>
+{{-- TOMBOL EXPORT DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.kependudukan.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
 <div class="card">
     <div class="card-body">
         <table class="table table-striped">
@@ -54446,6 +54644,8 @@ Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('lapor
     Route::delete('/destroy/{id}', [KependudukanController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KependudukanController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KependudukanController::class, 'unapprove'])->name('unapprove');
+    
+    Route::get('/export', [KependudukanController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/penyakit')->middleware('auth:web,admin')->name('laporan.penyakit.')->group(function () {
@@ -57762,6 +57962,13 @@ storage\framework\views\112fe2ef9a96e9d3235a15ef8d4702b4.php:
 
 storage\framework\views\120d2afa60fe0bad3d18f8a2a3437b51.php:
 <code>
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="<?php echo e(route('laporan.kependudukan.export', request()->query())); ?>" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
 <div class="card">
     <div class="card-body">
         <table class="table table-striped">
@@ -59476,8 +59683,6 @@ storage\framework\views\1d2e35268e3d4fd67732c960e3ce1f6f.php:
 
 storage\framework\views\1d9361ffa8119f4caf64068e69d67600.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Penyakit (Admin)</h3>
@@ -61038,8 +61243,6 @@ storage\framework\views\29509566cf679cded4e24a7627394d39.php:
 
 storage\framework\views\29aa35756d70ff8f0bfc0690833904d4.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Kecelakaan Kerja (Admin)</h3>
@@ -61083,6 +61286,8 @@ storage\framework\views\29aa35756d70ff8f0bfc0690833904d4.php:
                         </select>
                     </div>
                 </div>
+                <fieldset id="input-form-content">
+                    <div id="data-exists-alert" class="alert alert-warning" style="display: none;">Data untuk periode ini sudah ada. Silahkan gunakan fitur "Edit" untuk mengubahnya.</div>
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -62244,8 +62449,6 @@ storage\framework\views\388d1193f7fdeef265a2608af3fdd553.php:
 
 storage\framework\views\38c5e22a17cdcea63dfb3e81bfe77ea0.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Klaim Asuransi (Admin)</h3>
@@ -64748,8 +64951,6 @@ storage\framework\views\4eaac209329b6c126a3f162f2354d591.php:
 
 storage\framework\views\4f8acb578170e19f9b9eaeaffc172f37.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Sakit Berkepanjangan (Admin)</h3>
@@ -65004,6 +65205,15 @@ storage\framework\views\51384b1d61064004b67bf6385c8fcfb9.php:
         </div>
     </div>
 </td><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN/resources/views/laporan/modal/modal-kependudukan.blade.php ENDPATH**/ ?>
+</code>
+
+storage\framework\views\517ad277ad823690deff3a965719cf62.php:
+<code>
+<?php $__env->startSection('title', __('Forbidden')); ?>
+<?php $__env->startSection('code', '403'); ?>
+<?php $__env->startSection('message', __($exception->getMessage() ?: 'Forbidden')); ?>
+
+<?php echo $__env->make('errors::minimal', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN7/vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/views/403.blade.php ENDPATH**/ ?>
 </code>
 
 storage\framework\views\526a0c86319c00e15149e8c0915fc987.php:
@@ -71168,8 +71378,6 @@ storage\framework\views\8bcf46248cac0f23ca1ee966ee9b7da6.php:
 
 storage\framework\views\8d30f84ca311579e0636c746a8b8bf99.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Penyakit (Unit <?php echo e($authUser->unit->nama ?? ''); ?>)</h3>
@@ -80160,8 +80368,6 @@ $(document).ready(function() {
 
 storage\framework\views\dc488235e6cd266ecf0d2ce196bb6484.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Absensi Dokter Honorer (Unit <?php echo e($authUser->unit->nama ?? ''); ?>)</h3>
@@ -83468,7 +83674,16 @@ storage\framework\views\f9367cdfdaf252e4d8155711c1e5636c.php:
     </div>
 <?php endif; ?>
 
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="<?php echo e(route('laporan.kependudukan.export', request()->query())); ?>" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
+
 <table class="table table-striped">
+    
     <thead>
         <tr><th>No</th><th>Unit</th><th>Subkategori</th><th>Jumlah</th><th>Bulan</th><th>Tahun</th><th>Status</th><th>Aksi</th></tr>
     </thead>
@@ -83484,15 +83699,12 @@ storage\framework\views\f9367cdfdaf252e4d8155711c1e5636c.php:
             <td><?php echo e($row->tahun); ?></td>
             <td><?php if($isRowApproved): ?><span class="badge bg-success">Disetujui</span><?php else: ?><span class="badge bg-warning text-dark">Menunggu</span><?php endif; ?></td>
             <td>
-                
                 <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal<?php echo e($row->id); ?>">Edit</a>
-
-                
-                <!-- <form action="<?php echo e(route('laporan.kependudukan.destroy', $row->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')"> -->
-                    <!-- <?php echo csrf_field(); ?> -->
-                    <!-- <?php echo method_field('DELETE'); ?> -->
-                    <!-- <button type="submit" class="btn btn-sm btn-danger">Hapus</button> -->
-                <!-- </form> -->
+                <form action="<?php echo e(route('laporan.kependudukan.destroy', $row->id)); ?>" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('DELETE'); ?>
+                    <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                </form>
             </td>
         </tr>
         <?php echo $__env->make('admin.laporan.modal.modal-kependudukan', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>

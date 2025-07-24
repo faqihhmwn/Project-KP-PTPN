@@ -28,6 +28,13 @@
     </div>
 @endif
 
+{{-- TAMBAHKAN TOMBOL BARU DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.penyakit.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
 {{-- BAGIAN TABEL DATA --}}
 <table class="table table-striped">
     <thead>

@@ -84,6 +84,8 @@ Route::prefix('laporan/penyakit')->middleware('auth:web,admin')->name('laporan.p
     Route::delete('/destroy/{id}', [PenyakitController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [PenyakitController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [PenyakitController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [PenyakitController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/opname')->middleware('auth:web,admin')->name('laporan.opname.')->group(function () {
