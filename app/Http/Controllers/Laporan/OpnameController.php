@@ -9,6 +9,8 @@ use App\Models\Unit;
 use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LaporanOpnameExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OpnameController extends Controller
 {
@@ -208,5 +210,24 @@ class OpnameController extends Controller
         }
 
         return back()->with('error', 'Data persetujuan tidak ditemukan.');
+    }
+
+    public function export(Request $request)
+    {
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id');
+
+        // Jika yang login adalah user biasa (bukan admin),
+        // paksa filter unit_id menjadi unit milik user tersebut.
+        if (Auth::guard('web')->check()) {
+            $unitId = Auth::guard('web')->user()->unit_id;
+        }
+
+        $fileName = 'laporan_opname_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Panggil class export yang baru dengan parameter filter
+        return Excel::download(new LaporanOpnameExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }

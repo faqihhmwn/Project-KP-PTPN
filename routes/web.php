@@ -95,6 +95,8 @@ Route::prefix('laporan/opname')->middleware('auth:web,admin')->name('laporan.opn
     Route::delete('/destroy/{id}', [OpnameController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [OpnameController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [OpnameController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [OpnameController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/penyakit-kronis')->middleware('auth:web,admin')->name('laporan.penyakit-kronis.')->group(function () {
