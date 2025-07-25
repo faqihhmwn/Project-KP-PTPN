@@ -19,6 +19,7 @@ class Obat extends Model
         'satuan',
         'stok_awal',
         'stok_sisa',
+        'tambah_obat',
         'keterangan',
         'unit_id',
     ];
@@ -178,7 +179,7 @@ class Obat extends Model
 
                 $this->stok_masuk = $totalMasuk;
                 $this->stok_keluar = $totalKeluar;
-                $this->stok_sisa = $this->stok_awal + $totalMasuk - $totalKeluar;
+                $this->stok_sisa = $this->stok_awal + $this->tambah_obat + $totalMasuk - $totalKeluar;
             }
 
             $this->save();

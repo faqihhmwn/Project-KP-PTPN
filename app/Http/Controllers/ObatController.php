@@ -282,125 +282,125 @@ class ObatController extends Controller
         return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
     }
 
-    public function addTransaksi(Request $request, Obat $obat)
-    {
-        $validated = $request->validate([
-            'tanggal' => 'required|date',
-            'tipe_transaksi' => 'required|in:masuk,keluar',
-            'jumlah' => 'required|integer|min:1',
-            'keterangan' => 'nullable|string',
-            'petugas' => 'nullable|string'
-        ]);
+    // public function addTransaksi(Request $request, Obat $obat)
+    // {
+    //     $validated = $request->validate([
+    //         'tanggal' => 'required|date',
+    //         'tipe_transaksi' => 'required|in:masuk,keluar',
+    //         'jumlah' => 'required|integer|min:1',
+    //         'keterangan' => 'nullable|string',
+    //         'petugas' => 'nullable|string'
+    //     ]);
 
-        $transaksi = new TransaksiObat([
-            'obat_id' => $obat->id,
-            'tanggal' => $validated['tanggal'],
-            'tipe_transaksi' => $validated['tipe_transaksi'],
-            'keterangan' => $validated['keterangan'],
-            'petugas' => $validated['petugas']
-        ]);
+    //     $transaksi = new TransaksiObat([
+    //         'obat_id' => $obat->id,
+    //         'tanggal' => $validated['tanggal'],
+    //         'tipe_transaksi' => $validated['tipe_transaksi'],
+    //         'keterangan' => $validated['keterangan'],
+    //         'petugas' => $validated['petugas']
+    //     ]);
 
-        if ($validated['tipe_transaksi'] === 'masuk') {
-            $transaksi->jumlah_masuk = $validated['jumlah'];
-        } else {
-            // Check stok tersedia
-            if ($obat->stok_sisa < $validated['jumlah']) {
-                return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
-            }
-            $transaksi->jumlah_keluar = $validated['jumlah'];
-        }
+    //     if ($validated['tipe_transaksi'] === 'masuk') {
+    //         $transaksi->jumlah_masuk = $validated['jumlah'];
+    //     } else {
+    //         // Check stok tersedia
+    //         if ($obat->stok_sisa < $validated['jumlah']) {
+    //             return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
+    //         }
+    //         $transaksi->jumlah_keluar = $validated['jumlah'];
+    //     }
 
-        $transaksi->save();
-        $this->updateStokObat($obat);
+    //     $transaksi->save();
+    //     $this->updateStokObat($obat);
 
-        return back()->with('success', 'Transaksi berhasil ditambahkan.');
-    }
+    //     return back()->with('success', 'Transaksi berhasil ditambahkan.');
+    // }
 
-    public function getRekapitulasiData(Request $request)
-    {
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
+    // public function getRekapitulasiData(Request $request)
+    // {
+    //     $bulan = $request->get('bulan', Carbon::now()->month);
+    //     $tahun = $request->get('tahun', Carbon::now()->year);
         
-        $rekapitulasi = RekapitulasiObat::where('unit_id', auth()->user()->unit_id)
-            ->whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
-            ->with('obat')
-            ->get()
-            ->groupBy('obat_id');
+    //     $rekapitulasi = RekapitulasiObat::where('unit_id', auth()->user()->unit_id)
+    //         ->whereMonth('tanggal', $bulan)
+    //         ->whereYear('tanggal', $tahun)
+    //         ->with('obat')
+    //         ->get()
+    //         ->groupBy('obat_id');
             
-        return response()->json($rekapitulasi);
-    }
+    //     return response()->json($rekapitulasi);
+    // }
 
-    public function updateTransaksiHarian(Request $request, Obat $obat)
-    {
-        $validated = $request->validate([
-            'tanggal' => 'required|date',
-            'jumlah_keluar' => 'required|integer|min:0'
-        ]);
+    // public function updateTransaksiHarian(Request $request, Obat $obat)
+    // {
+    //     $validated = $request->validate([
+    //         'tanggal' => 'required|date',
+    //         'jumlah_keluar' => 'required|integer|min:0'
+    //     ]);
 
-        // Verify that the obat belongs to the user's unit
-        if ($obat->unit_id !== auth()->user()->unit_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+    //     // Verify that the obat belongs to the user's unit
+    //     if ($obat->unit_id !== auth()->user()->unit_id) {
+    //         return response()->json(['error' => 'Unauthorized'], 403);
+    //     }
 
-        $tanggal = Carbon::parse($validated['tanggal']);
-        $bulan = $tanggal->month;
-        $tahun = $tanggal->year;
+    //     $tanggal = Carbon::parse($validated['tanggal']);
+    //     $bulan = $tanggal->month;
+    //     $tahun = $tanggal->year;
 
-        if ($validated['jumlah_keluar'] > 0) {
-            // Dapatkan stok awal dari bulan ini
-            $stokAwal = $this->getStokAwalBulan($obat, $bulan, $tahun);
+    //     if ($validated['jumlah_keluar'] > 0) {
+    //         // Dapatkan stok awal dari bulan ini
+    //         $stokAwal = $this->getStokAwalBulan($obat, $bulan, $tahun);
 
-            if ($stokAwal < $validated['jumlah_keluar']) {
-                return response()->json(['error' => 'Stok tidak mencukupi'], 422);
-            }
+    //         if ($stokAwal < $validated['jumlah_keluar']) {
+    //             return response()->json(['error' => 'Stok tidak mencukupi'], 422);
+    //         }
 
-            // Update rekapitulasi
-            $rekapitulasi = $obat->rekapitulasiObat()->updateOrCreate(
-                [
-                    'tanggal' => $validated['tanggal'],
-                    'bulan' => $bulan,
-                    'tahun' => $tahun
-                ],
-                [
-                    'stok_awal' => $stokAwal,
-                    'jumlah_keluar' => $validated['jumlah_keluar'],
-                    'sisa_stok' => $stokAwal - $validated['jumlah_keluar'],
-                    'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
-                ]
-            );
+    //         // Update rekapitulasi
+    //         $rekapitulasi = $obat->rekapitulasiObat()->updateOrCreate(
+    //             [
+    //                 'tanggal' => $validated['tanggal'],
+    //                 'bulan' => $bulan,
+    //                 'tahun' => $tahun
+    //             ],
+    //             [
+    //                 'stok_awal' => $stokAwal,
+    //                 'jumlah_keluar' => $validated['jumlah_keluar'],
+    //                 'sisa_stok' => $stokAwal - $validated['jumlah_keluar'],
+    //                 'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
+    //             ]
+    //         );
 
-            // Recalculate stok untuk hari-hari berikutnya
-            $rekapitulasiSetelahnya = $obat->rekapitulasiObat()
-                ->where('bulan', $bulan)
-                ->where('tahun', $tahun)
-                ->where('tanggal', '>', $validated['tanggal'])
-                ->orderBy('tanggal', 'asc')
-                ->get();
+    //         // Recalculate stok untuk hari-hari berikutnya
+    //         $rekapitulasiSetelahnya = $obat->rekapitulasiObat()
+    //             ->where('bulan', $bulan)
+    //             ->where('tahun', $tahun)
+    //             ->where('tanggal', '>', $validated['tanggal'])
+    //             ->orderBy('tanggal', 'asc')
+    //             ->get();
 
-            $stokSebelumnya = $rekapitulasi->sisa_stok;
-            foreach ($rekapitulasiSetelahnya as $rekap) {
-                $rekap->stok_awal = $stokSebelumnya;
-                $rekap->sisa_stok = $stokSebelumnya - $rekap->jumlah_keluar;
-                $rekap->save();
-                $stokSebelumnya = $rekap->sisa_stok;
-            }
+    //         $stokSebelumnya = $rekapitulasi->sisa_stok;
+    //         foreach ($rekapitulasiSetelahnya as $rekap) {
+    //             $rekap->stok_awal = $stokSebelumnya;
+    //             $rekap->sisa_stok = $stokSebelumnya - $rekap->jumlah_keluar;
+    //             $rekap->save();
+    //             $stokSebelumnya = $rekap->sisa_stok;
+    //         }
 
-            // Update stok di tabel obat dengan nilai terkini
-            $latestRekap = $obat->rekapitulasiObat()
-                ->orderBy('tahun', 'desc')
-                ->orderBy('bulan', 'desc')
-                ->orderBy('tanggal', 'desc')
-                ->first();
+    //         // Update stok di tabel obat dengan nilai terkini
+    //         $latestRekap = $obat->rekapitulasiObat()
+    //             ->orderBy('tahun', 'desc')
+    //             ->orderBy('bulan', 'desc')
+    //             ->orderBy('tanggal', 'desc')
+    //             ->first();
 
-            $obat->update([
-                'stok_sisa' => $latestRekap->sisa_stok,
-                'stok_keluar' => $obat->stok_keluar + $validated['jumlah_keluar']
-            ]);
-        }
+    //         $obat->update([
+    //             'stok_sisa' => $latestRekap->sisa_stok,
+    //             'stok_keluar' => $obat->stok_keluar + $validated['jumlah_keluar']
+    //         ]);
+    //     }
 
-        return response()->json(['success' => true]);
-    }
+    //     return response()->json(['success' => true]);
+    // }
 
     private function getStokAwalBulan(Obat $obat, $bulan, $tahun)
     {
