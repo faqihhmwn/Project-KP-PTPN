@@ -416,7 +416,7 @@
             
             // Get stok awal dari sel tabel
             const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+            let stokAwal = parseInt(stokAwalCell ? stokAwalCell.textContent.replace(/[^\d]/g, '') : 0) || 0;
             
             // Calculate total stock available (stok awal sudah termasuk tambahan dari bulan sebelumnya)
             let totalStokTersedia = stokAwal;
@@ -616,8 +616,11 @@
                     const obatId = row.getAttribute('data-obat-row');
                     const harga = parseInt(row.getAttribute('data-harga')) || 0;
                     const stokAwalCell = row.querySelector('.stok-awal');
-                    const stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+                    const stokAwal = parseInt(stokAwalCell ? stokAwalCell.textContent.replace(/[^\d]/g, '') : 0) || 0;
                     const totalStokTersedia = stokAwal; // Use the initial stock as total available
+                    // Get stok tambahan value if exists
+                    const stokTambahanInput = row.querySelector('.stok-tambahan');
+                    const stokTambahan = stokTambahanInput ? (parseInt(stokTambahanInput.value) || 0) : 0;
 
                     // Untuk setiap input harian
                     const inputs = row.querySelectorAll('.daily-input');
@@ -763,7 +766,11 @@
             const jumlahKeluar = parseInt(input.value) || 0;
             const row = input.closest('tr[data-obat-row]');
             const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+            let stokAwal = parseInt(stokAwalCell ? stokAwalCell.textContent.replace(/[^\d]/g, '') : 0) || 0;
+            
+            // Get stok tambahan value if exists
+            const stokTambahanInput = row.querySelector('.stok-tambahan');
+            const stokTambahan = stokTambahanInput ? (parseInt(stokTambahanInput.value) || 0) : 0;
             
             let totalKeluar = 0;
             row.querySelectorAll('.daily-input').forEach(inp => {
@@ -794,6 +801,7 @@
                         tanggal: tanggal,
                         jumlah_keluar: jumlahKeluar,
                         stok_awal: stokAwal,
+                        stok_tambahan: stokTambahan,
                         sisa_stok: sisaStok < 0 ? 0 : sisaStok,
                         total_biaya: totalBiaya,
                         bulan: {{ $bulan }},

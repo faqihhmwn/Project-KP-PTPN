@@ -3,8 +3,20 @@
 
 @section('content')
 <style>
-    .info-card {
-        transition: all 0.3s ease;
+    .info-c                        <!-- Penggunaan Bulan Ini -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0">Penggunaan Bulan Ini</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="mb-2">{{ $penggunaanBulanIni }} {{ $obat->satuan }}</h4>
+                                    <p class="mb-0 text-success">
+                                        Rp {{ number_format($totalBiayaBulanIni, 0, ',', '.') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>transition: all 0.3s ease;
     }
     .info-card:hover {
         transform: translateY(-5px);
@@ -102,10 +114,6 @@
                         </h5>
                     </div>
 
-                    @php
-                        $penggunaanBulanIni = $obat->getPenggunaanBulanIni($bulan, $tahun);
-                        $penggunaanBulanLalu = $obat->getPenggunaanBulanLalu($bulan, $tahun);
-                    @endphp
                     <div class="row text-center g-2 mt-2">
                         <!-- Penggunaan Bulan Ini -->
                         <div class="col-md-6">
@@ -114,9 +122,9 @@
                                     <h6 class="mb-0">Penggunaan Bulan Ini</h6>
                                 </div>
                                 <div class="card-body">
-                                    <h4 class="mb-2">{{ $penggunaanBulanIni['jumlah'] }} {{ $obat->satuan }}</h4>
+                                    <h4 class="mb-2">{{ $penggunaanBulanIni }} {{ $obat->satuan }}</h4>
                                     <p class="mb-0 text-success">
-                                        Rp {{ number_format($penggunaanBulanIni['biaya'], 0, ',', '.') }}
+                                        Rp {{ number_format($totalBiayaBulanIni, 0, ',', '.') }}
                                     </p>
                                 </div>
                             </div>
@@ -128,9 +136,9 @@
                                     <h6 class="mb-0">Penggunaan Bulan Lalu</h6>
                                 </div>
                                 <div class="card-body">
-                                    <h4 class="mb-2">{{ $penggunaanBulanLalu['jumlah'] }} {{ $obat->satuan }}</h4>
+                                    <h4 class="mb-2">{{ $penggunaanBulanLalu }} {{ $obat->satuan }}</h4>
                                     <p class="mb-0 text-success">
-                                        Rp {{ number_format($penggunaanBulanLalu['biaya'], 0, ',', '.') }}
+                                        Rp {{ number_format($totalBiayaBulanLalu, 0, ',', '.') }}
                                     </p>
                                 </div>
                             </div>

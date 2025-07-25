@@ -618,11 +618,30 @@ class ObatController extends Controller
             ->orderBy('tanggal', 'asc')
             ->get();
 
+        // Calculate total penggunaan for the current month
+        $penggunaanBulanIni = $rekapHarian->sum('jumlah_keluar');
+        $totalBiayaBulanIni = $penggunaanBulanIni * $obat->harga_satuan;
+
+        // Calculate total penggunaan for the previous month
+        $lastMonth = Carbon::create($tahun, $bulan, 1)->subMonth();
+        $rekapBulanLalu = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('bulan', $lastMonth->month)
+            ->where('tahun', $lastMonth->year)
+            ->where('jumlah_keluar', '>', 0)
+            ->get();
+        
+        $penggunaanBulanLalu = $rekapBulanLalu->sum('jumlah_keluar');
+        $totalBiayaBulanLalu = $penggunaanBulanLalu * $obat->harga_satuan;
+
         return view('obat.detail_rekapitulasi', [
             'obat' => $obat,
             'rekapHarian' => $rekapHarian,
             'bulan' => $bulan,
-            'tahun' => $tahun
+            'tahun' => $tahun,
+            'penggunaanBulanIni' => $penggunaanBulanIni,
+            'totalBiayaBulanIni' => $totalBiayaBulanIni,
+            'penggunaanBulanLalu' => $penggunaanBulanLalu,
+            'totalBiayaBulanLalu' => $totalBiayaBulanLalu
         ]);
     }
 }
