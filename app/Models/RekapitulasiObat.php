@@ -2,40 +2,35 @@
 
 namespace App\Models;
 
-use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class RekapitulasiObat extends Model
 {
-    protected $table = 'rekapitulasi_obats';
+    use HasFactory;
+
+    // Pastikan ini mencerminkan kolom-kolom AKTUAL di tabel 'rekapitulasi_obats' Anda sekarang
     protected $fillable = [
         'obat_id',
-        'tanggal',
-        'stok_awal',
-        'jumlah_keluar',
-        'sisa_stok',
-        'total_biaya',
-        'bulan',
-        'tahun',
         'unit_id',
-        'user_id',
-    ];
-    public $timestamps = true;
-
-    protected $dates = [
         'tanggal',
-        'created_at',
-        'updated_at'
+        'stok_awal',             // Kolom fisik di DB
+        'jumlah_masuk_hari_ini', // Kolom baru yang ditambahkan di DB
+        'jumlah_keluar',         // Kolom fisik di DB
+        'sisa_stok',             // Kolom fisik di DB
+        'total_biaya',
+        'bulan',                 // Kolom fisik di DB
+        'tahun',                 // Kolom fisik di DB
+        // 'user_id',             // Hapus ini jika Anda sudah menghapus kolom user_id di DB
+    ];
+
+    protected $casts = [
+        'tanggal' => 'date',
     ];
 
     public function obat()
     {
-        return $this->belongsTo(Obat::class, 'obat_id');
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Obat::class);
     }
 
     public function unit()

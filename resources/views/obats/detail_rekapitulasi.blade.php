@@ -3,20 +3,9 @@
 
 @section('content')
 <style>
-    .info-c                        <!-- Penggunaan Bulan Ini -->
-                        <div class="col-md-6">
-                            <div class="card shadow-sm h-100">
-                                <div class="card-header bg-secondary text-white">
-                                    <h6 class="mb-0">Penggunaan Bulan Ini</h6>
-                                </div>
-                                <div class="card-body">
-                                    <h4 class="mb-2">{{ $penggunaanBulanIni }} {{ $obat->satuan }}</h4>
-                                    <p class="mb-0 text-success">
-                                        Rp {{ number_format($totalBiayaBulanIni, 0, ',', '.') }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>transition: all 0.3s ease;
+    /* Perbaikan sintaks CSS di sini */
+    .info-card {
+        transition: all 0.3s ease;
     }
     .info-card:hover {
         transform: translateY(-5px);
@@ -69,7 +58,6 @@
         </a>
     </div>
 
-    <!-- Info Cards -->
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <div class="card info-card h-100 shadow-sm">
@@ -99,6 +87,11 @@
                                 <td class="text-muted"><strong>Satuan</strong></td>
                                 <td class="text-dark">: {{ $obat->satuan }}</td>
                             </tr>
+                            <tr>
+                                {{-- Menampilkan stok terakhir dari tabel 'obats' --}}
+                                <td class="text-muted"><strong>Stok Saat Ini</strong></td>
+                                <td class="text-dark">: {{ $obat->stok_terakhir ?? 0 }} {{ $obat->satuan }}</td>
+                            </tr>
                         </table>
                     </div>
                 </div>
@@ -115,11 +108,10 @@
                     </div>
 
                     <div class="row text-center g-2 mt-2">
-                        <!-- Penggunaan Bulan Ini -->
                         <div class="col-md-6">
                             <div class="card shadow-sm h-100">
                                 <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0">Penggunaan Bulan Ini</h6>
+                                    <h6 class="mb-0">Jumlah Keluar Bulan Ini</h6> {{-- Label lebih spesifik --}}
                                 </div>
                                 <div class="card-body">
                                     <h4 class="mb-2">{{ $penggunaanBulanIni }} {{ $obat->satuan }}</h4>
@@ -129,11 +121,10 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Penggunaan Bulan Lalu -->
                         <div class="col-md-6">
                             <div class="card shadow-sm h-100">
                                 <div class="card-header bg-secondary text-white">
-                                    <h6 class="mb-0">Penggunaan Bulan Lalu</h6>
+                                    <h6 class="mb-0">Jumlah Keluar Bulan Lalu</h6> {{-- Label lebih spesifik --}}
                                 </div>
                                 <div class="card-body">
                                     <h4 class="mb-2">{{ $penggunaanBulanLalu }} {{ $obat->satuan }}</h4>
@@ -149,10 +140,9 @@
         </div>
     </div>
 
-    <!-- Form Stok Tambahan -->
-   
+    {{-- Form Stok Tambahan dihapus dari sini karena ini adalah halaman detail rekap, bukan manajemen stok --}}
+    {{-- Jika Anda ingin menambahkan fitur input stok, pertimbangkan modal atau link ke halaman edit obat --}}
 
-    <!-- Rekapitulasi Table -->
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -160,6 +150,24 @@
                     <i class="fas fa-table me-2"></i>
                     Rekapitulasi Harian {{ \Carbon\Carbon::createFromDate(null, (int)$bulan, 1)->format('F') }} {{ $tahun }}
                 </h5>
+                {{-- Opsi untuk mengubah bulan/tahun --}}
+                <div class="d-flex align-items-center">
+                    <form action="{{ route('obats.detailRekapitulasi', $obat->id) }}" method="GET" class="d-flex">
+                        <select name="bulan" class="form-select form-select-sm me-2">
+                            @for ($i = 1; $i <= 12; $i++)
+                                <option value="{{ $i }}" {{ (int)$bulan == $i ? 'selected' : '' }}>
+                                    {{ \Carbon\Carbon::createFromDate(null, $i, 1)->format('F') }}
+                                </option>
+                            @endfor
+                        </select>
+                        <select name="tahun" class="form-select form-select-sm me-2">
+                            @for ($i = date('Y') - 5; $i <= date('Y') + 1; $i++) {{-- Rentang tahun --}}
+                                <option value="{{ $i }}" {{ (int)$tahun == $i ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">Lihat</button>
+                    </form>
+                </div>
             </div>
 
             <div class="table-responsive mt-3">
@@ -174,8 +182,8 @@
                     <tbody>
                         @php
                             $totalHari = \Carbon\Carbon::create($tahun, $bulan)->daysInMonth;
-                            $totalKeluar = 0;
-                            $totalBiaya = 0;
+                            $totalKeluarKeseluruhan = 0; // Mengubah nama variabel agar tidak ambigu
+                            $totalBiayaKeseluruhan = 0; // Mengubah nama variabel agar tidak ambigu
                             
                             // Pre-process rekapitulasi data into an array for faster lookup
                             $rekapData = [];
@@ -189,8 +197,8 @@
                                 $rekap = $rekapData[$day] ?? null;
                                 $jumlahKeluar = $rekap ? $rekap->jumlah_keluar : 0;
                                 $biaya = $jumlahKeluar * $obat->harga_satuan;
-                                $totalKeluar += $jumlahKeluar;
-                                $totalBiaya += $biaya;
+                                $totalKeluarKeseluruhan += $jumlahKeluar;
+                                $totalBiayaKeseluruhan += $biaya;
                             @endphp
                             <tr @if($jumlahKeluar > 0) class="table-light" @endif>
                                 <td class="text-center">{{ sprintf('%02d', $day) }}</td>
@@ -211,13 +219,19 @@
                             </tr>
                         @endfor
                         <tr class="table-primary fw-bold">
-                            <td class="text-center">Total</td>
-                            <td class="text-center">{{ $totalKeluar }} {{ $obat->satuan }}</td>
-                            <td class="text-end">Rp {{ number_format($totalBiaya, 0, ',', '.') }}</td>
+                            <td class="text-center">Total Bulan Ini</td> {{-- Label lebih spesifik --}}
+                            <td class="text-center">{{ $totalKeluarKeseluruhan }} {{ $obat->satuan }}</td>
+                            <td class="text-end">Rp {{ number_format($totalBiayaKeseluruhan, 0, ',', '.') }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            {{-- Tambahkan pesan jika tidak ada data rekapitulasi --}}
+            @if(count($rekapHarian) == 0 && $bulan == date('n') && $tahun == date('Y'))
+                <div class="no-data text-center mt-4">
+                    Belum ada data rekapitulasi untuk bulan ini.
+                </div>
+            @endif
         </div>
     </div>
 </div>

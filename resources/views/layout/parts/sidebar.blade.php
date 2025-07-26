@@ -60,7 +60,7 @@
 
       @php
         $is_admin = Auth::guard('admin')->check();
-        $obat_route = $is_admin ? route('admin.obat.dashboard') : route('obat.dashboard');
+        $obat_route = $is_admin ? route('admin.obats.dashboard') : route('obats.dashboard');
         $is_active = $is_admin ? request()->routeIs('admin.obat.*') : request()->routeIs('obat.*');
       @endphp
       <li class="nav-item">

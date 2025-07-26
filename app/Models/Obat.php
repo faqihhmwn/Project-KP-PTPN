@@ -7,40 +7,48 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
-
 class Obat extends Model
 {
     use HasFactory;
 
+    // Pastikan ini mencerminkan kolom-kolom AKTUAL di tabel 'obats' Anda sekarang
     protected $fillable = [
         'nama_obat',
         'jenis_obat',
         'harga_satuan',
         'satuan',
-        'stok_awal',
-        'stok_sisa',
-        'tambah_obat',
         'keterangan',
         'unit_id',
+        'stok_terakhir', // Ini adalah kolom ACTUAL untuk stok saat ini
     ];
 
     protected $casts = [
-        'harga_satuan' => 'decimal:2'
+        'harga_satuan' => 'decimal:2',
     ];
 
-    // Relationship
+    // Relationships (tetap sama)
     public function transaksiObats()
     {
         return $this->hasMany(TransaksiObat::class);
     }
 
-    // Scope untuk obat aktif
+    public function rekapitulasiObat()
+    {
+        return $this->hasMany(RekapitulasiObat::class)
+                    ->where('unit_id', Auth::user()->unit_id);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    // Scopes (tetap relevan, contoh)
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    // Scope untuk search
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
@@ -49,148 +57,46 @@ class Obat extends Model
         });
     }
 
-    // Scope untuk mengambil rekapitulasi terbaru
-    public function scopeWithLastRekapitulasi($query)
+    // --- METHODS (Logika stok yang benar) ---
+
+    // Metode ini untuk mendapatkan stok awal bulan dari rekapitulasi_obats.
+    // Ini AKAN digambar di tampilan Rekapitulasi Obat Bulanan pada kolom 'Stok Awal'.
+    public function getStokAwalBulan($bulan = null, $tahun = null)
     {
-        return $query->addSelect(['last_rekapitulasi_id' => RekapitulasiObat::select('id')
-            ->whereColumn('obat_id', 'obats.id')
-            ->latest('tahun')
-            ->latest('bulan')
-            ->latest('tanggal')
-            ->limit(1)
-        ])->with(['last_rekapitulasi' => function($q) {
-            $q->select('id', 'obat_id', 'sisa_stok', 'tanggal', 'bulan', 'tahun');
-        }]);
-    }
+        $bulan = $bulan ?? Carbon::now()->month;
+        $tahun = $tahun ?? Carbon::now()->year;
 
-    // Relationship dengan rekapitulasi obat
-    public function rekapitulasiObat()
-    {
-    return $this->hasMany(RekapitulasiObat::class)
-                ->where('unit_id', Auth::user()->unit_id);
-}
+        $firstDayOfMonth = Carbon::create($tahun, $bulan, 1)->startOfDay();
+        $lastDayOfPreviousMonth = $firstDayOfMonth->copy()->subDay()->endOfDay();
 
-    public function last_rekapitulasi()
-    {
-        return $this->belongsTo(RekapitulasiObat::class, 'last_rekapitulasi_id');
-    }
-
-    // Method untuk mendapatkan stok awal berdasarkan bulan dan tahun
-    public function stokAwal($bulan = null, $tahun = null)
-    {
-        // Jika bulan dan tahun tidak diisi, gunakan bulan sekarang
-        if (is_null($bulan) || is_null($tahun)) {
-            $now = Carbon::now();
-            $bulan = $now->month;
-            $tahun = $now->year;
-        }
-
-        // Tanggal yang diminta
-        $tanggalDiminta = Carbon::create($tahun, $bulan, 1);
-
-        // Cari data rekapitulasi pertama yang pernah dibuat untuk obat ini
-        $rekapPertama = $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->orderBy('tahun')
-            ->orderBy('bulan')
-            ->orderBy('tanggal')
+        // Cari rekapitulasi terakhir di bulan sebelumnya
+        $rekapAkhirBulanSebelumnya = $this->rekapitulasiObat()
+            ->whereDate('tanggal', $lastDayOfPreviousMonth->toDateString())
             ->first();
 
-        // Jika belum ada rekapitulasi sama sekali, kembalikan stok awal dari data obat
-        if (!$rekapPertama) {
-            return $this->attributes['stok_awal'];
+        if ($rekapAkhirBulanSebelumnya) {
+            // Jika ada data rekapitulasi di akhir bulan sebelumnya, itu adalah stok awal bulan ini
+            return $rekapAkhirBulanSebelumnya->sisa_stok; // Menggunakan kolom 'sisa_stok' di rekapitulasi_obats
         }
 
-        // Tanggal rekapitulasi pertama
-        $tanggalPertama = Carbon::create($rekapPertama->tahun, $rekapPertama->bulan, 1);
-
-        // Jika bulan yang diminta adalah sebelum bulan pertama rekapitulasi
-        // kembalikan 0 untuk mencegah stok muncul di bulan-bulan sebelumnya
-        if ($tanggalDiminta < $tanggalPertama) {
-            return 0;
+        // Jika tidak ada data rekapitulasi di bulan sebelumnya,
+        // Cek apakah ada rekapitulasi pertama di hari pertama bulan yang diminta.
+        // Jika ada, 'stok_awal' di entri itu adalah stok awal hari pertama bulan itu.
+        $rekapPertamaDiBulan = $this->rekapitulasiObat()
+                                    ->whereDate('tanggal', $firstDayOfMonth->toDateString())
+                                    ->first();
+        if ($rekapPertamaDiBulan) {
+            return $rekapPertamaDiBulan->stok_awal; // Menggunakan kolom 'stok_awal' di rekapitulasi_obats
         }
 
-        // Jika bulan yang diminta adalah bulan pertama rekapitulasi
-        // kembalikan stok awal dari data obat
-        if ($tanggalDiminta->format('Y-m') === $tanggalPertama->format('Y-m')) {
-            return $this->attributes['stok_awal'];
-        }
-
-        // Untuk bulan-bulan setelah rekapitulasi pertama
-        // cari rekapitulasi terakhir dari bulan sebelumnya
-        $rekapTerakhir = $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->where(function ($query) use ($tanggalDiminta) {
-                $query->where('tanggal', '<', $tanggalDiminta->format('Y-m-d'));
-            })
-            ->latest('tahun')
-            ->latest('bulan')
-            ->latest('tanggal')
-            ->first();
-
-        return $rekapTerakhir ? $rekapTerakhir->sisa_stok : 0;
+        // Jika belum ada rekapitulasi sama sekali untuk bulan ini atau bulan sebelumnya,
+        // Ambil dari stok_terakhir di tabel obat itu sendiri.
+        // Ini adalah skenario ketika obat baru ditambahkan atau belum ada pergerakan.
+        return $this->stok_terakhir ?? 0;
     }
 
-
-    // Method untuk mendapatkan sisa stok berdasarkan rekapitulasi terbaru
-    public function getStokSisaAttribute()
-    {
-        // Ambil rekapitulasi paling baru berdasarkan tahun, bulan, dan tanggal
-        $rekapTerbaru = $this->rekapitulasiObat()
-            ->orderBy('tahun', 'desc')
-            ->orderBy('bulan', 'desc')
-            ->orderBy('tanggal', 'desc')
-            ->first();
-
-        // Jika ada rekapitulasi, gunakan sisa stok dari rekapitulasi
-        // Jika tidak ada, kembalikan nilai stok_sisa yang ada di database
-        return $rekapTerbaru ? $rekapTerbaru->sisa_stok : $this->attributes['stok_sisa'] ?? $this->stok_awal;
-    }
-
-    // Method untuk set stok sisa
-    public function setStokSisaAttribute($value)
-    {
-        $this->attributes['stok_sisa'] = $value;
-    }
-
-
-    // Method untuk update stok
-    public function updateStok()
-    {
-        try {
-            // Ambil rekapitulasi terbaru untuk mendapatkan sisa stok yang benar
-            $rekapTerbaru = $this->rekapitulasiObat()
-                ->orderBy('tahun', 'desc')
-                ->orderBy('bulan', 'desc')
-                ->orderBy('tanggal', 'desc')
-                ->first();
-
-            if ($rekapTerbaru) {
-                $this->stok_sisa = $rekapTerbaru->sisa_stok;
-            } else {
-                // Jika tidak ada rekapitulasi, hitung dari transaksi
-                $totalMasuk = $this->transaksiObats()
-                    ->where('tipe_transaksi', 'masuk')
-                    ->sum('jumlah_masuk') ?? 0;
-                    
-                $totalKeluar = $this->transaksiObats()
-                    ->where('tipe_transaksi', 'keluar')
-                    ->sum('jumlah_keluar') ?? 0;
-
-                $this->stok_masuk = $totalMasuk;
-                $this->stok_keluar = $totalKeluar;
-                $this->stok_sisa = $this->stok_awal + $this->tambah_obat + $totalMasuk - $totalKeluar;
-            }
-
-            $this->save();
-            return true;
-        } catch (\Exception $e) {
-            \Log::error('Error updating stock: ' . $e->getMessage());
-            return false;
-        }
-    }
-    // Method untuk mendapatkan rekapitulasi bulan tertentu
-    public function getRekapitulasiBulan($bulan = null, $tahun = null)
+    // Metode ini untuk mendapatkan semua entri rekapitulasi harian untuk bulan dan tahun tertentu.
+    public function getRekapitulasiBulanan($bulan = null, $tahun = null)
     {
         if (is_null($bulan) || is_null($tahun)) {
             $now = Carbon::now();
@@ -199,34 +105,20 @@ class Obat extends Model
         }
 
         return $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->orderBy('tanggal', 'desc')
+            ->whereMonth('tanggal', $bulan)
+            ->whereYear('tanggal', $tahun)
+            ->orderBy('tanggal', 'asc')
             ->get();
     }
 
-    // Method untuk mendapatkan informasi penggunaan untuk bulan tertentu
+    // Metode ini untuk mendapatkan informasi penggunaan total (jumlah keluar dan biaya) untuk bulan tertentu.
     public function getInfoPenggunaan($bulan = null, $tahun = null)
     {
-        if (is_null($bulan) || is_null($tahun)) {
-            $now = Carbon::now();
-            $bulan = $now->month;
-            $tahun = $now->year;
-        }
+        $rekapitulasi = $this->getRekapitulasiBulanan($bulan, $tahun); // Panggil metode di atas
 
-        // Ambil semua rekapitulasi untuk bulan tersebut
-        $rekapitulasi = $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->get();
-
-        // Hitung total penggunaan dan biaya
-        $jumlahKeluar = $rekapitulasi->sum('jumlah_keluar');
+        $jumlahKeluar = $rekapitulasi->sum('jumlah_keluar'); // Menggunakan kolom fisik 'jumlah_keluar' di rekapitulasi_obats
         $totalBiaya = $jumlahKeluar * $this->harga_satuan;
 
-        // Ambil update terakhir
         $lastUpdate = $rekapitulasi->sortByDesc('updated_at')->first();
 
         return [
@@ -236,42 +128,9 @@ class Obat extends Model
         ];
     }
 
-    // Method untuk mendapatkan penggunaan bulan ini
-    public function getPenggunaanBulanIni($bulan = null, $tahun = null)
-    {
-        return $this->getInfoPenggunaan($bulan, $tahun);
-    }
-
-    // Method untuk mendapatkan penggunaan bulan lalu
-    public function getPenggunaanBulanLalu($bulan = null, $tahun = null)
-    {
-        if (is_null($bulan) || is_null($tahun)) {
-            $date = Carbon::now();
-        } else {
-            $date = Carbon::createFromDate($tahun, $bulan, 1);
-        }
-        
-        $bulanLalu = $date->copy()->subMonth();
-        
-        return $this->getInfoPenggunaan($bulanLalu->month, $bulanLalu->year);
-    }
-
-    // Method untuk format harga
+    // Accessor untuk format harga (tetap relevan)
     public function getFormattedHargaAttribute()
     {
         return 'Rp ' . number_format($this->harga_satuan, 0, ',', '.');
-    }
-
-    public function unit()
-    {
-        return $this->belongsTo(Unit::class);
-    }
-
-
-    public function transaksiObatsByUnit()
-    {
-        return $this->hasMany(TransaksiObat::class)->whereHas('obat', function ($q) {
-            $q->where('unit_id', Auth::user()->unit_id);
-        });
     }
 }

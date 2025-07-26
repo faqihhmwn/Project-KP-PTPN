@@ -1,5 +1,7 @@
 @extends('layout.app')
+
 @section('title', 'Detail Obat')
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -11,7 +13,8 @@
                         <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#tambahStokModal">
                             <i class="fas fa-plus"></i> Tambah Stok
                         </button>
-                        <a href="{{ request()->get('return_url', route('obat.index')) }}" class="btn btn-secondary">
+                        {{-- Perbaikan: Menggunakan 'obats.index' jika rute telah diubah untuk konsistensi --}}
+                        <a href="{{ request()->get('return_url', route('obats.index')) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali Ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
                         </a>
                     </div>
@@ -25,7 +28,6 @@
                         </div>
                     @endif
 
-                    <!-- Informasi Obat -->
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <div class="card h-100">
@@ -50,7 +52,6 @@
                                             <td><strong>Satuan:</strong></td>
                                             <td>{{ $obat->satuan }}</td>
                                         </tr>
-        
                                         <tr>
                                             <td><strong>Keterangan:</strong></td>
                                             <td>{{ $obat->keterangan ?? '-' }}</td>
@@ -85,9 +86,9 @@
                         </div>
                     </div>
 
-                    <!-- Statistik Penggunaan -->
                     <div class="row mb-4">
                         @php
+                            // Pastikan metode ini ada di model Obat Anda
                             $penggunaanBulanIni = $obat->getPenggunaanBulanIni();
                             $penggunaanBulanLalu = $obat->getPenggunaanBulanLalu();
                         @endphp
@@ -132,7 +133,8 @@
                                             <small class="text-muted">Total Biaya</small>
                                         </div>
                                     </div>
-                                    @if($lastUpdateBulanLalu)
+                                    {{-- Pastikan $lastUpdateBulanLalu dilewatkan dari controller jika digunakan di sini --}}
+                                    @if(isset($lastUpdateBulanLalu)) 
                                         <small class="text-muted">
                                             <i class="fas fa-clock"></i> Input terakhir: {{ $lastUpdateBulanLalu->created_at->format('d M Y H:i') }}
                                         </small>
@@ -149,9 +151,6 @@
     </div>
 </div>
 
-
-
-<!-- Modal Tambah Stok -->
 <div class="modal fade" id="tambahStokModal" tabindex="-1" aria-labelledby="tambahStokModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -159,7 +158,8 @@
                 <h5 class="modal-title" id="tambahStokModalLabel">Tambah Stok {{ $obat->nama_obat }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('obat.tambah-stok', $obat) }}" method="POST">
+            {{-- Perbaikan: Menggunakan 'obats.tambah-stok' jika rute telah diubah untuk konsistensi --}}
+            <form action="{{ route('obats.tambah-stok', $obat) }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -179,5 +179,4 @@
         </div>
     </div>
 </div>
-
 @endsection

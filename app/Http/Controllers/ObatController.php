@@ -12,11 +12,20 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ObatImport;
 use App\Exports\ObatExport;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
 class ObatController extends Controller
 {
+    /**
+     * Menampilkan daftar obat.
+     * Filter berdasarkan unit_id pengguna yang login dan pencarian.
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
     public function index(Request $request)
     {
-        // Load data obat dengan rekapitulasi terbaru
         $query = Obat::query();
 
         // Filter berdasarkan unit_id user yang login
@@ -30,525 +39,423 @@ class ObatController extends Controller
             });
         }
 
-        // Get obats with their latest rekapitulasi
-        $obats = $query->withLastRekapitulasi()
-                      ->orderBy('nama_obat')
-                      ->paginate(10);
+        $obats = $query->orderBy('nama_obat')->paginate(10);
 
-        // Update stok_sisa for each obat based on latest rekapitulasi
-        foreach ($obats as $obat) {
-            if ($obat->last_rekapitulasi) {
-                $obat->stok_sisa = $obat->last_rekapitulasi->sisa_stok;
-                $obat->save();
-            }
-        }
-
-        // Update stok_sisa untuk setiap obat berdasarkan rekapitulasi terbaru
-        foreach ($obats as $obat) {
-            $rekapTerbaru = $obat->rekapitulasiObat->first();
-            if ($rekapTerbaru) {
-                $obat->update(['stok_sisa' => $rekapTerbaru->sisa_stok]);
-            }
-        }
-
+        // Jika request adalah AJAX, kembalikan partial view
         if ($request->ajax()) {
             return view('partials.obat-table', compact('obats'))->render();
         }
 
-        return view('obat.index', compact('obats'));
+        // Menggunakan 'obats.index' untuk konsistensi nama view
+        return view('obats.index', compact('obats'));
     }
 
+    /**
+     * Menampilkan form untuk membuat obat baru.
+     *
+     * @return \Illuminate\View\View
+     */
     public function create()
     {
-        return view('obat.create');
+        // Menggunakan 'obats.create' untuk konsistensi nama view
+        return view('obats.create');
     }
 
+    /**
+     * Menyimpan obat baru ke database.
+     * Memproses stok awal sebagai transaksi 'masuk' jika disediakan.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string'
+            'stok_awal' => 'nullable|integer|min:0', // Input dari form "Stok Awal" untuk obat baru
+            'keterangan' => 'nullable|string',
         ]);
+        
+        try {
+            DB::beginTransaction();
 
-        // Tambahkan unit_id dari user yang login dan set stok awal 0
-        $validated['unit_id'] = auth()->user()->unit_id;
-        $validated['stok_awal'] = 0;
-        $validated['stok_sisa'] = 0;
-        $validated['stok_masuk'] = 0;
-        $validated['stok_keluar'] = 0;
+            // Buat obat baru
+            // Pastikan 'stok_awal' dari form disimpan ke kolom stok_awal di tabel obats
+            // Dan 'stok_terakhir' diinisialisasi dengan stok_awal
+            $obat = Obat::create([
+                'nama_obat' => $request->nama_obat,
+                'jenis_obat' => $request->jenis_obat,
+                'harga_satuan' => $request->harga_satuan,
+                'satuan' => $request->satuan,
+                'keterangan' => $request->keterangan,
+                'unit_id' => Auth::user()->unit_id,
+                'stok_awal' => $request->stok_awal ?? 0, // Simpan stok_awal dari form
+                'stok_terakhir' => $request->stok_awal ?? 0, // Inisialisasi stok_terakhir dengan stok_awal
+            ]);
 
-        // Format nama obat menjadi kapital semua
-        $validated['nama_obat'] = strtoupper($validated['nama_obat']);
+            // Jika ada stok_awal yang diinput dan lebih dari 0, catat sebagai transaksi masuk awal
+            // Ini akan memperbarui rekapitulasi dan stok_terakhir lagi, tapi tidak masalah
+            if ($request->filled('stok_awal') && $request->stok_awal > 0) {
+                // Gunakan tanggal saat ini untuk transaksi stok awal
+                $this->processStockChange(
+                    $obat,
+                    'masuk', // Jenis transaksi: 'masuk'
+                    $request->stok_awal, // Jumlah yang masuk
+                    'Stok Awal Obat Baru', // Keterangan transaksi
+                    Carbon::now()->toDateString() // Teruskan tanggal saat ini
+                );
+            }
 
-        // Cek apakah nama obat sudah ada di unit yang sama
-        $obatExists = \App\Models\Obat::where('unit_id', auth()->user()->unit_id)
-            ->whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
-            ->exists();
-            
-        if ($obatExists) {
-            return back()
-                ->withInput()
-                ->withErrors(['nama_obat' => 'Obat dengan nama tersebut sudah ada di unit Anda!']);
+            DB::commit();
+
+            return redirect()->route('obats.index')->with('success', 'Obat berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error adding new obat: ' . $e->getMessage(), ['exception' => $e]);
+            return redirect()->back()->withInput()->with('error', 'Gagal menambahkan obat: ' . $e->getMessage());
         }
-
-        // Set stok_sisa = stok_awal for new obat (no transactions yet)
-        $validated['stok_sisa'] = $validated['stok_awal'];
-        $validated['stok_masuk'] = 0;
-        $validated['stok_keluar'] = 0;
-
-        \App\Models\Obat::create($validated);
-
-        return redirect()->route('obat.index')
-            ->with('success', 'Obat berhasil ditambahkan.');
     }
 
+    /**
+     * Menampilkan detail obat.
+     *
+     * @param Obat $obat
+     * @return \Illuminate\View\View
+     */
     public function show(Obat $obat)
     {
-        // Verifikasi bahwa obat belongs to unit yang sama dengan user
+        // Verifikasi bahwa obat milik unit yang sama dengan user yang login
         if ($obat->unit_id !== auth()->user()->unit_id) {
             abort(403, 'Unauthorized action.');
         }
-
-        // Load relasi rekapitulasiObat
-        $obat->load('rekapitulasiObat');
         
         $now = Carbon::now();
         
-        // Data bulan ini
-        $bulanIni = $obat->rekapitulasiObat()
-            ->whereMonth('tanggal', $now->month)
-            ->whereYear('tanggal', $now->year)
-            ->orderBy('tanggal', 'desc')
-            ->get();
-            
-        // Data bulan lalu    
-        $bulanLalu = $obat->rekapitulasiObat()
-            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
-            ->whereYear('tanggal', $now->copy()->subMonth()->year)
-            ->orderBy('tanggal', 'desc')
-            ->get();
-        
-        // Ambil tanggal update terakhir bulan ini
-        $lastUpdateBulanIni = $obat->rekapitulasiObat()
-            ->whereMonth('tanggal', $now->month)
-            ->whereYear('tanggal', $now->year)
-            ->latest('created_at')
-            ->first();
-            
-        // Ambil tanggal update terakhir bulan lalu
-        $lastUpdateBulanLalu = $obat->rekapitulasiObat()
-            ->whereMonth('tanggal', $now->copy()->subMonth()->month)
-            ->whereYear('tanggal', $now->copy()->subMonth()->year)
-            ->latest('created_at')
-            ->first();
-        
-        // Hitung total penggunaan bulan ini
-        $totalPenggunaanBulanIni = $bulanIni->sum('jumlah_keluar');
-        $totalBiayaBulanIni = $totalPenggunaanBulanIni * $obat->harga_satuan;
-        
-        // Hitung total penggunaan bulan lalu
-        $totalPenggunaanBulanLalu = $bulanLalu->sum('jumlah_keluar');
-        $totalBiayaBulanLalu = $totalPenggunaanBulanLalu * $obat->harga_satuan;
+        // Ambil info penggunaan bulan ini (gunakan metode dari Model Obat)
+        $infoPenggunaanBulanIni = $obat->getInfoPenggunaan($now->month, $now->year);
+        // Ambil info penggunaan bulan lalu (gunakan metode dari Model Obat)
+        $infoPenggunaanBulanLalu = $obat->getInfoPenggunaan($now->copy()->subMonth()->month, $now->copy()->subMonth()->year);
 
-        return view('obat.show', compact(
+        // Menggunakan 'obats.show' untuk konsistensi nama view
+        return view('obats.show', compact(
             'obat',
-            'bulanIni',
-            'bulanLalu',
-            'totalPenggunaanBulanIni',
-            'totalBiayaBulanIni',
-            'totalPenggunaanBulanLalu',
-            'totalBiayaBulanLalu',
-            'lastUpdateBulanIni',
-            'lastUpdateBulanLalu'
+            'infoPenggunaanBulanIni', // Kirim langsung array info
+            'infoPenggunaanBulanLalu' // Kirim langsung array info
         ));
     }
 
+    /**
+     * Menampilkan form untuk mengedit obat.
+     *
+     * @param Obat $obat
+     * @return \Illuminate\View\View
+     */
     public function edit(Obat $obat)
     {
-        return view('obat.edit', compact('obat'));
+        // Pastikan obat milik unit user yang login
+        if ($obat->unit_id !== Auth::user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+        // Menggunakan 'obats.edit' untuk konsistensi nama view
+        return view('obats.edit', compact('obat'));
     }
 
+    /**
+     * Memperbarui informasi obat dan memproses transaksi stok.
+     *
+     * @param Request $request
+     * @param Obat $obat
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(Request $request, Obat $obat)
     {
+        // Pastikan obat milik unit user yang login
+        if ($obat->unit_id !== Auth::user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $validated = $request->validate([
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'stok_awal' => 'required|integer|min:0',
-            'keterangan' => 'nullable|string'
+            'keterangan' => 'nullable|string',
+            // Validasi untuk transaksi stok
+            'jumlah_masuk' => 'nullable|integer|min:0',
+            'jumlah_keluar' => 'nullable|integer|min:0',
+            'tanggal_transaksi' => 'required|date', // Tanggal transaksi harus selalu ada
+            'keterangan_transaksi' => 'nullable|string|max:255',
         ]);
-
-        // Get the old stok_awal value before updating
-        $oldStokAwal = $obat->stok_awal;
 
         try {
             DB::beginTransaction();
 
-            // Update basic obat information
-            $obat->update($validated);
+            // Update informasi dasar obat
+            $obat->update([
+                'nama_obat' => $validated['nama_obat'],
+                'jenis_obat' => $validated['jenis_obat'],
+                'harga_satuan' => $validated['harga_satuan'],
+                'satuan' => $validated['satuan'],
+                'keterangan' => $validated['keterangan'],
+            ]);
 
-            // Calculate the difference in stok_awal
-            $stokAwalDiff = $validated['stok_awal'] - $oldStokAwal;
+            $jumlahMasuk = (int) $request->input('jumlah_masuk', 0);
+            $jumlahKeluar = (int) $request->input('jumlah_keluar', 0);
+            $tanggalTransaksi = $request->input('tanggal_transaksi');
+            $keteranganTransaksi = $request->input('keterangan_transaksi');
 
-            // Update all rekapitulasi records for this obat
-            if ($stokAwalDiff != 0) {
-                $now = Carbon::now();
-                
-                // Update current month's rekapitulasi
-                $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
-                    ->where('unit_id', auth()->user()->unit_id)
-                    ->where('bulan', $now->month)
-                    ->where('tahun', $now->year)
-                    ->orderBy('tanggal', 'asc')
-                    ->get();
-
-                foreach ($rekapitulasi as $rekap) {
-                    $rekap->stok_awal += $stokAwalDiff;
-                    $rekap->sisa_stok = $rekap->stok_awal - $rekap->jumlah_keluar;
-                    $rekap->save();
-                }
-
-                // If no rekapitulasi exists for current month, create one
-                if ($rekapitulasi->isEmpty()) {
-                    RekapitulasiObat::create([
-                        'obat_id' => $obat->id,
-                        'unit_id' => auth()->user()->unit_id,
-                        'tanggal' => $now->format('Y-m-d'),
-                        'bulan' => $now->month,
-                        'tahun' => $now->year,
-                        'stok_awal' => $validated['stok_awal'],
-                        'jumlah_keluar' => 0,
-                        'sisa_stok' => $validated['stok_awal']
-                    ]);
-                }
+            // Logika validasi stok di sisi server (jika diperlukan selain JS di frontend)
+            if ($jumlahMasuk > 0 && $jumlahKeluar > 0) {
+                throw new \Exception('Tidak bisa menambah dan mengurangi stok sekaligus dalam satu transaksi.');
+            }
+            if ($jumlahKeluar > $obat->stok_terakhir) {
+                throw new \Exception('Jumlah keluar tidak boleh melebihi stok saat ini.');
             }
 
-            // Update final stok calculations
-            $this->updateStokObat($obat);
+            // Proses transaksi masuk jika ada
+            if ($jumlahMasuk > 0) {
+                $this->processStockChange(
+                    $obat,
+                    'masuk',
+                    $jumlahMasuk,
+                    $keteranganTransaksi . ' (Update)', // Tambahkan keterangan dari form
+                    $tanggalTransaksi // Teruskan tanggal transaksi
+                );
+            }
+
+            // Proses transaksi keluar jika ada
+            if ($jumlahKeluar > 0) {
+                $this->processStockChange(
+                    $obat,
+                    'keluar',
+                    $jumlahKeluar,
+                    $keteranganTransaksi . ' (Update)', // Tambahkan keterangan dari form
+                    $tanggalTransaksi // Teruskan tanggal transaksi
+                );
+            }
 
             DB::commit();
-            return redirect()->route('obat.index')
-                ->with('success', 'Obat berhasil diperbarui.');
+            return redirect()->route('obats.index')
+                ->with('success', 'Informasi obat dan transaksi stok berhasil diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()
-                ->with('error', 'Gagal memperbarui obat: ' . $e->getMessage());
+            Log::error('Error updating obat info: ' . $e->getMessage(), ['exception' => $e]);
+            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui informasi obat: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Menghapus obat dari database.
+     * Juga menghapus semua transaksi dan rekapitulasi terkait.
+     *
+     * @param Obat $obat
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function destroy(Obat $obat)
     {
+        // Verifikasi bahwa obat milik unit yang sama dengan user
+        if ($obat->unit_id !== auth()->user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         try {
+            DB::beginTransaction();
             // Hapus semua transaksi terkait terlebih dahulu
-            $obat->transaksiObats()->delete();
-            
+            $obat->transaksiObats()->delete(); // Pastikan relasi ini ada di model Obat
+            $obat->rekapitulasiObats()->delete(); // Pastikan relasi ini ada di model Obat dan namanya plural
+
             // Hapus obat
             $obat->delete();
             
-            return redirect()->route('obat.index')
-                ->with('success', 'Obat dan semua transaksi terkait berhasil dihapus.');
+            DB::commit(); // Commit transaction
+            return redirect()->route('obats.index')
+                ->with('success', 'Obat dan semua data terkait berhasil dihapus.');
         } catch (\Exception $e) {
-            return redirect()->route('obat.index')
+            DB::rollBack(); // Rollback transaction
+            Log::error('Error deleting obat: ' . $e->getMessage(), ['exception' => $e]);
+            return redirect()->route('obats.index')
                 ->with('error', 'Gagal menghapus obat: ' . $e->getMessage());
         }
     }
 
-    public function rekapitulasi(Request $request)
+    /**
+     * Menampilkan rekapitulasi penggunaan obat bulanan.
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function rekapitulasiBulanan(Request $request)
     {
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
-        
-        // Check if export is requested
-        if ($request->get('export') == '1') {
-            return $this->exportExcel($request);
-        }
-        
-        $obats = Obat::query()
-            ->where('unit_id', auth()->user()->unit_id)
-            ->with(['transaksiObats' => function($query) use ($bulan, $tahun) {
-                $query->whereMonth('tanggal', $bulan)
-                      ->whereYear('tanggal', $tahun);
-            }])
-            ->with('unit') // Load unit relationship
-            ->get();
+        $bulan = $request->input('bulan', Carbon::now()->month);
+        $tahun = $request->input('tahun', Carbon::now()->year);
 
-        // Generate data untuk setiap hari dalam bulan
-        $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
-        
-        return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
-    }
-
-    // public function addTransaksi(Request $request, Obat $obat)
-    // {
-    //     $validated = $request->validate([
-    //         'tanggal' => 'required|date',
-    //         'tipe_transaksi' => 'required|in:masuk,keluar',
-    //         'jumlah' => 'required|integer|min:1',
-    //         'keterangan' => 'nullable|string',
-    //         'petugas' => 'nullable|string'
-    //     ]);
-
-    //     $transaksi = new TransaksiObat([
-    //         'obat_id' => $obat->id,
-    //         'tanggal' => $validated['tanggal'],
-    //         'tipe_transaksi' => $validated['tipe_transaksi'],
-    //         'keterangan' => $validated['keterangan'],
-    //         'petugas' => $validated['petugas']
-    //     ]);
-
-    //     if ($validated['tipe_transaksi'] === 'masuk') {
-    //         $transaksi->jumlah_masuk = $validated['jumlah'];
-    //     } else {
-    //         // Check stok tersedia
-    //         if ($obat->stok_sisa < $validated['jumlah']) {
-    //             return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
-    //         }
-    //         $transaksi->jumlah_keluar = $validated['jumlah'];
-    //     }
-
-    //     $transaksi->save();
-    //     $this->updateStokObat($obat);
-
-    //     return back()->with('success', 'Transaksi berhasil ditambahkan.');
-    // }
-
-    // public function getRekapitulasiData(Request $request)
-    // {
-    //     $bulan = $request->get('bulan', Carbon::now()->month);
-    //     $tahun = $request->get('tahun', Carbon::now()->year);
-        
-    //     $rekapitulasi = RekapitulasiObat::where('unit_id', auth()->user()->unit_id)
-    //         ->whereMonth('tanggal', $bulan)
-    //         ->whereYear('tanggal', $tahun)
-    //         ->with('obat')
-    //         ->get()
-    //         ->groupBy('obat_id');
+        // Ambil semua obat untuk unit user yang login
+        $obats = Obat::where('unit_id', Auth::user()->unit_id)
+            ->orderBy('nama_obat')
+            ->get(); // Ambil semua obat, rekapitulasi akan di-load per obat nanti
             
-    //     return response()->json($rekapitulasi);
-    // }
+        if ($obats->isEmpty()) {
+            // Menggunakan 'obats.rekapitulasi' untuk konsistensi nama view
+            return view('obats.rekapitulasi', [
+                'rekapitulasiDataFrontend' => [],
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+                'daysInMonth' => Carbon::create($tahun, $bulan, 1)->daysInMonth,
+                'obats' => collect() // Kirim koleksi kosong jika tidak ada data
+            ]);
+        }
 
-    // public function updateTransaksiHarian(Request $request, Obat $obat)
-    // {
-    //     $validated = $request->validate([
-    //         'tanggal' => 'required|date',
-    //         'jumlah_keluar' => 'required|integer|min:0'
-    //     ]);
+        $rekapitulasiDataFrontend = []; // Ini adalah array yang akan dikirim ke view
 
-    //     // Verify that the obat belongs to the user's unit
-    //     if ($obat->unit_id !== auth()->user()->unit_id) {
-    //         return response()->json(['error' => 'Unauthorized'], 403);
-    //     }
+        $daysInMonth = Carbon::create($tahun, $bulan, 1)->daysInMonth;
 
-    //     $tanggal = Carbon::parse($validated['tanggal']);
-    //     $bulan = $tanggal->month;
-    //     $tahun = $tanggal->year;
+        foreach ($obats as $obat) {
+            $dataHarianKeluar = []; // Untuk menyimpan 'jumlah_keluar' per tanggal
+            $dataHarianMasuk = []; // Untuk menyimpan 'jumlah_masuk_hari_ini' per tanggal
 
-    //     if ($validated['jumlah_keluar'] > 0) {
-    //         // Dapatkan stok awal dari bulan ini
-    //         $stokAwal = $this->getStokAwalBulan($obat, $bulan, $tahun);
+            // Inisialisasi data harian dengan 0 untuk semua tanggal di bulan
+            for ($i = 1; $i <= $daysInMonth; $i++) {
+                $dataHarianKeluar[$i] = 0;
+                $dataHarianMasuk[$i] = 0;
+            }
 
-    //         if ($stokAwal < $validated['jumlah_keluar']) {
-    //             return response()->json(['error' => 'Stok tidak mencukupi'], 422);
-    //         }
+            // Dapatkan semua entri rekapitulasi bulanan untuk obat ini
+            $rekapBulananEntries = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('unit_id', Auth::user()->unit_id)
+                ->whereMonth('tanggal', $bulan)
+                ->whereYear('tanggal', $tahun)
+                ->orderBy('tanggal', 'asc')
+                ->get();
 
-    //         // Update rekapitulasi
-    //         $rekapitulasi = $obat->rekapitulasiObat()->updateOrCreate(
-    //             [
-    //                 'tanggal' => $validated['tanggal'],
-    //                 'bulan' => $bulan,
-    //                 'tahun' => $tahun
-    //             ],
-    //             [
-    //                 'stok_awal' => $stokAwal,
-    //                 'jumlah_keluar' => $validated['jumlah_keluar'],
-    //                 'sisa_stok' => $stokAwal - $validated['jumlah_keluar'],
-    //                 'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
-    //             ]
-    //         );
+            // Isi data harian jumlah_keluar dan jumlah_masuk_hari_ini
+            foreach ($rekapBulananEntries as $rekap) {
+                $day = Carbon::parse($rekap->tanggal)->day;
+                $dataHarianKeluar[$day] = $rekap->jumlah_keluar;
+                $dataHarianMasuk[$day] = $rekap->jumlah_masuk_hari_ini;
+            }
 
-    //         // Recalculate stok untuk hari-hari berikutnya
-    //         $rekapitulasiSetelahnya = $obat->rekapitulasiObat()
-    //             ->where('bulan', $bulan)
-    //             ->where('tahun', $tahun)
-    //             ->where('tanggal', '>', $validated['tanggal'])
-    //             ->orderBy('tanggal', 'asc')
-    //             ->get();
+            // --- PERBAIKAN LOGIKA STOK AWAL BULAN ---
+            $stokAwalBulan = 0;
+            $firstDayOfCurrentMonth = Carbon::create($tahun, $bulan, 1)->toDateString();
+            
+            // 1. Coba cari entri rekapitulasi untuk hari pertama bulan ini
+            $firstRekapEntryToday = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('unit_id', Auth::user()->unit_id)
+                ->whereDate('tanggal', $firstDayOfCurrentMonth)
+                ->first();
 
-    //         $stokSebelumnya = $rekapitulasi->sisa_stok;
-    //         foreach ($rekapitulasiSetelahnya as $rekap) {
-    //             $rekap->stok_awal = $stokSebelumnya;
-    //             $rekap->sisa_stok = $stokSebelumnya - $rekap->jumlah_keluar;
-    //             $rekap->save();
-    //             $stokSebelumnya = $rekap->sisa_stok;
-    //         }
+            if ($firstRekapEntryToday) {
+                // Jika ada entri untuk hari pertama bulan ini, gunakan stok_awal dari entri tersebut
+                $stokAwalBulan = $firstRekapEntryToday->stok_awal;
+            } else {
+                // 2. Jika tidak ada entri untuk hari pertama bulan ini, cari entri rekapitulasi terakhir di bulan sebelumnya
+                $lastDayOfPreviousMonth = Carbon::create($tahun, $bulan, 1)->subDay()->toDateString();
+                $lastRekapEntryPreviousMonth = RekapitulasiObat::where('obat_id', $obat->id)
+                    ->where('unit_id', Auth::user()->unit_id)
+                    ->whereDate('tanggal', '<=', $lastDayOfPreviousMonth) // Cari yang terakhir sebelum bulan ini
+                    ->orderBy('tanggal', 'desc')
+                    ->first();
 
-    //         // Update stok di tabel obat dengan nilai terkini
-    //         $latestRekap = $obat->rekapitulasiObat()
-    //             ->orderBy('tahun', 'desc')
-    //             ->orderBy('bulan', 'desc')
-    //             ->orderBy('tanggal', 'desc')
-    //             ->first();
+                if ($lastRekapEntryPreviousMonth) {
+                    // Jika ada entri di bulan sebelumnya, stok awal bulan ini adalah sisa stok akhir bulan sebelumnya
+                    $stokAwalBulan = $lastRekapEntryPreviousMonth->sisa_stok;
+                } else {
+                    // 3. Jika tidak ada rekapitulasi sama sekali di bulan ini maupun bulan sebelumnya,
+                    // gunakan stok_terakhir dari tabel 'obats' itu sendiri (ini untuk obat baru atau bulan pertama transaksi)
+                    $stokAwalBulan = $obat->stok_terakhir; 
+                }
+            }
+            // --- AKHIR PERBAIKAN LOGIKA STOK AWAL BULAN ---
 
-    //         $obat->update([
-    //             'stok_sisa' => $latestRekap->sisa_stok,
-    //             'stok_keluar' => $obat->stok_keluar + $validated['jumlah_keluar']
-    //         ]);
-    //     }
 
-    //     return response()->json(['success' => true]);
-    // }
+            // Hitung Sisa Stok Akhir Bulan
+            $sisaStokAkhirBulanEntry = $rekapBulananEntries->sortByDesc('tanggal')->first();
+            if ($sisaStokAkhirBulanEntry) {
+                $sisaStokAkhirBulan = $sisaStokAkhirBulanEntry->sisa_stok;
+            } else {
+                // Jika tidak ada rekapitulasi sama sekali di bulan ini,
+                // sisa stok akhir bulan diasumsikan sama dengan stok awal bulan.
+                $sisaStokAkhirBulan = $stokAwalBulan;
+            }
 
-    private function getStokAwalBulan(Obat $obat, $bulan, $tahun)
-    {
-        // Ambil rekapitulasi terakhir dari bulan sebelumnya
-        $lastMonth = Carbon::createFromDate($tahun, $bulan, 1)->subMonth();
-        
-        $lastRekapitulasi = $obat->rekapitulasiObat()
-            ->where(function($query) use ($lastMonth) {
-                $query->where('tahun', $lastMonth->year)
-                    ->where('bulan', $lastMonth->month);
-            })
-            ->orderBy('tanggal', 'desc')
-            ->first();
+            // Hitung Total Biaya Bulan Ini (menggunakan method di model Obat)
+            $infoPenggunaanBulanIni = $obat->getInfoPenggunaan($bulan, $tahun);
+            $totalBiayaBulan = $infoPenggunaanBulanIni['biaya'];
 
-        // Jika ada rekapitulasi bulan lalu, gunakan sisa stoknya
-        // Jika tidak, gunakan stok awal dari data obat
-        return $lastRekapitulasi ? $lastRekapitulasi->sisa_stok : $obat->stok_awal;
+            // === PENTING: Map ke variabel yang diharapkan view Anda ===
+            $rekapitulasiDataFrontend[] = [
+                'id' => $obat->id,
+                'Nama Obat' => $obat->nama_obat,
+                'Jenis' => $obat->jenis_obat,
+                'Harga Satuan' => $obat->harga_satuan, // Pastikan ini di-format di view jika perlu
+                'Stok Awal' => $stokAwalBulan, // Menggunakan stokAwalBulan yang sudah dihitung
+                'data_keluar_per_tanggal' => $dataHarianKeluar,
+                'data_masuk_per_tanggal' => $dataHarianMasuk,
+                'Sisa Stok' => $sisaStokAkhirBulan,
+                'Total Biaya' => $totalBiayaBulan,
+                'obat_obj' => $obat, // Opsional: kirim objek obat penuh jika ada aksi di view yang butuh ini
+            ];
+        }
+
+        // Menggunakan 'obats.rekapitulasi' untuk konsistensi nama view
+        return view('obats.rekapitulasi', [
+            'rekapitulasiDataFrontend' => $rekapitulasiDataFrontend,
+            'bulan' => $bulan,
+            'bulanNama' => Carbon::createFromDate($tahun, $bulan, 1)->format('F'), // Tambahkan nama bulan
+            'tahun' => $tahun,
+            'daysInMonth' => $daysInMonth,
+            'obats' => $obats // Mengirim koleksi obat ke view
+        ]);
     }
 
-    public function tambahStok(Request $request, Obat $obat)
+    /**
+     * Memproses perubahan stok manual (misalnya dari halaman edit obat).
+     *
+     * @param Request $request
+     * @param Obat $obat
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateStokManual(Request $request, Obat $obat)
     {
-        // Verifikasi bahwa obat belongs to unit yang sama dengan user
-        if ($obat->unit_id !== auth()->user()->unit_id) {
+        // Pastikan obat milik unit user yang login
+        if ($obat->unit_id !== Auth::user()->unit_id) {
             abort(403, 'Unauthorized action.');
         }
 
-        $validated = $request->validate([
-            'jumlah_tambah' => 'required|integer|min:1',
-            'keterangan' => 'nullable|string'
+        $request->validate([
+            'jumlah' => 'required|integer|min:1',
+            'tipe_perubahan' => 'required|in:masuk,keluar,penyesuaian',
+            'referensi' => 'nullable|string|max:255',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Buat transaksi masuk
-            $transaksi = new TransaksiObat([
-                'obat_id' => $obat->id,
-                'tanggal' => Carbon::now(),
-                'tipe_transaksi' => 'masuk',
-                'jumlah_masuk' => $validated['jumlah_tambah'],
-                'keterangan' => $validated['keterangan']
-            ]);
-            $transaksi->save();
-
-            // Update stok obat
-            $obat->increment('stok_masuk', $validated['jumlah_tambah']);
-            $obat->increment('stok_sisa', $validated['jumlah_tambah']);
-
-            // Update rekapitulasi untuk bulan ini
-            $now = Carbon::now();
-            $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
-                ->where('unit_id', auth()->user()->unit_id)
-                ->where('bulan', $now->month)
-                ->where('tahun', $now->year)
-                ->orderBy('tanggal', 'desc')
-                ->first();
-
-            if ($rekapitulasi) {
-                $rekapitulasi->increment('stok_awal', $validated['jumlah_tambah']);
-                $rekapitulasi->increment('sisa_stok', $validated['jumlah_tambah']);
-            } else {
-                RekapitulasiObat::create([
-                    'obat_id' => $obat->id,
-                    'unit_id' => auth()->user()->unit_id,
-                    'tanggal' => $now->format('Y-m-d'),
-                    'bulan' => $now->month,
-                    'tahun' => $now->year,
-                    'stok_awal' => $validated['jumlah_tambah'],
-                    'jumlah_keluar' => 0,
-                    'sisa_stok' => $validated['jumlah_tambah']
-                ]);
-            }
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Stok berhasil ditambahkan');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Gagal menambahkan stok: ' . $e->getMessage());
-        }
-    }
-
-    private function updateStokObat(Obat $obat)
-    {
-        try {
-            $now = Carbon::now();
-            $currentMonth = $now->month;
-            $currentYear = $now->year;
-
-            // Get last month's final stock
-            $lastMonth = Carbon::now()->subMonth();
-            $lastMonthStock = RekapitulasiObat::where('obat_id', $obat->id)
-                ->where('unit_id', auth()->user()->unit_id)
-                ->where('bulan', $lastMonth->month)
-                ->where('tahun', $lastMonth->year)
-                ->orderBy('tanggal', 'desc')
-                ->first();
-
-            // Calculate initial stock for current month
-            $stokAwal = $lastMonthStock ? $lastMonthStock->sisa_stok : $obat->stok_awal;
-
-            // Get current month's transactions
-            $currentMonthTransactions = $obat->transaksiObats()
-                ->whereMonth('tanggal', $currentMonth)
-                ->whereYear('tanggal', $currentYear)
-                ->get();
-
-            $totalMasuk = $currentMonthTransactions
-                ->where('tipe_transaksi', 'masuk')
-                ->sum('jumlah_masuk') ?? 0;
-                
-            $totalKeluar = $currentMonthTransactions
-                ->where('tipe_transaksi', 'keluar')
-                ->sum('jumlah_keluar') ?? 0;
-
-            // Update obat with current month's data
-            $obat->update([
-                'stok_masuk' => $totalMasuk,
-                'stok_keluar' => $totalKeluar,
-                'stok_sisa' => max(0, $stokAwal + $totalMasuk - $totalKeluar)
-            ]);
-
-            // Update or create rekapitulasi for current month
-            RekapitulasiObat::updateOrCreate(
-                [
-                    'obat_id' => $obat->id,
-                    'unit_id' => auth()->user()->unit_id,
-                    'bulan' => $currentMonth,
-                    'tahun' => $currentYear,
-                    'tanggal' => $now->format('Y-m-d'),
-                ],
-                [
-                    'stok_awal' => $stokAwal,
-                    'jumlah_keluar' => $totalKeluar,
-                    'sisa_stok' => max(0, $stokAwal + $totalMasuk - $totalKeluar)
-                ]
+            $this->processStockChange(
+                $obat,
+                $request->tipe_perubahan,
+                $request->jumlah,
+                $request->referensi ?? 'Penyesuaian Stok Manual'
             );
 
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Stok obat berhasil diperbarui.');
         } catch (\Exception $e) {
-            \Log::error('Error updating stock: ' . $e->getMessage());
-            // If there's an error, set basic values
-            $obat->update([
-                'stok_masuk' => 0,
-                'stok_keluar' => 0,
-                'stok_sisa' => $obat->stok_awal
-            ]);
+            DB::rollBack();
+            Log::error('Error updating stock manually for obat ID ' . $obat->id . ': ' . $e->getMessage(), ['exception' => $e]);
+            return redirect()->back()->with('error', 'Gagal memperbarui stok: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Menampilkan dashboard obat.
+     *
+     * @return \Illuminate\View\View
+     */
     public function dashboard()
     {
         try {
@@ -556,23 +463,91 @@ class ObatController extends Controller
             $totalObat = Obat::where('unit_id', auth()->user()->unit_id)->count();
         } catch (\Exception $e) {
             // Fallback values if database error
+            Log::error('Error fetching total obat for dashboard: ' . $e->getMessage());
             $totalObat = 0;
         }
-        
-        return view('obat.dashboard', compact('totalObat'));
+        // Menggunakan 'obats.dashboard' untuk konsistensi nama view
+        return view('obats.dashboard', compact('totalObat'));
     }
 
+    /**
+     * Mengimpor data obat dari file Excel/CSV.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function import(Request $request)
     {
         $request->validate([
             'file' => 'required|mimes:xlsx,xls,csv',
         ]);
 
-        Excel::import(new ObatImport, $request->file('file'));
-
-        return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
+        try {
+            Excel::import(new ObatImport, $request->file('file'));
+            return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
+        } catch (\Exception $e) {
+            Log::error('Import error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+        }
     }
 
+    /**
+     * Memproses input stok harian (biasanya dari tabel rekapitulasi).
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function inputHarian(Request $request)
+    {
+        try {
+            $request->validate([
+                'obat_id' => 'required|exists:obats,id',
+                'tanggal' => 'required|date',
+                'stok_keluar' => 'required|integer|min:0',
+                'stok_masuk' => 'required|integer|min:0',
+            ]);
+
+            DB::beginTransaction();
+
+            $obat = Obat::findOrFail($request->obat_id);
+
+            // Proses stok keluar jika ada
+            if ($request->stok_keluar > 0) {
+                $this->processStockChange(
+                    $obat,
+                    'keluar',
+                    $request->stok_keluar,
+                    'Input Manual Harian (Keluar)',
+                    $request->tanggal // Teruskan tanggal transaksi
+                );
+            }
+
+            // Proses stok masuk jika ada
+            if ($request->stok_masuk > 0) {
+                $this->processStockChange(
+                    $obat,
+                    'masuk',
+                    $request->stok_masuk,
+                    'Input Manual Harian (Masuk)',
+                    $request->tanggal // Teruskan tanggal transaksi
+                );
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Data berhasil disimpan']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error in inputHarian: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Mengekspor data obat ke Excel.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function exportExcel(Request $request)
     {
         $request->validate([
@@ -599,49 +574,183 @@ class ObatController extends Controller
             );
             
         } catch (\Exception $e) {
-            \Log::error('Export error: ' . $e->getMessage());
+            Log::error('Export error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->with('error', 'Gagal mengexport data: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Menampilkan detail rekapitulasi harian untuk obat tertentu.
+     *
+     * @param Request $request
+     * @param Obat $obat
+     * @return \Illuminate\View\View
+     */
     public function showRekapitulasi(Request $request, Obat $obat)
     {
+        // Pastikan obat milik unit user yang login
+        if ($obat->unit_id !== Auth::user()->unit_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Get bulan & tahun from request or use current
         $bulan = $request->get('bulan', Carbon::now()->month);
         $tahun = $request->get('tahun', Carbon::now()->year);
 
-        // Get rekap harian for selected month
-        $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
-            ->orderBy('tanggal', 'asc')
-            ->get();
+        // Get rekap harian for selected month for this specific obat
+        // Gunakan metode getRekapitulasiBulanan dari model Obat
+        $rekapHarian = $obat->getRekapitulasiBulanan($bulan, $tahun);
 
-        // Calculate total penggunaan for the current month
-        $penggunaanBulanIni = $rekapHarian->sum('jumlah_keluar');
-        $totalBiayaBulanIni = $penggunaanBulanIni * $obat->harga_satuan;
+        // Ambil info penggunaan bulan ini dan bulan lalu untuk tampilan di detail rekap
+        $infoPenggunaanBulanIni = $obat->getInfoPenggunaan($bulan, $tahun);
+        $infoPenggunaanBulanLalu = $obat->getInfoPenggunaan(Carbon::create($tahun, $bulan, 1)->subMonth()->month, Carbon::create($tahun, $bulan, 1)->subMonth()->year);
 
-        // Calculate total penggunaan for the previous month
-        $lastMonth = Carbon::create($tahun, $bulan, 1)->subMonth();
-        $rekapBulanLalu = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-            ->where('bulan', $lastMonth->month)
-            ->where('tahun', $lastMonth->year)
-            ->where('jumlah_keluar', '>', 0)
-            ->get();
-        
-        $penggunaanBulanLalu = $rekapBulanLalu->sum('jumlah_keluar');
-        $totalBiayaBulanLalu = $penggunaanBulanLalu * $obat->harga_satuan;
 
-        return view('obat.detail_rekapitulasi', [
+        // Menggunakan 'obats.detail_rekapitulasi' untuk konsistensi nama view
+        return view('obats.detail_rekapitulasi', [
             'obat' => $obat,
             'rekapHarian' => $rekapHarian,
             'bulan' => $bulan,
             'tahun' => $tahun,
-            'penggunaanBulanIni' => $penggunaanBulanIni,
-            'totalBiayaBulanIni' => $totalBiayaBulanIni,
-            'penggunaanBulanLalu' => $penggunaanBulanLalu,
-            'totalBiayaBulanLalu' => $totalBiayaBulanLalu
+            'penggunaanBulanIni' => $infoPenggunaanBulanIni['jumlah'], // Untuk kompatibilitas dengan view
+            'totalBiayaBulanIni' => $infoPenggunaanBulanIni['biaya'], // Untuk kompatibilitas dengan view
+            'penggunaanBulanLalu' => $infoPenggunaanBulanLalu['jumlah'], // Untuk kompatibilitas dengan view
+            'totalBiayaBulanLalu' => $infoPenggunaanBulanLalu['biaya'], // Untuk kompatibilitas dengan view
+            'lastUpdateBulanIni' => $infoPenggunaanBulanIni['last_update'], // Untuk kompatibilitas dengan view
+            'lastUpdateBulanLalu' => $infoPenggunaanBulanLalu['last_update'], // Untuk kompatibilitas dengan view
         ]);
     }
+
+    // --- Private Methods (Helper Functions) ---
+
+    /**
+     * Memproses perubahan stok (masuk, keluar, penyesuaian).
+     * Akan mencatat TransaksiObat, memperbarui RekapitulasiObat harian,
+     * dan memperbarui stok_terakhir di tabel Obat.
+     *
+     * @param Obat $obat
+     * @param string $tipeTransaksi 'masuk', 'keluar', 'penyesuaian'
+     * @param int $jumlah Jumlah obat yang berubah. Untuk penyesuaian, bisa negatif untuk pengurangan.
+     * @param string $keterangan Keterangan transaksi (misal: "Penjualan ke Pasien X", "Penerimaan PO Y")
+     * @param string|null $tanggalTransaksi Tanggal transaksi, default hari ini.
+     * @return void
+     * @throws \Exception Jika stok tidak mencukupi untuk transaksi 'keluar'.
+     */
+    private function processStockChange(Obat $obat, string $tipeTransaksi, int $jumlah, string $keterangan, ?string $tanggalTransaksi = null)
+    {
+        $currentDate = $tanggalTransaksi ? Carbon::parse($tanggalTransaksi)->toDateString() : Carbon::now()->toDateString();
+        $userUnitId = Auth::user()->unit_id; // Ambil unit_id user sekali saja
+
+        // Pastikan obat milik unit yang sedang login
+        if ($obat->unit_id !== $userUnitId) {
+            throw new \Exception('Obat tidak ditemukan di unit Anda.');
+        }
+
+        // 1. Validasi stok untuk transaksi 'keluar' atau 'penyesuaian' pengurangan
+        if ($tipeTransaksi == 'keluar') {
+            if ($obat->stok_terakhir < $jumlah) {
+                throw new \Exception('Stok tidak mencukupi untuk transaksi keluar ini. Stok saat ini: ' . $obat->stok_terakhir);
+            }
+        } elseif ($tipeTransaksi == 'penyesuaian' && $jumlah < 0) { // Jika penyesuaian pengurangan
+            if ($obat->stok_terakhir < abs($jumlah)) {
+                throw new \Exception('Stok tidak mencukupi untuk penyesuaian pengurangan. Stok saat ini: ' . $obat->stok_terakhir);
+            }
+        }
+
+        // 2. Catat Transaksi di tabel transaksi_obats
+        TransaksiObat::create([
+            'obat_id' => $obat->id,
+            'tanggal_transaksi' => $currentDate, // Menggunakan tanggal transaksi yang diteruskan
+            'tipe_transaksi' => $tipeTransaksi, // Menggunakan 'tipe_transaksi' agar konsisten dengan DB
+            'jumlah' => $jumlah,
+            'keterangan' => $keterangan, // Simpan keterangan transaksi
+            'user_id' => Auth::id(), // Simpan ID pengguna yang melakukan transaksi
+        ]);
+
+        // 3. Perbarui Rekapitulasi Harian di tabel rekapitulasi_obats
+        $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('unit_id', $userUnitId)
+            ->whereDate('tanggal', $currentDate)
+            ->first();
+
+        if (!$rekapitulasi) {
+            // Jika belum ada entri rekapitulasi untuk hari ini, buat yang baru
+            // Hitung stok awal hari ini dari stok akhir hari sebelumnya
+            // Atau dari stok_terakhir obat jika belum ada rekapitulasi sama sekali sebelumnya
+            $stokAwalHariIni = $this->getStokAkhirHariSebelumnya($obat, $currentDate);
+
+            $rekapitulasi = new RekapitulasiObat([
+                'obat_id' => $obat->id,
+                'unit_id' => $userUnitId,
+                'tanggal' => $currentDate,
+                'stok_awal' => $stokAwalHariIni,
+                'jumlah_masuk_hari_ini' => 0,
+                'jumlah_keluar' => 0,
+                'sisa_stok' => $stokAwalHariIni, // Awalnya sisa stok sama dengan stok awal
+                'total_biaya' => 0,
+                'bulan' => Carbon::parse($currentDate)->month,
+                'tahun' => Carbon::parse($currentDate)->year,
+            ]);
+        }
+
+        // Perbarui jumlah masuk/keluar dan sisa_stok di entri rekapitulasi
+        if ($tipeTransaksi == 'masuk') {
+            $rekapitulasi->jumlah_masuk_hari_ini += $jumlah;
+            $rekapitulasi->sisa_stok += $jumlah;
+        } elseif ($tipeTransaksi == 'keluar') {
+            $rekapitulasi->jumlah_keluar += $jumlah;
+            $rekapitulasi->sisa_stok -= $jumlah;
+            $rekapitulasi->total_biaya += ($jumlah * $obat->harga_satuan);
+        } elseif ($tipeTransaksi == 'penyesuaian') {
+            if ($jumlah > 0) { // Jika jumlah positif, berarti penambahan
+                $rekapitulasi->jumlah_masuk_hari_ini += $jumlah;
+            } else { // Jika jumlah negatif, berarti pengurangan
+                $rekapitulasi->jumlah_keluar += abs($jumlah); // Tambahkan nilai absolut ke jumlah_keluar
+                $rekapitulasi->total_biaya += (abs($jumlah) * $obat->harga_satuan); // Hitung biaya untuk pengurangan
+            }
+            $rekapitulasi->sisa_stok += $jumlah; // Langsung tambahkan/kurangi jumlah (bisa positif/negatif)
+        }
+
+        $rekapitulasi->save();
+
+        // 4. Perbarui stok_terakhir di tabel Obat (ini adalah single source of truth untuk stok aktual)
+        $obat->stok_terakhir = $rekapitulasi->sisa_stok;
+        $obat->save();
+    }
+
+    /**
+     * Mengambil stok akhir dari hari sebelumnya atau stok_terakhir obat jika belum ada rekapitulasi.
+     *
+     * @param Obat $obat
+     * @param string $currentDate Tanggal saat ini dalam format Y-m-d.
+     * @return int
+     */
+    private function getStokAkhirHariSebelumnya(Obat $obat, string $currentDate)
+    {
+        $targetDate = Carbon::parse($currentDate)->subDay()->toDateString();
+        $userUnitId = Auth::user()->unit_id;
+
+        // Cari entri rekapitulasi untuk hari sebelumnya dari tanggal target
+        $rekapSebelumnya = RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('unit_id', $userUnitId)
+            ->whereDate('tanggal', '<=', $targetDate) // Cari tanggal <= targetDate
+            ->orderBy('tanggal', 'desc') // Ambil yang paling baru
+            ->first();
+
+        if ($rekapSebelumnya) {
+            return $rekapSebelumnya->sisa_stok; // Stok akhir sebelumnya adalah stok awal hari ini
+        }
+
+        // Jika belum ada rekapitulasi sama sekali sebelum tanggal target,
+        // Ambil stok_terakhir dari tabel 'obats' itu sendiri
+        return $obat->stok_terakhir ?? 0;
+    }
+
+    // Metode untuk menambah stok (jika masih digunakan, disarankan pakai updateStokManual)
+    // public function tambahStok(Request $request, Obat $obat)
+    // {
+    //     // Anda bisa memanggil processStockChange di sini
+    //     // $this->processStockChange($obat, 'masuk', $request->jumlah_tambah, $request->keterangan);
+    //     // return redirect()->back()->with('success', 'Stok berhasil ditambahkan.');
+    // }
 }

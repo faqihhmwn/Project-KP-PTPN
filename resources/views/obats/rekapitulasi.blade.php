@@ -212,18 +212,18 @@
                                 {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ route('obat.rekapitulasi.detail', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}"
+                                <a href="{{ route('obats.detailRekapitulasi', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}"
                                     class="btn btn-info btn-sm" title="Detail Rekapitulasi">
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
 
 
 
-                                <a href="{{ route('obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}"
+                                <a href="{{ route('obats.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}"
                                     class="btn btn-warning btn-sm" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
+                                <form action="{{ route('obats.destroy', $obat->id) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm"
@@ -330,7 +330,7 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('obat.export') }}" method="GET" id="exportForm" target="_blank">
+                <form action="{{ route('obats.exportRekapitulasi') }}" method="GET" id="exportForm" target="_blank">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
@@ -653,7 +653,7 @@
                 }
 
                 // Kirim data ke backend
-                const response = await fetch('{{ route('obat.rekapitulasi-obat.input-harian') }}', {
+                const response = await fetch('{{ route('obats.rekapitulasi.input-harian') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -790,7 +790,7 @@
             const harga = parseInt(row.getAttribute('data-harga')) || 0;
             const totalBiaya = jumlahKeluar * harga;
             // Kirim data ke endpoint rekapitulasi
-            fetch('/obat/rekapitulasi-obat/input-harian', {
+            fetch('{{ route('obats.rekapitulasi.input-harian') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

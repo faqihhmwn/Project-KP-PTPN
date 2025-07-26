@@ -20,13 +20,12 @@ use App\Http\Controllers\Laporan\SakitBerkepanjanganController;
 use App\Http\Controllers\Laporan\AbsensiDokterHonorController;
 use App\Http\Controllers\Laporan\KategoriKhususController;
 use App\Http\Controllers\ObatController;
-use App\Http\Controllers\RekapitulasiObatController;
+use App\Http\Controllers\RekapitulasiObatController; // Ini mungkin tidak lagi dipakai, tapi biarkan importnya jika masih ada referensi
 use App\Http\Controllers\RekapitulasiExportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ObatController as AdminObatController;
-use App\Http\Controllers\Admin\RekapitulasiObatController as AdminRekapitulasiObatController;
+use App\Http\Controllers\Admin\RekapitulasiObatController as AdminRekapitulasiObatController; // Ini juga
 use App\Http\Controllers\Admin\RekapitulasiExportController as AdminRekapitulasiExportController;
-
 
 use App\Http\Controllers\Rekap\RegionalController;
 use App\Http\Controllers\Rekap\KapitasiController;
@@ -42,18 +41,13 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth:web,admin')
     ->name('dashboard');
 
-// Route untuk export obat
-Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export');
+// Route untuk export obat (ini akan diganti dengan rute obats.exportRekapitulasi yang baru)
+// Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export'); // Dikomentari/Dihapus
 
 Route::get('/', function () {
     return redirect('/dashboard');
 });
 
-// Route::get('/dashboard', function () {
-//     return view('dashboard');
-// })->middleware(['auth', 'verified'])->name('dashboard');
-
-// web.php
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -66,6 +60,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name
 
 require __DIR__.'/auth.php';
 
+// --- LAPORAN ROUTES (Tidak diubah) ---
 Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('laporan.kependudukan.')->group(function () {
     Route::get('/', [KependudukanController::class, 'index'])->name('index');
     Route::post('/store', [KependudukanController::class, 'store'])->name('store');
@@ -211,36 +206,39 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth:web,admin')->name('la
 });
 
 
-// Obat Routes
-Route::prefix('obat')->name('obat.')->group(function () {
-    Route::get('/', [ObatController::class, 'index'])->name('index');
+// Obat Routes (Client/User)
+Route::prefix('obats')->middleware('auth:web,admin')->name('obats.')->group(function () {
     Route::get('/dashboard', [ObatController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [ObatController::class, 'index'])->name('index');
     Route::get('/create', [ObatController::class, 'create'])->name('create');
     Route::post('/', [ObatController::class, 'store'])->name('store');
-    Route::get('/{obat}', [ObatController::class, 'show'])->name('show');
-    Route::get('/{obat}/edit', [ObatController::class, 'edit'])->name('edit');
-    Route::put('/{obat}', [ObatController::class, 'update'])->name('update');
-    Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
-    Route::post('/{obat}/tambah-stok', [ObatController::class, 'tambahStok'])->name('tambah-stok');
-    
-    // Rekapitulasi
-    Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
-    Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
-    Route::get('/export', [RekapitulasiExportController::class, 'export'])->name('export');
-    Route::get('/{obat}/rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
-    Route::get('/obat/rekapitulasi-data', [ObatController::class, 'getRekapitulasiData'])->name('obat.rekapitulasi-data');
+    Route::get('/{obat}', [ObatController::class, 'show'])->name('show')->where('obat', '[0-9]+');
+    Route::get('/{obat}/edit', [ObatController::class, 'edit'])->name('edit')->where('obat', '[0-9]+');
+    Route::put('/{obat}', [ObatController::class, 'update'])->name('update')->where('obat', '[0-9]+');
+    Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy')->where('obat', '[0-9]+');
 
-    // Transaksi
-    Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
-    Route::post('/{obat}/transaksi-harian', [ObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
-    
-    // Import
+    // --- Manajemen Stok Baru ---
+    // Perbaikan: Ubah {obats} menjadi {obat}
+    Route::post('/{obat}/update-stok-manual', [ObatController::class, 'updateStokManual'])->name('updateStokManual');
+
+    // --- Rekapitulasi & Laporan ---
+    Route::get('/rekapitulasi-bulanan', [ObatController::class, 'rekapitulasiBulanan'])->name('rekapitulasiBulanan');
+
+    Route::get('/export-rekapitulasi', [RekapitulasiExportController::class, 'export'])->name('exportRekapitulasi');
+
+    // Perbaikan: Ubah {obats} menjadi {obat}
+    Route::get('/{obat}/detail-rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('detailRekapitulasi');
+
+    // --- Import & Export ---
     Route::post('/import', [ObatController::class, 'import'])->name('import');
+    Route::get('/export', [ObatController::class, 'exportExcel'])->name('exportRekapitulasi');
+    
+    // --- Input Harian ---
+    Route::post('/rekapitulasi/input-harian', [ObatController::class, 'inputHarian'])->name('rekapitulasi.input-harian');
 });
 
-// REKAPITULASI BIAYA
+// REKAPITULASI BIAYA (Dipindahkan ke luar grup 'obats')
 Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
-
     // Regional
     Route::prefix('regional')->name('regional.')->group(function () {
         Route::get('/', [RegionalController::class, 'index'])->name('index');
@@ -261,7 +259,6 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate');
         Route::get('/bpjs/export', [BpjsExportController::class, 'export'])->name('bpjs.export');
-
     });
 
     // Kapitasi
@@ -273,31 +270,31 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::delete('/{tahun}/{bulan_id}', [KapitasiController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [KapitasiController::class, 'validateRekap'])->name('validate');
         Route::get('/kapitasi/export', [KapitasiExportController::class, 'export'])->name('kapitasi.export');
-
     });
 });
 
 // Admin Obat Routes
-Route::prefix('admin/obat')->name('admin.obat.')->middleware('auth:admin')->group(function () {
+Route::prefix('admin/obats')->name('admin.obats.')->middleware('auth:admin')->group(function () {
     Route::get('/', [AdminObatController::class, 'index'])->name('index');
     Route::get('/dashboard', [AdminObatController::class, 'dashboard'])->name('dashboard');
     Route::get('/create', [AdminObatController::class, 'create'])->name('create');
     Route::post('/', [AdminObatController::class, 'store'])->name('store');
+    // Perbaikan: Ubah {obat} menjadi {obat} (sudah benar, hanya memastikan)
     Route::get('/{obat}', [AdminObatController::class, 'show'])->name('show');
     Route::get('/{obat}/edit', [AdminObatController::class, 'edit'])->name('edit');
     Route::put('/{obat}', [AdminObatController::class, 'update'])->name('update');
     Route::delete('/{obat}', [AdminObatController::class, 'destroy'])->name('destroy');
 
-    // Rekapitulasi
-    Route::post('/rekapitulasi-obat/input-harian', [AdminRekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
-    Route::get('/rekapitulasi/bulanan', [AdminObatController::class, 'rekapitulasi'])->name('rekapitulasi');
-    Route::get('/export', [AdminRekapitulasiExportController::class, 'export'])->name('export');
-    Route::get('/{obat}/rekapitulasi', [AdminObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
+    // --- Manajemen Stok Baru (untuk Admin) ---
+    Route::post('/{obat}/update-stok-manual', [AdminObatController::class, 'updateStokManual'])->name('updateStokManual');
 
-    // Transaksi
-    Route::post('/{obat}/transaksi', [AdminObatController::class, 'addTransaksi'])->name('transaksi.store');
-    Route::post('/{obat}/transaksi-harian', [AdminObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
+    // --- Rekapitulasi & Laporan (untuk Admin) ---
+    Route::get('/rekapitulasi-bulanan', [AdminObatController::class, 'rekapitulasiBulanan'])->name('rekapitulasiBulanan');
 
-    // Import
+    Route::get('/export-rekapitulasi', [AdminRekapitulasiExportController::class, 'export'])->name('exportRekapitulasi');
+
+    Route::get('/{obat}/detail-rekapitulasi', [AdminObatController::class, 'showRekapitulasi'])->name('detailRekapitulasi');
+
+    // --- Import (untuk Admin) ---
     Route::post('/import', [AdminObatController::class, 'import'])->name('import');
 });

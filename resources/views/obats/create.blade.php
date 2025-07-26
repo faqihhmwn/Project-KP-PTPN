@@ -22,7 +22,8 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('obat.store') }}" method="POST">
+                    {{-- Perbarui action form ke rute baru 'obats.store' --}}
+                    <form action="{{ route('obats.store') }}" method="POST">
                         @csrf
                         <div class="row">
                             <div class="col-md-6">
@@ -87,6 +88,18 @@
                             </div>
                         </div>
 
+                        {{-- Input stok_awal, pastikan ini input awal saat registrasi obat --}}
+                        {{-- Ini akan menjadi nilai awal untuk kolom stok_terakhir di tabel obats --}}
+                        <div class="mb-3">
+                            <label for="stok_awal" class="form-label">Stok Awal (Saat Registrasi) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control @error('stok_awal') is-invalid @enderror"
+                                   id="stok_awal" name="stok_awal" value="{{ old('stok_awal', 0) }}" min="0" required>
+                            <small class="form-text text-muted">Masukkan jumlah stok awal obat ini saat pertama kali didaftarkan. Ini akan menjadi stok saat ini.</small>
+                            @error('stok_awal')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="mb-3">
                             <label for="keterangan" class="form-label">Keterangan</label>
                             <textarea class="form-control @error('keterangan') is-invalid @enderror" 
@@ -98,7 +111,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('obat.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('obats.index') }}" class="btn btn-secondary"> {{-- Perbarui rute --}}
                                 <i class="fas fa-times"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -113,18 +126,29 @@
 </div>
 
 <script>
-// Format input harga saat user mengetik
-document.getElementById('harga_satuan').addEventListener('input', function() {
-    let value = this.value.replace(/[^\d]/g, '');
-    this.value = value;
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hanya izinkan angka untuk harga_satuan (dan titik sebagai desimal jika perlu)
+        document.getElementById('harga_satuan').addEventListener('input', function() {
+            // Memungkinkan desimal jika Anda ingin input harga ada koma
+            // Jika harga selalu bulat, gunakan value.replace(/[^\d]/g, '')
+            let value = this.value.replace(/[^0-9.]/g, ''); // Hanya angka dan titik
+            // Pastikan hanya ada satu titik desimal
+            let parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            this.value = value;
+        });
 
-// Preview stok awal
-document.getElementById('stok_awal').addEventListener('input', function() {
-    if (this.value < 0) {
-        this.value = 0;
-    }
-});
+        // Preview stok awal - memastikan tidak negatif
+        document.getElementById('stok_awal').addEventListener('input', function() {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+            // Pastikan nilai tidak mengandung non-digit setelah input
+            this.value = this.value.replace(/\D/g, ''); 
+        });
+    });
 </script>
 
 @endsection
