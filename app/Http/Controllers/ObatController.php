@@ -68,29 +68,6 @@ class ObatController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    /**
-     * Mendapatkan data rekapitulasi obat untuk bulan tertentu
-     *
-     * @param Obat $obat
-     * @param int $bulan
-     * @param int $tahun
-     * @return array
-     */
-    private function getRekapitulasiData(Obat $obat, $bulan, $tahun)
-    {
-        $rekapitulasi = $obat->rekapitulasiObat()
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->get();
-
-        return [
-            'stok_awal' => $obat->getStokAwal($bulan, $tahun),
-            'jumlah_keluar' => $rekapitulasi->sum('jumlah_keluar'),
-            'total_biaya' => $rekapitulasi->sum('total_biaya'),
-            'data_harian' => $rekapitulasi->keyBy('tanggal')
-        ];
-    }
-
     public function store(Request $request)
     {
         $request->validate([

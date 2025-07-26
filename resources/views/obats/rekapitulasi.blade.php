@@ -71,7 +71,7 @@
             <div class="row align-items-center">
                 <!-- Filter Bulan/Tahun -->
                 <div class="col-md-6">
-                    <form method="GET" class="d-flex gap-2" id="filterForm" onsubmit="return false;">
+                    <form method="GET" class="d-flex gap-2" id="filterForm">
                         <select name="bulan" class="form-select" id="bulanSelect">
                             @for ($i = 1; $i <= 12; $i++)
                                 <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
@@ -127,7 +127,7 @@
             <tbody id="obatTableBody">
                 @forelse($obats as $index => $obat)
                     @php
-                        $rekapData = $obat->getStokAwal($bulan, $tahun);
+                        $rekapData = $obat->getStokAwalBulan($bulan, $tahun);
                     @endphp
                     <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
@@ -439,16 +439,24 @@
             const tahunSelect = document.getElementById('tahunSelect');
 
             if (filterForm) {
-                // Remove automatic submission on select change
-                const filterBtn = filterForm.querySelector('button[type="submit"]');
-                
-                filterBtn.addEventListener('click', function(e) {
+                // Handle form submission only through the filter button
+                filterForm.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    // Set semua input ke 0 sebelum submit form
-                    document.querySelectorAll('.daily-input').forEach(input => {
-                        input.value = '0';
+                    const bulan = document.getElementById('bulanSelect').value;
+                    const tahun = document.getElementById('tahunSelect').value;
+                    
+                    // Construct URL with parameters
+                    const url = `${window.location.pathname}?bulan=${bulan}&tahun=${tahun}`;
+                    window.location.href = url;
+                });
+                
+                // Prevent form submission on enter key
+                filterForm.querySelectorAll('select').forEach(select => {
+                    select.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                        }
                     });
-                    filterForm.submit();
                 });
             }
 
