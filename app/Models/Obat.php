@@ -49,6 +49,35 @@ class Obat extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * Menghitung stok awal obat untuk bulan tertentu
+     *
+     * @param int $bulan
+     * @param int $tahun
+     * @return int
+     */
+    public function getStokAwal($bulan, $tahun)
+    {
+        // Cek bulan sebelumnya
+        $previousMonth = $bulan == 1 ? 12 : $bulan - 1;
+        $previousYear = $bulan == 1 ? $tahun - 1 : $tahun;
+        
+        // Cari sisa stok dari bulan sebelumnya
+        $previousMonthStock = $this->rekapitulasiObat()
+            ->where('bulan', $previousMonth)
+            ->where('tahun', $previousYear)
+            ->orderBy('tanggal', 'desc')
+            ->first();
+
+        // Jika ada data bulan sebelumnya, gunakan sisa stoknya
+        if ($previousMonthStock) {
+            return $previousMonthStock->sisa_stok;
+        }
+
+        // Jika tidak ada data sebelumnya, gunakan stok terakhir dari obat
+        return $this->stok_terakhir;
+    }
+
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {

@@ -68,10 +68,47 @@ class ObatController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
+    /**
+     * Mendapatkan data rekapitulasi obat untuk bulan tertentu
+     *
+     * @param Obat $obat
+     * @param int $bulan
+     * @param int $tahun
+     * @return array
+     */
+    private function getRekapitulasiData(Obat $obat, $bulan, $tahun)
+    {
+        $rekapitulasi = $obat->rekapitulasiObat()
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->get();
+
+        return [
+            'stok_awal' => $obat->getStokAwal($bulan, $tahun),
+            'jumlah_keluar' => $rekapitulasi->sum('jumlah_keluar'),
+            'total_biaya' => $rekapitulasi->sum('total_biaya'),
+            'data_harian' => $rekapitulasi->keyBy('tanggal')
+        ];
+    }
+
     public function store(Request $request)
     {
         $request->validate([
-            'nama_obat' => 'required|string|max:255',
+            'nama_obat' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    // Check if medicine with same name exists in the same unit
+                    $exists = Obat::where('nama_obat', $value)
+                        ->where('unit_id', Auth::user()->unit_id)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('Obat dengan nama ini sudah ada di unit Anda.');
+                    }
+                },
+            ],
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
@@ -86,8 +123,8 @@ class ObatController extends Controller
             // Pastikan 'stok_awal' dari form disimpan ke kolom stok_awal di tabel obats
             // Dan 'stok_terakhir' diinisialisasi dengan stok_awal
             $obat = Obat::create([
-                'nama_obat' => $request->nama_obat,
-                'jenis_obat' => $request->jenis_obat,
+                'nama_obat' => ucwords(strtolower($request->nama_obat)), // Proper case (huruf pertama tiap kata kapital)
+                'jenis_obat' => ucwords(strtolower($request->jenis_obat)), // Proper case (huruf pertama tiap kata kapital)
                 'harga_satuan' => $request->harga_satuan,
                 'satuan' => $request->satuan,
                 'keterangan' => $request->keterangan,
@@ -178,7 +215,22 @@ class ObatController extends Controller
         }
 
         $validated = $request->validate([
-            'nama_obat' => 'required|string|max:255',
+            'nama_obat' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($obat) {
+                    // Check if medicine with same name exists in the same unit, excluding current medicine
+                    $exists = Obat::where('nama_obat', $value)
+                        ->where('unit_id', Auth::user()->unit_id)
+                        ->where('id', '!=', $obat->id)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('Obat dengan nama ini sudah ada di unit Anda.');
+                    }
+                },
+            ],
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
@@ -195,8 +247,8 @@ class ObatController extends Controller
 
             // Update informasi dasar obat
             $obat->update([
-                'nama_obat' => $validated['nama_obat'],
-                'jenis_obat' => $validated['jenis_obat'],
+                'nama_obat' => ucwords(strtolower($validated['nama_obat'])), // Proper case (huruf pertama tiap kata kapital)
+                'jenis_obat' => ucwords(strtolower($validated['jenis_obat'])), // Proper case (huruf pertama tiap kata kapital)
                 'harga_satuan' => $validated['harga_satuan'],
                 'satuan' => $validated['satuan'],
                 'keterangan' => $validated['keterangan'],
@@ -263,9 +315,9 @@ class ObatController extends Controller
 
         try {
             DB::beginTransaction();
-            // Hapus semua transaksi terkait terlebih dahulu
-            $obat->transaksiObats()->delete(); // Pastikan relasi ini ada di model Obat
-            $obat->rekapitulasiObats()->delete(); // Pastikan relasi ini ada di model Obat dan namanya plural
+            // Hapus semua transaksi dan rekapitulasi terkait terlebih dahulu
+            $obat->transaksiObats()->delete(); // Hapus semua transaksi
+            $obat->rekapitulasiObat()->delete(); // Hapus semua rekapitulasi
 
             // Hapus obat
             $obat->delete();
@@ -667,7 +719,7 @@ class ObatController extends Controller
             'user_id' => Auth::id(), // Simpan ID pengguna yang melakukan transaksi
         ]);
 
-        // 3. Perbarui Rekapitulasi Harian di tabel rekapitulasi_obats
+        // 3. Perbarui atau buat Rekapitulasi Harian di tabel rekapitulasi_obats
         $rekapitulasi = RekapitulasiObat::where('obat_id', $obat->id)
             ->where('unit_id', $userUnitId)
             ->whereDate('tanggal', $currentDate)
@@ -675,9 +727,15 @@ class ObatController extends Controller
 
         if (!$rekapitulasi) {
             // Jika belum ada entri rekapitulasi untuk hari ini, buat yang baru
-            // Hitung stok awal hari ini dari stok akhir hari sebelumnya
-            // Atau dari stok_terakhir obat jika belum ada rekapitulasi sama sekali sebelumnya
-            $stokAwalHariIni = $this->getStokAkhirHariSebelumnya($obat, $currentDate);
+            // Untuk transaksi stok awal, gunakan nilai stok awal yang diinput
+            $isStokAwal = $tipeTransaksi === 'masuk' && $keterangan === 'Stok Awal Obat Baru';
+            
+            if ($isStokAwal) {
+                $stokAwalHariIni = $jumlah; // Gunakan jumlah yang diinput sebagai stok awal
+            } else {
+                // Untuk transaksi lain, hitung dari hari sebelumnya
+                $stokAwalHariIni = $this->getStokAkhirHariSebelumnya($obat, $currentDate);
+            }
 
             $rekapitulasi = new RekapitulasiObat([
                 'obat_id' => $obat->id,

@@ -60,7 +60,7 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
-        <a href="/obat/dashboard" class="btn btn-secondary btn-sm">
+        <a href="/obats/dashboard" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
         </a>
     </div>
@@ -71,7 +71,7 @@
             <div class="row align-items-center">
                 <!-- Filter Bulan/Tahun -->
                 <div class="col-md-6">
-                    <form method="GET" class="d-flex gap-2" id="filterForm">
+                    <form method="GET" class="d-flex gap-2" id="filterForm" onsubmit="return false;">
                         <select name="bulan" class="form-select" id="bulanSelect">
                             @for ($i = 1; $i <= 12; $i++)
                                 <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
@@ -126,6 +126,9 @@
             </thead>
             <tbody id="obatTableBody">
                 @forelse($obats as $index => $obat)
+                    @php
+                        $rekapData = $obat->getStokAwal($bulan, $tahun);
+                    @endphp
                     <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
@@ -135,50 +138,11 @@
                         <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
                        
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
-                                @php
-                                $previousMonth = $bulan == 1 ? 12 : $bulan - 1;
-                                $previousYear = $bulan == 1 ? $tahun - 1 : $tahun;
-                                
-                                // Get current month's rekapitulasi
-                                $currentMonthStocks = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                    ->where('unit_id', Auth::user()->unit_id)
-                                    ->where('bulan', $bulan)
-                                    ->where('tahun', $tahun)
-                                    ->get();
-
-                                // Get last stock from previous month
-                                $previousMonthStock = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                    ->where('unit_id', Auth::user()->unit_id)
-                                    ->where('bulan', $previousMonth)
-                                    ->where('tahun', $previousYear)
-                                    ->orderBy('tanggal', 'desc')
-                                    ->first();
-
-                                // Get the initial stock from the obat table
-                                $stokAwal = $obat->stok_awal;
-                                
-                                // If we have previous month's data, add its remaining stock
-                                if ($previousMonthStock) {
-                                    $stokAwal = $previousMonthStock->sisa_stok;
-                                }
-                                
-                                // Add any additional stock for this month
-                                $currentMonthAdditions = $currentMonthStocks->sum('stok_tambahan') ?? 0;
-                                $stokAwal += $currentMonthAdditions;
-                                
-                                // Ensure final stock value is not negative
-                                $stokAwal = max(0, $stokAwal);
-                                
-                                // Store for use in sisa_stok calculation
-                                $row_stok_awal = $stokAwal;
-                            @endphp
-                            {{ number_format($stokAwal, 0, ',', '.') }}
+                            {{ number_format($rekapData, 0, ',', '.') }}
                         </td>
 
-                        @php $totalBiaya = 0; @endphp
                         @for ($day = 1; $day <= $daysInMonth; $day++)
                             @php
-                                $jumlahKeluar = 0;
                                 $tanggal = \Carbon\Carbon::createFromDate($tahun, (int) $bulan, $day);
                                 $rekapitulasi = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
                                     ->where('unit_id', Auth::user()->unit_id)
@@ -187,29 +151,20 @@
                                     ->where('tahun', $tahun)
                                     ->first();
 
-                                if ($rekapitulasi) {
-                                    $jumlahKeluar = $rekapitulasi->jumlah_keluar;
-                                }
-                                $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                                $jumlahKeluar = $rekapitulasi ? $rekapitulasi->jumlah_keluar : 0;
                             @endphp
                             <td>
                                 <input type="number" class="daily-input" type="text" inputmode="numeric"
                                     pattern="[0-9]*" value="{{ $jumlahKeluar }}" data-obat-id="{{ $obat->id }}"
-                                    data-tanggal="{{ $tanggal->format('Y-m-d') }}">
+                                    data-tanggal="{{ $tanggal->format('Y-m-d') }}"
+                                    max="{{ $rekapData }}">
                             </td>
                         @endfor
                         <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
-                            @php
-                                // Calculate total usage for this month
-                                $totalKeluar = $currentMonthStocks->sum('jumlah_keluar') ?? 0;
-                                
-                                // Calculate remaining stock
-                                $sisaStok = max(0, $row_stok_awal - $totalKeluar);
-                            @endphp
-                            {{ number_format($sisaStok, 0, ',', '.') }}
+                            {{ number_format($obat->stok_terakhir, 0, ',', '.') }}
                         </td>
                         <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp
-                                {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
+                                {{ number_format($rekapitulasi ? $rekapitulasi->total_biaya : 0, 0, ',', '.') }}</strong></td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ route('obats.detailRekapitulasi', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}"
@@ -418,45 +373,62 @@
             const stokAwalCell = row.querySelector('.stok-awal');
             let stokAwal = parseInt(stokAwalCell ? stokAwalCell.textContent.replace(/[^\d]/g, '') : 0) || 0;
             
-            // Calculate total stock available (stok awal sudah termasuk tambahan dari bulan sebelumnya)
-            let totalStokTersedia = stokAwal;
-            
-            // Calculate total used
+            // Calculate daily usage chronologically
+            let currentStok = stokAwal;
             let totalKeluar = 0;
-            row.querySelectorAll('.daily-input').forEach(input => {
-                totalKeluar += parseInt(input.value) || 0;
+            const dailyInputs = Array.from(row.querySelectorAll('.daily-input'));
+            
+            dailyInputs.sort((a, b) => {
+                return new Date(a.getAttribute('data-tanggal')) - new Date(b.getAttribute('data-tanggal'));
             });
             
-            // Calculate remaining stock
-            const sisaStok = totalStokTersedia - totalKeluar;
-            const sisaStokCell = row.querySelector('.sisa-stok');
-            
-            if (sisaStokCell) {
-                if (sisaStok < 0) {
-                    alert('Peringatan: Total penggunaan melebihi stok yang tersedia!');
-                    sisaStokCell.textContent = '0';
-                    sisaStokCell.style.color = 'red';
+            for (const input of dailyInputs) {
+                const jumlahKeluar = parseInt(input.value) || 0;
+                
+                // Check if this transaction would make stock negative
+                if (jumlahKeluar > currentStok) {
+                    input.value = currentStok; // Limit the input to available stock
+                    alert(`Peringatan: Penggunaan pada tanggal ${input.getAttribute('data-tanggal')} disesuaikan dengan stok tersedia (${currentStok})`);
+                    totalKeluar += currentStok;
+                    currentStok = 0;
                 } else {
-                    sisaStokCell.textContent = sisaStok;
-                    sisaStokCell.style.color = '';
+                    totalKeluar += jumlahKeluar;
+                    currentStok -= jumlahKeluar;
                 }
             }
+            
+            // Update sisa stok display
+            const sisaStokCell = row.querySelector('.sisa-stok');
+            if (sisaStokCell) {
+                sisaStokCell.textContent = new Intl.NumberFormat('id-ID').format(currentStok);
+                sisaStokCell.style.color = currentStok === 0 ? 'red' : '';
+            }
+            
+            return totalKeluar;
         }
 
         // Update total biaya secara dinamis saat input harian berubah
         function updateTotalBiaya(obatId) {
             const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
             if (!row) return;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
+            
+            const harga = parseFloat(row.getAttribute('data-harga')) || 0;
             let totalBiaya = 0;
+            
+            // Get all valid usage (after stock validation)
             row.querySelectorAll('.daily-input').forEach(input => {
                 const jumlahKeluar = parseInt(input.value) || 0;
-                totalBiaya += jumlahKeluar * harga;
+                if (jumlahKeluar > 0) {
+                    totalBiaya += jumlahKeluar * harga;
+                }
             });
+            
             const totalBiayaCell = row.querySelector('.total-biaya');
             if (totalBiayaCell) {
-                totalBiayaCell.innerHTML = `<strong>Rp ${totalBiaya.toLocaleString('id-ID')}</strong>`;
+                totalBiayaCell.innerHTML = `<strong>Rp ${new Intl.NumberFormat('id-ID').format(totalBiaya)}</strong>`;
             }
+            
+            return totalBiaya;
         }
 
         // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
@@ -467,15 +439,11 @@
             const tahunSelect = document.getElementById('tahunSelect');
 
             if (filterForm) {
-                bulanSelect.addEventListener('change', function() {
-                    // Set semua input ke 0 sebelum submit form
-                    document.querySelectorAll('.daily-input').forEach(input => {
-                        input.value = '0';
-                    });
-                    filterForm.submit();
-                });
-
-                tahunSelect.addEventListener('change', function() {
+                // Remove automatic submission on select change
+                const filterBtn = filterForm.querySelector('button[type="submit"]');
+                
+                filterBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
                     // Set semua input ke 0 sebelum submit form
                     document.querySelectorAll('.daily-input').forEach(input => {
                         input.value = '0';
@@ -608,48 +576,48 @@
                 notif.classList.add('d-none');
                 notif.classList.remove('alert-success', 'alert-danger');
 
-                // Kumpulkan data dari seluruh baris obat
+                // Kumpulkan dan validasi data dari seluruh baris obat
                 const rows = document.querySelectorAll('tr[data-obat-row]');
                 const bulk = [];
 
                 for (const row of rows) {
                     const obatId = row.getAttribute('data-obat-row');
-                    const harga = parseInt(row.getAttribute('data-harga')) || 0;
+                    const harga = parseFloat(row.getAttribute('data-harga')) || 0;
                     const stokAwalCell = row.querySelector('.stok-awal');
                     const stokAwal = parseInt(stokAwalCell ? stokAwalCell.textContent.replace(/[^\d]/g, '') : 0) || 0;
-                    const totalStokTersedia = stokAwal; // Use the initial stock as total available
-                    // Get stok tambahan value if exists
-                    const stokTambahanInput = row.querySelector('.stok-tambahan');
-                    const stokTambahan = stokTambahanInput ? (parseInt(stokTambahanInput.value) || 0) : 0;
-
-                    // Untuk setiap input harian
-                    const inputs = row.querySelectorAll('.daily-input');
-                    inputs.forEach((input) => {
+                    
+                    // Sort inputs by date to process chronologically
+                    const inputs = Array.from(row.querySelectorAll('.daily-input'))
+                        .sort((a, b) => new Date(a.getAttribute('data-tanggal')) - new Date(b.getAttribute('data-tanggal')));
+                    
+                    let currentStok = stokAwal;
+                    
+                    // Process each day's data
+                    for (const input of inputs) {
                         const tanggal = input.getAttribute('data-tanggal');
-                        const jumlahKeluar = parseInt(input.value) || 0;
-
-                        if (tanggal) { // Pastikan tanggal ada
-                            // Hitung sisa stok hanya untuk tanggal ini
-                            let totalKeluar = 0;
-                            inputs.forEach((inp) => {
-                                if (inp.getAttribute('data-tanggal') <= tanggal) {
-                                    totalKeluar += parseInt(inp.value) || 0;
-                                }
-                            });
-
+                        let jumlahKeluar = parseInt(input.value) || 0;
+                        
+                        // Validate and adjust stock if needed
+                        if (jumlahKeluar > currentStok) {
+                            jumlahKeluar = currentStok;
+                            input.value = currentStok;
+                        }
+                        
+                        if (tanggal) {
                             bulk.push({
                                 obat_id: obatId,
                                 tanggal: tanggal,
                                 bulan: CURRENT_BULAN,
                                 tahun: CURRENT_TAHUN,
                                 jumlah_keluar: jumlahKeluar,
-                                stok_awal: totalStokTersedia,
-                                stok_tambahan: stokTambahan,
-                                sisa_stok: Math.max(0, totalStokTersedia - totalKeluar),
+                                stok_awal: stokAwal,
+                                sisa_stok: currentStok - jumlahKeluar,
                                 total_biaya: jumlahKeluar * harga
                             });
+                            
+                            currentStok -= jumlahKeluar;
                         }
-                    });
+                    }
                 }
 
                 // Kirim data ke backend

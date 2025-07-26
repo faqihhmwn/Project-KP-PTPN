@@ -163,10 +163,6 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm" role="group" aria-label="Aksi Obat">
-                                                {{-- Tombol Detail --}}
-                                                <a href="{{ route('obats.show', $obat->id) }}" class="btn btn-info text-black" title="Detail Obat">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
                                                 {{-- Tombol Edit --}}
                                                 <a href="{{ route('obats.edit', $obat->id) }}" class="btn btn-warning text-dark" title="Edit Obat">
                                                     <i class="fas fa-edit"></i>
