@@ -45,65 +45,64 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     public function collection(): Collection
     {
         // 1. Ambil semua obat untuk unit yang login
-        $obats = Obat::where('unit_id', $this->unitId)->get();
+        $obats = Obat::where('unit_id', $this->unitId)
+            ->orderBy('nama_obat')
+            ->get();
 
         $processedData = new Collection();
 
         foreach ($obats as $obat) {
-            // 2. Ambil semua data rekapitulasi untuk obat ini dalam rentang tanggal
-            // Lakukan query sekali untuk setiap obat dalam rentang tanggal
+            // 2. Ambil stok awal dari rekapitulasi pada tanggal awal periode
+            $stokAwalEntry = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('unit_id', $this->unitId)
+                ->where('tanggal', $this->startDate->format('Y-m-d'))
+                ->first();
+
+            // 3. Ambil semua data rekapitulasi dalam rentang tanggal
             $rekapData = RekapitulasiObat::where('obat_id', $obat->id)
                 ->where('unit_id', $this->unitId)
-                ->whereBetween('tanggal', [$this->startDate->format('Y-m-d'), $this->endDate->format('Y-m-d')])
+                ->whereBetween('tanggal', [
+                    $this->startDate->format('Y-m-d'),
+                    $this->endDate->format('Y-m-d')
+                ])
                 ->orderBy('tanggal')
                 ->get();
 
             // Inisialisasi data yang akan dihitung
             $dailyKeluar = []; // Untuk menyimpan jumlah keluar per tanggal
             $totalKeluarPeriode = 0;
-            $sisaStokAkhirPeriode = null;
-            $totalBiayaPeriode = 0;
-
-            // 3. Populate daily data dan hitung total keluar untuk periode
-            foreach ($this->dateRange as $date) {
-                $rekapForDay = $rekapData->firstWhere('tanggal', $date->format('Y-m-d'));
-                $keluar = $rekapForDay ? $rekapForDay->jumlah_keluar : 0;
-                
-                $dailyKeluar[$date->format('Y-m-d')] = $keluar;
-                $totalKeluarPeriode += $keluar;
-
-                // Jika ini adalah tanggal terakhir dalam rentang, ambil sisa stoknya
-                if ($date->equalTo($this->endDate)) {
-                    $sisaStokAkhirPeriode = $rekapForDay ? $rekapForDay->sisa_stok : null;
-                }
-            }
-
-            // 4. Hitung Stok Awal Periode
-            // Ambil sisa_stok dari hari sebelumnya (tanggal sebelum startDate)
-            $stokAwalPeriodeEntry = RekapitulasiObat::where('obat_id', $obat->id)
-                ->where('unit_id', $this->unitId)
-                ->where('tanggal', '<', $this->startDate->format('Y-m-d'))
-                ->orderBy('tanggal', 'desc')
-                ->first();
             
-            // Jika ada entri sebelum periode, gunakan sisa_stok terakhir. Jika tidak, gunakan stok_awal dari tabel obat.
-            $stokAwalPeriode = $stokAwalPeriodeEntry ? $stokAwalPeriodeEntry->sisa_stok : $obat->stok_awal;
-
-            // Jika sisaStokAkhirPeriode masih null (misal tidak ada transaksi di endDate),
-            //hitung sisa stok berdasarkan stok awal periode dan total keluar
-            if (is_null($sisaStokAkhirPeriode)) {
-                $sisaStokAkhirPeriode = max(0, $stokAwalPeriode - $totalKeluarPeriode);
-                // Jika tidak ada rekapitulasi sama sekali dalam rentang, sisa stok akhir adalah stok awal periode.
-                if ($rekapData->isEmpty() && $stokAwalPeriodeEntry === null) {
-                    $sisaStokAkhirPeriode = $obat->stok_awal;
-                } else if ($rekapData->isEmpty() && $stokAwalPeriodeEntry !== null) {
-                    $sisaStokAkhirPeriode = $stokAwalPeriode;
+            // Tentukan stok awal periode dari rekapitulasi atau stok awal obat
+            $stokAwalPeriode = $stokAwalEntry ? $stokAwalEntry->stok_awal : $obat->stok_awal;
+            
+            // Inisialisasi sisa stok
+            $sisaStok = $stokAwalPeriode;
+            
+            // Populate daily data dan hitung total keluar untuk periode
+            foreach ($this->dateRange as $date) {
+                $dateStr = $date->format('Y-m-d');
+                $rekapForDay = $rekapData->where('tanggal', $dateStr)->first();
+                
+                if ($rekapForDay) {
+                    $keluar = $rekapForDay->jumlah_keluar;
+                    // Kurangi sisa stok dengan jumlah keluar
+                    $sisaStok -= $keluar;
+                } else {
+                    $keluar = 0;
                 }
+                
+                $dailyKeluar[$dateStr] = $keluar;
+                $totalKeluarPeriode += $keluar;
             }
+            
+            // Set sisa stok akhir periode dari hasil pengurangan
+            $sisaStokAkhirPeriode = $stokAwalPeriode - $totalKeluarPeriode;
 
-
+            // Pastikan sisa stok tidak negatif
+            $sisaStokAkhirPeriode = max(0, $sisaStokAkhirPeriode);
+            
             // 5. Hitung Total Biaya Periode
-            $totalBiayaPeriode = $totalKeluarPeriode * $obat->harga_satuan;
+            $totalBiayaPeriode = $sisaStokAkhirPeriode * $obat->harga_satuan;
 
             // 6. Tambahkan data yang sudah diproses ke objek obat untuk memudahkan mapping
             $obat->daily_keluar_data = $dailyKeluar;
@@ -121,24 +120,21 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     public function headings(): array
     {
         $headers = [
-            'No',
-            'Nama Obat',
-            'Jenis',
-            'Harga Satuan',
-            'Stok Awal Periode'
+            'No',           // Nomor urut
+            'Nama Obat',    // Nama obat
+            'Jenis',        // Jenis obat
+            'Harga Satuan', // Harga per unit
+            'Stok Awal'     // Stok awal dari sisa stok
         ];
 
-        // Jika opsi includeDailyData aktif, tambahkan kolom untuk setiap tanggal dalam rentang
-        if ($this->includeDailyData) {
-            foreach ($this->dateRange as $date) {
-                $headers[] = $date->format('d/m'); // Contoh: 01/07, 02/07
-            }
+        // Tambahkan semua tanggal dalam bulan tersebut
+        foreach ($this->dateRange as $date) {
+            $headers[] = $date->format('d'); // Hanya tanggal: 1, 2, 3, dst
         }
 
-        // Tambah kolom ringkasan
-        $headers[] = 'Total Keluar Periode';
-        $headers[] = 'Sisa Stok Akhir Periode';
-        $headers[] = 'Total Biaya Periode';
+        // Tambah kolom Stok Sisa dan Biaya
+        $headers[] = 'Stok Sisa';
+        $headers[] = 'Biaya';
 
         return [$headers]; // Harus array of arrays jika hanya ada satu baris heading
     }
@@ -147,26 +143,24 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     {
         $this->rowNumber++;
         
+        // Gunakan data yang sudah diproses di collection()
         $rowData = [
-            $this->rowNumber,
-            $obat->nama_obat,
-            $obat->jenis_obat ?? '-',
-            $obat->harga_satuan,
-            $obat->stok_awal_periode,
+            $this->rowNumber,               // No
+            $obat->nama_obat,               // Nama Obat
+            $obat->jenis_obat ?? '-',       // Jenis
+            $obat->harga_satuan,            // Harga Satuan
+            $obat->stok_awal_periode,       // Stok Awal
         ];
 
-        // Jika opsi includeDailyData aktif, tambahkan data keluar harian
-        if ($this->includeDailyData) {
-            foreach ($this->dateRange as $date) {
-                // Ambil data dari properti daily_keluar_data yang sudah diproses di collection()
-                $rowData[] = $obat->daily_keluar_data[$date->format('Y-m-d')] ?? 0;
-            }
+        // Data penggunaan per tanggal
+        foreach ($this->dateRange as $date) {
+            $dateKey = $date->format('Y-m-d');
+            $rowData[] = $obat->daily_keluar_data[$dateKey] ?? 0;  // Data harian
         }
 
-        // Tambah data ringkasan periode
-        $rowData[] = $obat->total_keluar_periode;
-        $rowData[] = $obat->sisa_stok_akhir_periode;
-        $rowData[] = $obat->total_biaya_periode;
+        // Tambah kolom Stok Sisa dan Biaya
+        $rowData[] = $obat->sisa_stok_akhir_periode;        // Stok Sisa
+        $rowData[] = $obat->sisa_stok_akhir_periode * $obat->harga_satuan;  // Biaya
 
         return $rowData;
     }
