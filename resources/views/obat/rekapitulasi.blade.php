@@ -221,6 +221,9 @@
             <button id="validasiBulanBtn" class="btn btn-success">
                 <i class="fas fa-lock"></i> Validasi Data Bulan Ini
             </button>
+            <button id="unvalidasiBulanBtn" class="btn btn-warning d-none">
+                <i class="fas fa-unlock"></i> Batalkan Validasi
+            </button>
             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
                 <i class="fas fa-file-excel"></i> Export Excel
             </button>
@@ -231,6 +234,9 @@
         <div id="validasiInfo" class="alert alert-success mt-3 d-none">
             <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
             dinonaktifkan untuk menjaga integritas laporan.
+            <button class="btn btn-sm btn-warning float-end" id="unvalidasiBtnInAlert">
+                <i class="fas fa-unlock"></i> Batalkan Validasi
+            </button>
         </div>
     </div>
 
@@ -407,6 +413,8 @@
             const lockKey = `obat_validasi_${tahun}_${bulan}`;
             const isLocked = localStorage.getItem(lockKey) === '1';
             const validasiBtn = document.getElementById('validasiBulanBtn');
+            const unvalidasiBtn = document.getElementById('unvalidasiBulanBtn');
+            const unvalidasiBtnInAlert = document.getElementById('unvalidasiBtnInAlert');
             const validasiInfo = document.getElementById('validasiInfo');
 
             function setLockedState(locked) {
@@ -427,17 +435,26 @@
                         btn.removeAttribute('aria-disabled');
                     }
                 });
-                // Hide or show validasi button/info
+                // Hide or show validasi/unvalidasi buttons and info
                 if (locked) {
                     if (validasiBtn) validasiBtn.classList.add('d-none');
+                    if (unvalidasiBtn) unvalidasiBtn.classList.remove('d-none');
                     if (validasiInfo) validasiInfo.classList.remove('d-none');
                 } else {
                     if (validasiBtn) validasiBtn.classList.remove('d-none');
+                    if (unvalidasiBtn) unvalidasiBtn.classList.add('d-none');
                     if (validasiInfo) validasiInfo.classList.add('d-none');
                 }
             }
 
             setLockedState(isLocked);
+
+            function handleUnvalidasi() {
+                if (confirm('Anda yakin ingin membatalkan validasi? Semua data akan dapat diubah kembali.')) {
+                    localStorage.removeItem(lockKey);
+                    setLockedState(false);
+                }
+            }
 
             if (validasiBtn) {
                 validasiBtn.addEventListener('click', function() {
@@ -448,6 +465,14 @@
                         setLockedState(true);
                     }
                 });
+            }
+
+            // Add event listeners for unvalidation buttons
+            if (unvalidasiBtn) {
+                unvalidasiBtn.addEventListener('click', handleUnvalidasi);
+            }
+            if (unvalidasiBtnInAlert) {
+                unvalidasiBtnInAlert.addEventListener('click', handleUnvalidasi);
             }
         });
         // --- SIMPAN REKAPITULASI (MANUAL SAVE, BULK) ---
