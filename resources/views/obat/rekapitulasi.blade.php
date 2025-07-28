@@ -618,22 +618,22 @@
             }
         });
 
-        function searchObat() {
-            const searchInput = document.getElementById('searchObat');
-            const searchTerm = searchInput.value.toLowerCase();
-            const tableRows = document.querySelectorAll('#obatTableBody tr');
+        // function searchObat() {
+        //     const searchInput = document.getElementById('searchObat');
+        //     const searchTerm = searchInput.value.toLowerCase();
+        //     const tableRows = document.querySelectorAll('#obatTableBody tr');
 
-            tableRows.forEach(row => {
-                const obatName = row.getAttribute('data-obat-name') || '';
-                const obatJenis = row.getAttribute('data-obat-jenis') || '';
+        //     tableRows.forEach(row => {
+        //         const obatName = row.getAttribute('data-obat-name') || '';
+        //         const obatJenis = row.getAttribute('data-obat-jenis') || '';
 
-                if (obatName.includes(searchTerm) || obatJenis.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
+        //         if (obatName.includes(searchTerm) || obatJenis.includes(searchTerm)) {
+        //             row.style.display = '';
+        //         } else {
+        //             row.style.display = 'none';
+        //         }
+        //     });
+        // }
 
         function updateTransaksi(input) {
             const obatId = input.getAttribute('data-obat-id');

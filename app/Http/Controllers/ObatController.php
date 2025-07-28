@@ -147,15 +147,15 @@ class ObatController extends Controller
             'lastUpdateBulanLalu'
         ));
 
-        return view('obat.show', compact(
-            'obat',
-            'bulanIni',
-            'bulanLalu',
-            'totalPenggunaanBulanIni',
-            'totalBiayaBulanIni',
-            'totalPenggunaanBulanLalu',
-            'totalBiayaBulanLalu'
-        ));
+        // return view('obat.show', compact(
+        //     'obat',
+        //     'bulanIni',
+        //     'bulanLalu',
+        //     'totalPenggunaanBulanIni',
+        //     'totalBiayaBulanIni',
+        //     'totalPenggunaanBulanLalu',
+        //     'totalBiayaBulanLalu'
+        // ));
     }
 
     public function edit(Obat $obat)
@@ -338,18 +338,6 @@ class ObatController extends Controller
             'transaksiHariIni'
         ));
     }
-
-
-    // public function import(Request $request)
-    // {
-    //     $request->validate([
-    //         'file' => 'required|mimes:xlsx,xls,csv',
-    //     ]);
-
-    //     Excel::import(new ObatImport, $request->file('file'));
-
-    //     return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
-    // }
 
     public function exportExcel(Request $request)
     {
