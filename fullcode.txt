@@ -29429,115 +29429,6 @@ class KapitasiExport implements FromArray, WithTitle, WithStyles, WithColumnForm
 
 </code>
 
-app\Exports\LaporanKependudukanExport.php:
-<code>
-<?php
-
-namespace App\Exports;
-
-use App\Models\LaporanBulanan; // Ganti model ke LaporanBulanan
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-
-class LaporanKependudukanExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
-{
-    protected $unitId;
-    protected $bulan;
-    protected $tahun;
-    protected $subkategoriId;
-
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
-    {
-        $this->unitId = $unitId;
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
-    }
-
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 1); // Filter hanya untuk kategori Kependudukan
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        // Urutkan berdasarkan ID untuk menjaga urutan seperti di tabel
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
-    public function headings(): array
-    {
-        // Kolom header sesuai permintaan
-        return [
-            'No',
-            'Unit',
-            'Subkategori',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
-        ];
-    }
-
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
-    {
-        // Format setiap baris data
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
-    }
-
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
-    }
-}
-</code>
-
 app\Exports\LaporanKesehatanRekapExport.php:
 <code>
 <?php
@@ -29554,6 +29445,8 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithEvents
@@ -29563,8 +29456,9 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
     protected $data;
     protected $units;
     protected $kategori;
-    protected $mergeCells = [];
-    protected $categoryRows = []; // To store the row numbers of categories
+
+    protected $sheetData = [];
+    protected $mergeTitleCells = [];
 
     public function __construct($bulan, $tahun)
     {
@@ -29572,301 +29466,138 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
         $this->tahun = $tahun;
         $this->units = Unit::orderBy('id')->get();
         $this->kategori = Kategori::with('subkategori')->orderBy('id')->get();
-        
+
         $this->data = LaporanBulanan::where('bulan', $this->bulan)
             ->where('tahun', $this->tahun)
             ->get()
             ->groupBy(['subkategori_id', 'unit_id']);
     }
 
+    public function headings(): array
+    {
+        // Baris 1: Judul besar
+        // Baris 2: Subjudul bulan & tahun
+        return [
+            ["REKAPITULASI LAPORAN KESEHATAN"],
+            ["Bulan: " . strtoupper($this->bulan) . " - Tahun: " . $this->tahun],
+        ];
+    }
+
     public function collection()
     {
         $collection = collect();
 
+        $collection->push(collect(['']));
+        $collection->push(collect(['']));
+
         foreach ($this->kategori as $kategori) {
-            // +2 because of 1-based indexing and the main header row
-            $startMergeRow = $collection->count() + 2; 
-            
-            // Record the row number for styling later
-            $this->categoryRows[] = $startMergeRow;
+            // Simpan index baris awal kategori ini
+            $collection->push(collect()); // Tempatkan header kategori nanti di AfterSheet
 
-            $collection->push([
-                'uraian' => $kategori->nama,
-            ]);
-            
-            $endMergeColIndex = 1 + $this->units->count();
-            $endMergeColLetter = Coordinate::stringFromColumnIndex($endMergeColIndex);
-            $this->mergeCells[] = 'A' . $startMergeRow . ':' . $endMergeColLetter . $startMergeRow;
+            // Header kategori: nama unit + TOTAL
+            $headerRow = collect(["Kat. " . strtoupper($kategori->nama)]);
+            foreach ($this->units as $unit) {
+                $headerRow->push($unit->nama);
+            }
+            $headerRow->push("TOTAL");
+            $collection->push($headerRow);
 
+            // Subkategori data
+            $kategoriTotal = array_fill(0, $this->units->count(), 0);
             foreach ($kategori->subkategori as $sub) {
-                $rowData = [
-                    'uraian' => $sub->nama,
-                ];
-
+                $row = collect([$sub->nama]);
                 $total = 0;
-                foreach ($this->units as $unit) {
+                foreach ($this->units as $i => $unit) {
                     $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
-                    $rowData[$unit->nama] = $jumlah;
+                    $row->push($jumlah);
+                    $kategoriTotal[$i] += $jumlah;
                     $total += $jumlah;
                 }
-                $rowData['jumlah'] = $total;
-                $collection->push($rowData);
+                $row->push($total);
+                $collection->push($row);
             }
+
+            // Baris TOTAL kategori
+            $totalRow = collect(['TOTAL']);
+            $totalSum = 0;
+            foreach ($kategoriTotal as $jumlah) {
+                $totalRow->push($jumlah);
+                $totalSum += $jumlah;
+            }
+            $totalRow->push($totalSum);
+            $collection->push($totalRow);
+
+            // Baris kosong antar kategori
+            $collection->push(collect(['']));
         }
+
         return $collection;
     }
 
-    public function headings(): array
-    {
-        $unitHeaders = $this->units->pluck('nama')->toArray();
-        return array_merge(['URAIAN'], $unitHeaders, ['JUMLAH']);
-    }
-    
     public function styles(Worksheet $sheet)
     {
-        // Style for the main header (Row 1)
-        $sheet->getStyle('1:1')->getFont()->setBold(true);
+        // Judul (A1), Subjudul (A2)
+        $lastCol = Coordinate::stringFromColumnIndex($this->units->count() + 2);
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->mergeCells("A2:{$lastCol}2");
 
-        // --- THIS IS THE NEW CODE ---
-        // Apply bold style to all category rows
-        foreach ($this->categoryRows as $row) {
-            $sheet->getStyle("{$row}:{$row}")->getFont()->setBold(true);
-        }
-        // --- END OF NEW CODE ---
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setItalic(true);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
-                foreach ($this->mergeCells as $merge) {
-                    $event->sheet->getDelegate()->mergeCells($merge);
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
+                $highestColIndex = $this->units->count() + 2;
+                $highestColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+
+                $borderStyle = [
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
+                ];
+
+                // Apply border ke semua sel mulai dari row 3
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $isEmptyRow = true;
+                    for ($col = 1; $col <= $highestColIndex; $col++) {
+                        $cell = $sheet->getCellByColumnAndRow($col, $row);
+                        if (trim((string)$cell->getValue()) !== '') {
+                            $isEmptyRow = false;
+                            break;
+                        }
+                    }
+
+                    if (!$isEmptyRow) {
+                        $range = 'A' . $row . ':' . $highestColLetter . $row;
+                        $sheet->getStyle($range)->applyFromArray($borderStyle);
+                    }
                 }
 
-                $lastColIndex = 2 + $this->units->count();
-                $lastColLetter = Coordinate::stringFromColumnIndex($lastColIndex);
-                
-                $lastRow = $event->sheet->getHighestRow();
-                $event->sheet->getStyle('A1:' . $lastColLetter . $lastRow)
-                    ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                // Header kategori diberi bold dan align center
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $firstCell = $sheet->getCell("A{$row}");
+                    if (stripos((string) $firstCell->getValue(), 'Kat.') === 0) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
+                    if ((string) $firstCell->getValue() === 'TOTAL') {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    }
+                }
             },
         ];
     }
 }
-</code>
 
-app\Exports\LaporanOpnameExport.php:
-<code>
-<?php
-
-namespace App\Exports;
-
-use App\Models\LaporanBulanan;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-
-class LaporanOpnameExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
-{
-    protected $unitId;
-    protected $bulan;
-    protected $tahun;
-    protected $subkategoriId;
-
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
-    {
-        $this->unitId = $unitId;
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
-    }
-
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        // Ganti KATEGORI_ID menjadi 3 untuk Opname
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 3); // ID 3 untuk Kategori Opname
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
-    public function headings(): array
-    {
-        return [
-            'No',
-            'Unit',
-            'Subkategori (Opname)',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
-        ];
-    }
-
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
-    {
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
-    }
-
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
-    }
-}
-</code>
-
-app\Exports\LaporanPenyakitExport.php:
-<code>
-<?php
-
-namespace App\Exports;
-
-use App\Models\LaporanBulanan;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-
-class LaporanPenyakitExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
-{
-    protected $unitId;
-    protected $bulan;
-    protected $tahun;
-    protected $subkategoriId;
-
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
-    {
-        $this->unitId = $unitId;
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
-    }
-
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        // Ganti KATEGORI_ID menjadi 2 untuk Penyakit
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 2); // ID 2 untuk Kategori Penyakit
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
-    public function headings(): array
-    {
-        return [
-            'No',
-            'Unit',
-            'Subkategori (Penyakit)',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
-        ];
-    }
-
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
-    {
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
-    }
-
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
-    }
-}
 </code>
 
 app\Exports\ObatExport.php:
@@ -30357,62 +30088,85 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LaporanBulanan;
+use App\Models\InputManual; // Tambahkan ini
 use App\Models\Unit;
 use App\Models\Obat;
-use Illuminate\Support\Str;
+use App\Models\Kategori; // Tambahkan ini
 use App\Exports\LaporanKesehatanRekapExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Str;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
         $tab = $request->input('tab', 'laporan');
+        $is_admin = Auth::guard('admin')->check();
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
 
-        $kategoriList = [
-            1 => 'Kependudukan', 2 => 'Penyakit', 3 => 'Opname', 4 => 'Penyakit Kronis',
-            5 => 'Konsultasi Klinik', 6 => 'Cuti Sakit', 7 => 'Peserta KB', 8 => 'Metode KB',
-            9 => 'Kehamilan', 10 => 'Imunisasi', 11 => 'Kematian', 12 => 'Klaim Asuransi',
-            13 => 'Kecelakaan Kerja', 14 => 'Sakit Berkepanjangan', 15 => 'Absensi Dokter Honorer',
-            21 => 'Kategori Khusus',
-        ];
+        // Mengambil semua kategori dari database
+        $kategoriList = Kategori::with('subkategori')->get();
+        $units = Unit::all();
 
-        // Filter untuk Laporan
+        // Filter
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
         $unitId = $request->input('unit_id');
         $searchSubkategori = $request->input('search');
-
+        
         // Filter terpisah untuk Obat
         $unitIdObat = $request->input('unit_id_obat');
         $bulanObat = $request->input('bulan_obat');
         $tahunObat = $request->input('tahun_obat');
         $searchNamaObat = $request->input('search_nama');
         $searchJenisObat = $request->input('search_jenis');
-        
-        $units = Unit::all();
-        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
-        $is_admin = Auth::guard('admin')->check();
 
-        // Logika untuk Tab Laporan
         $ringkasan = [];
+
         if ($tab === 'laporan') {
-            foreach ($kategoriList as $kategoriId => $kategoriNama) {
-                $subkategoriData = \App\Models\SubKategori::where('kategori_id', $kategoriId)->get();
-                $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
+            foreach ($kategoriList as $kategori) {
+                $subkategoriData = $kategori->subkategori;
+                $laporan = collect();
 
-                if ($is_admin && $unitId) $laporanQuery->where('unit_id', $unitId);
-                if (!$is_admin) $laporanQuery->where('unit_id', $authUser->unit_id);
-                if ($bulan) $laporanQuery->where('bulan', $bulan);
-                if ($tahun) $laporanQuery->where('tahun', $tahun);
+                // --- PERUBAHAN UTAMA DI SINI ---
+                if ($kategori->id == 21) { // Jika KATEGORI KHUSUS
+                    $query = InputManual::query(); // Ambil dari tabel input_manual
+                    
+                    // Terapkan filter yang sama
+                    if ($is_admin && $unitId) $query->where('unit_id', $unitId);
+                    if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
+                    if ($bulan) $query->where('bulan', $bulan);
+                    if ($tahun) $query->where('tahun', $tahun);
+                    
+                    $laporan = $query->get();
 
-                $laporan = $laporanQuery->get();
-                $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
-                    return ['nama' => $sub->nama, 'total' => $laporan->where('subkategori_id', $sub->id)->sum('jumlah')];
-                });
+                    // Hitung berdasarkan jumlah baris (count), bukan menjumlahkan kolom 'jumlah'
+                    $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                        $jumlah = $laporan->where('subkategori_id', $sub->id)->count();
+                        return ['nama' => $sub->nama, 'total' => $jumlah];
+                    });
+
+                } else { // Untuk semua kategori lainnya
+                    $query = LaporanBulanan::where('kategori_id', $kategori->id); // Ambil dari laporan_bulanan
+                    
+                    // Terapkan filter
+                    if ($is_admin && $unitId) $query->where('unit_id', $unitId);
+                    if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
+                    if ($bulan) $query->where('bulan', $bulan);
+                    if ($tahun) $query->where('tahun', $tahun);
+                    
+                    $laporan = $query->get();
+
+                    // Hitung dengan menjumlahkan kolom 'jumlah'
+                    $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                        $jumlah = $laporan->where('subkategori_id', $sub->id)->sum('jumlah');
+                        return ['nama' => $sub->nama, 'total' => $jumlah];
+                    });
+                }
+                // --- AKHIR PERUBAHAN ---
 
                 $ringkasan[] = [
-                    'nama' => $kategoriNama,
+                    'nama' => $kategori->nama,
                     'total' => $subkategoriRingkasan->sum('total'),
                     'subkategori' => $subkategoriRingkasan,
                 ];
@@ -30428,9 +30182,7 @@ class DashboardController extends Controller
             if (!$is_admin) $obatQuery->where('unit_id', $authUser->unit_id);
             if ($searchNamaObat) $obatQuery->where('nama_obat', 'like', '%' . $searchNamaObat . '%');
             if ($searchJenisObat) $obatQuery->where('jenis_obat', 'like', '%' . $searchJenisObat . '%');
-
-            // Filter bulan dan tahun pada rekapitulasi obat (jika diperlukan)
-            // Untuk saat ini, kita hanya filter berdasarkan unit dan nama
+            
             $obats = $obatQuery->get();
         }
 

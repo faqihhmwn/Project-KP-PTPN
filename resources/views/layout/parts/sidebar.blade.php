@@ -29,6 +29,7 @@
         </li>
 
         <!-- rekap biaya -->
+        @if (Auth::guard('admin')->check())
         <li class="nav-item has-treeview">
           <a href="#" class="nav-link">
             <i class="nav-icon fa-solid fa-money-bill-transfer"></i>
@@ -37,26 +38,28 @@
               <i class="right bi bi-chevron-down"></i>
             </p>
           </a>
-        <ul class="nav nav-treeview ps-3">
-          <li class="nav-item">
-            <a href="{{ route('rekap.regional.index') }}" class="nav-link">
-              <i class="bi bi-chevron-right nav-icon"></i>
-              <p>PTPN I Regional 7</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{{ route('rekap.bpjs.index') }}" class="nav-link">
-              <i class="bi bi-chevron-right nav-icon"></i>
-              <p>Iuran BPJS</p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{{ route('rekap.kapitasi.index') }}" class="nav-link">
-              <i class="bi bi-chevron-right nav-icon"></i>
-              <p>Dana Kapitasi</p>
-            </a>
-        </ul>
-      </li>
+          <ul class="nav nav-treeview ps-3">
+            <li class="nav-item">
+              <a href="{{ route('rekap.regional.index') }}" class="nav-link">
+                <i class="bi bi-chevron-right nav-icon"></i>
+                <p>PTPN I Regional 7</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ route('rekap.bpjs.index') }}" class="nav-link">
+                <i class="bi bi-chevron-right nav-icon"></i>
+                <p>Iuran BPJS</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ route('rekap.kapitasi.index') }}" class="nav-link">
+                <i class="bi bi-chevron-right nav-icon"></i>
+                <p>Dana Kapitasi</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+      @endif
 
       @php
         $is_admin = Auth::guard('admin')->check();
