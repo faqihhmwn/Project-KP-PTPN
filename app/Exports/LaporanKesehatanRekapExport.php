@@ -98,6 +98,58 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
             $collection->push(collect(['']));
         }
 
+        // === Tambahan: Tabel Pekerja Disabilitas ===
+$collection->push(collect([''])); // Spasi sebelum tabel disabilitas
+$collection->push(collect(['PEKERJA DISABILITAS']));
+
+// Header: NAMA + Unit + TOTAL
+$headerDisabilitas = collect(['NAMA']);
+foreach ($this->units as $unit) {
+    $headerDisabilitas->push($unit->nama);
+}
+$headerDisabilitas->push("TOTAL");
+$collection->push($headerDisabilitas);
+
+// Ambil data dari tabel input_manual
+$disabilitasData = \DB::table('input_manual')
+    ->where('subkategori_id', 82) // PEKERJA DISABILITAS
+    ->where('bulan', $this->bulan)
+    ->where('tahun', $this->tahun)
+    ->get();
+
+foreach ($disabilitasData as $row) {
+    $namaLengkap = $row->nama . ' (' . ($row->keterangan ?? '-') . ')';
+    $dataRow = collect([$namaLengkap]);
+    $total = 0;
+    foreach ($this->units as $unit) {
+        $jumlah = ($row->unit_id == $unit->id) ? ($row->jumlah ?? 1) : '';
+        $dataRow->push($jumlah);
+        if (is_numeric($jumlah)) {
+            $total += $jumlah;
+        }
+    }
+    $dataRow->push($total);
+    $collection->push($dataRow);
+}
+
+// Baris total akhir
+$totalDisabilitas = array_fill(0, $this->units->count(), 0);
+foreach ($disabilitasData as $row) {
+    foreach ($this->units as $i => $unit) {
+        if ($row->unit_id == $unit->id) {
+            $totalDisabilitas[$i] += 1;
+        }
+    }
+}
+$totalRow = collect(['TOTAL']);
+$totalSum = 0;
+foreach ($totalDisabilitas as $jumlah) {
+    $totalRow->push($jumlah ?: '-');
+    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+}
+$totalRow->push($totalSum);
+$collection->push($totalRow);
+
         return $collection;
     }
 
