@@ -98,8 +98,8 @@
                 <tr>
                     <th rowspan="2" class="text-center align-middle">Bulan</th>
                     <th colspan="{{ $kategori->count() }}" class="group-header text-center">DETAIL IURAN</th>
-                    <th rowspan="2" class="bg-warning text-dark text-center align-middle">TOTAL IURAN BPJS</th>
-                    <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
+                    <th rowspan="2" class="bg-warning fw-bold text-center align-middle">TOTAL IURAN BPJS</th>
+                    <th rowspan="2" class="bg-green fw-bold text-center align-middle">VALIDASI</th>
                     <th rowspan="2" class="text-center align-middle">Aksi</th>
                 </tr>
                 <tr>
@@ -144,9 +144,9 @@
 
                 {{-- Baris: TOTAL 1 TAHUN --}}
                 <tr>
-                    <td class="fw-bold">TOTAL 1 TAHUN</td>
+                    <td class="bg-warning fw-bold">TOTAL 1 TAHUN</td>
                     @foreach ($kategori as $k)
-                        <td class="fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
+                        <td class="bg-warning fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
                     @endforeach
                         <td class="bg-warning fw-bold">{{ number_format($annualTotals['all_kategoris_total'] ?? 0, 0, ',', '.') }}</td>
                     <td></td> {{-- Kolom Validasi --}}
