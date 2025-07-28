@@ -29,43 +29,53 @@
             <!--end::Fullscreen Toggle-->
             <!--begin::User Menu Dropdown-->
             <li class="nav-item dropdown user-menu">
-                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                    <img src="{{ asset('assets/img/user2-160x160.jpg') }}" class="user-image rounded-circle shadow" alt="User Image" />
-                    <span class="d-none d-md-inline">Alexander Pierce</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
-                    <!--begin::User Image-->
-                    <li class="user-header text-bg-primary">
-                        <img src="{{ asset('assets/img/user2-160x160.jpg') }}" class="rounded-circle shadow" alt="User Image" />
-                        <p>
-                            Alexander Pierce - Web Developer
-                            <small>Member since Nov. 2023</small>
-                        </p>
-                    </li>
-                    <!--end::User Image-->
-                    <!--begin::Menu Body-->
-                    <li class="user-body">
-                        <!--begin::Row-->
-                        <div class="row">
+                @auth
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                        {{-- <img src="{{ asset('assets/img/user2-160x160.jpg') }}" class="user-image rounded-circle shadow"
+                            alt="User Image" /> --}}
+                        <span class="d-none d-md-inline">
+                            {{ Auth::user()->name }} - {{ Auth::user()->unit->nama ?? '-' }}
+                        </span>
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                        <li class="user-header text-bg-primary">
+                            <img src="{{ asset('assets/img/user2-160x160.jpg') }}" class="rounded-circle shadow"
+                                alt="User Image" />
+                            <p>
+                                {{ Auth::user()->name }} - {{ Auth::user()->unit->nama ?? '-' }}
+                                <small>Bergabung sejak {{ Auth::user()->created_at->translatedFormat('F Y') }}</small>
+                            </p>
+                        </li>
+                        <!-- lainnya... -->
+                    </ul>
+                @endauth
+
+            </li>
+            <!--end::User Image-->
+            <!--begin::Menu Body-->
+            <li class="user-body">
+                <!--begin::Row-->
+                {{-- <div class="row">
                             <div class="col-4 text-center"><a href="#">Followers</a></div>
                             <div class="col-4 text-center"><a href="#">Sales</a></div>
                             <div class="col-4 text-center"><a href="#">Friends</a></div>
-                        </div>
-                        <!--end::Row-->
-                    </li>
-                    <!--end::Menu Body-->
-                    <!--begin::Menu Footer-->
-                    <li class="user-footer">
-                        <a href="#" class="btn btn-default btn-flat">Profile</a>
-                        <form method="POST" action="{{ route('logout') }}" class="d-inline float-end">
-                            @csrf
-                            <button type="submit" class="btn btn-default btn-flat">Sign out</button>
-                        </form>
-                    </li>
-                    <!--end::Menu Footer-->
-                </ul>
+                        </div> --}}
+                <!--end::Row-->
             </li>
-            <!--end::User Menu Dropdown-->
+            <!--end::Menu Body-->
+            <!--begin::Menu Footer-->
+            <li class="user-footer">    
+                <a href="{{ route('profile.edit') }}" class="btn btn-default btn-flat">Ganti Password</a>
+                <form method="POST" action="{{ route('logout') }}" class="d-inline float-end">
+                    @csrf
+                    <button type="submit" class="btn btn-default btn-flat">Sign out</button>
+                </form>
+            </li>
+            <!--end::Menu Footer-->
+        </ul>
+        </li>
+        <!--end::User Menu Dropdown-->
         </ul>
         <!--end::End Navbar Links-->
     </div>

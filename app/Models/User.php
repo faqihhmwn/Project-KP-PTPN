@@ -40,17 +40,19 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
 
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
 
+    public function obats()
+    {
+        return $this->hasMany(Obat::class)->where('unit_id', $this->unit_id);
+    }
 }
