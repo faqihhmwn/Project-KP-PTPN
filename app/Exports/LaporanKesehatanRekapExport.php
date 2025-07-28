@@ -12,6 +12,8 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithEvents
@@ -21,8 +23,9 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
     protected $data;
     protected $units;
     protected $kategori;
-    protected $mergeCells = [];
-    protected $categoryRows = []; // To store the row numbers of categories
+
+    protected $sheetData = [];
+    protected $mergeTitleCells = [];
 
     public function __construct($bulan, $tahun)
     {
@@ -30,83 +33,133 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
         $this->tahun = $tahun;
         $this->units = Unit::orderBy('id')->get();
         $this->kategori = Kategori::with('subkategori')->orderBy('id')->get();
-        
+
         $this->data = LaporanBulanan::where('bulan', $this->bulan)
             ->where('tahun', $this->tahun)
             ->get()
             ->groupBy(['subkategori_id', 'unit_id']);
     }
 
+    public function headings(): array
+    {
+        // Baris 1: Judul besar
+        // Baris 2: Subjudul bulan & tahun
+        return [
+            ["REKAPITULASI LAPORAN KESEHATAN"],
+            ["Bulan: " . strtoupper($this->bulan) . " - Tahun: " . $this->tahun],
+        ];
+    }
+
     public function collection()
     {
         $collection = collect();
 
+        $collection->push(collect(['']));
+        $collection->push(collect(['']));
+
         foreach ($this->kategori as $kategori) {
-            // +2 because of 1-based indexing and the main header row
-            $startMergeRow = $collection->count() + 2; 
-            
-            // Record the row number for styling later
-            $this->categoryRows[] = $startMergeRow;
+            // Simpan index baris awal kategori ini
+            $collection->push(collect()); // Tempatkan header kategori nanti di AfterSheet
 
-            $collection->push([
-                'uraian' => $kategori->nama,
-            ]);
-            
-            $endMergeColIndex = 1 + $this->units->count();
-            $endMergeColLetter = Coordinate::stringFromColumnIndex($endMergeColIndex);
-            $this->mergeCells[] = 'A' . $startMergeRow . ':' . $endMergeColLetter . $startMergeRow;
+            // Header kategori: nama unit + TOTAL
+            $headerRow = collect(["Kat. " . strtoupper($kategori->nama)]);
+            foreach ($this->units as $unit) {
+                $headerRow->push($unit->nama);
+            }
+            $headerRow->push("TOTAL");
+            $collection->push($headerRow);
 
+            // Subkategori data
+            $kategoriTotal = array_fill(0, $this->units->count(), 0);
             foreach ($kategori->subkategori as $sub) {
-                $rowData = [
-                    'uraian' => $sub->nama,
-                ];
-
+                $row = collect([$sub->nama]);
                 $total = 0;
-                foreach ($this->units as $unit) {
+                foreach ($this->units as $i => $unit) {
                     $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
-                    $rowData[$unit->nama] = $jumlah;
+                    $row->push($jumlah);
+                    $kategoriTotal[$i] += $jumlah;
                     $total += $jumlah;
                 }
-                $rowData['jumlah'] = $total;
-                $collection->push($rowData);
+                $row->push($total);
+                $collection->push($row);
             }
+
+            // Baris TOTAL kategori
+            $totalRow = collect(['TOTAL']);
+            $totalSum = 0;
+            foreach ($kategoriTotal as $jumlah) {
+                $totalRow->push($jumlah);
+                $totalSum += $jumlah;
+            }
+            $totalRow->push($totalSum);
+            $collection->push($totalRow);
+
+            // Baris kosong antar kategori
+            $collection->push(collect(['']));
         }
+
         return $collection;
     }
 
-    public function headings(): array
-    {
-        $unitHeaders = $this->units->pluck('nama')->toArray();
-        return array_merge(['URAIAN'], $unitHeaders, ['JUMLAH']);
-    }
-    
     public function styles(Worksheet $sheet)
     {
-        // Style for the main header (Row 1)
-        $sheet->getStyle('1:1')->getFont()->setBold(true);
+        // Judul (A1), Subjudul (A2)
+        $lastCol = Coordinate::stringFromColumnIndex($this->units->count() + 2);
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->mergeCells("A2:{$lastCol}2");
 
-        // --- THIS IS THE NEW CODE ---
-        // Apply bold style to all category rows
-        foreach ($this->categoryRows as $row) {
-            $sheet->getStyle("{$row}:{$row}")->getFont()->setBold(true);
-        }
-        // --- END OF NEW CODE ---
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setItalic(true);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
-                foreach ($this->mergeCells as $merge) {
-                    $event->sheet->getDelegate()->mergeCells($merge);
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
+                $highestColIndex = $this->units->count() + 2;
+                $highestColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+
+                $borderStyle = [
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
+                ];
+
+                // Apply border ke semua sel mulai dari row 3
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $isEmptyRow = true;
+                    for ($col = 1; $col <= $highestColIndex; $col++) {
+                        $cell = $sheet->getCellByColumnAndRow($col, $row);
+                        if (trim((string)$cell->getValue()) !== '') {
+                            $isEmptyRow = false;
+                            break;
+                        }
+                    }
+
+                    if (!$isEmptyRow) {
+                        $range = 'A' . $row . ':' . $highestColLetter . $row;
+                        $sheet->getStyle($range)->applyFromArray($borderStyle);
+                    }
                 }
 
-                $lastColIndex = 2 + $this->units->count();
-                $lastColLetter = Coordinate::stringFromColumnIndex($lastColIndex);
-                
-                $lastRow = $event->sheet->getHighestRow();
-                $event->sheet->getStyle('A1:' . $lastColLetter . $lastRow)
-                    ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                // Header kategori diberi bold dan align center
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $firstCell = $sheet->getCell("A{$row}");
+                    if (stripos((string) $firstCell->getValue(), 'Kat.') === 0) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
+                    if ((string) $firstCell->getValue() === 'TOTAL') {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    }
+                }
             },
         ];
     }
