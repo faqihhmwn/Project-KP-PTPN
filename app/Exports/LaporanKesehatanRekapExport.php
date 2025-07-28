@@ -150,6 +150,59 @@ foreach ($totalDisabilitas as $jumlah) {
 $totalRow->push($totalSum);
 $collection->push($totalRow);
 
+// Tambahkan baris kosong sebelum CUTI HAMIL
+$collection->push(collect(['']));
+$collection->push(collect(['CUTI HAMIL']));
+
+// Header tabel CUTI HAMIL
+$headerCutiHamil = collect(['NAMA KARYAWAN/TI(STATUS)']);
+foreach ($this->units as $unit) {
+    $headerCutiHamil->push($unit->nama);
+}
+$headerCutiHamil->push('TOTAL');
+$collection->push($headerCutiHamil);
+
+// Ambil data CUTI HAMIL dari input_manual dengan subkategori_id = 83
+$cutiHamilData = \DB::table('input_manual')
+    ->where('bulan', $this->bulan)
+    ->where('tahun', $this->tahun)
+    ->where('subkategori_id', 83)
+    ->get();
+
+foreach ($cutiHamilData as $row) {
+    $namaStatus = $row->nama . ' (' . ($row->status ?? '-') . ')';
+    $dataRow = collect([$namaStatus]);
+    $total = 0;
+    foreach ($this->units as $unit) {
+        $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
+        $dataRow->push($jumlah);
+        if ($jumlah === 1) {
+            $total += 1;
+        }
+    }
+    $dataRow->push($total);
+    $collection->push($dataRow);
+}
+
+// Baris TOTAL CUTI HAMIL
+$totalCuti = array_fill(0, $this->units->count(), 0);
+foreach ($cutiHamilData as $row) {
+    foreach ($this->units as $i => $unit) {
+        if ($row->unit_id == $unit->id) {
+            $totalCuti[$i] += 1;
+        }
+    }
+}
+$totalRow = collect(['TOTAL']);
+$totalSum = 0;
+foreach ($totalCuti as $jumlah) {
+    $jumlah = $jumlah ?: '-';
+    $totalRow->push($jumlah);
+    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+}
+$totalRow->push($totalSum ?: '-');
+$collection->push($totalRow);
+
         return $collection;
     }
 
