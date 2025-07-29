@@ -6,10 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\PenerimaanObat;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class PenerimaanObatController extends Controller
 {
+
     public function store(Request $request)
     {
         if (!Auth::check()) {
@@ -31,6 +34,17 @@ class PenerimaanObatController extends Controller
                 'message' => '❌ Validasi gagal',
                 'errors' => $validated->errors()
             ], 422);
+        }
+
+        // ✅ Tambahan: Cek apakah bulan dikunci
+        $tanggalMasuk = \Carbon\Carbon::parse($request->tanggal_masuk);
+        $lockKey = 'obat_validasi_' . $tanggalMasuk->year . '_' . $tanggalMasuk->month;
+
+        if (\Storage::exists('validasi/' . $lockKey . '.lock')) {
+            return response()->json([
+                'success' => false,
+                'message' => '❌ Data bulan ini telah divalidasi dan dikunci. Tidak dapat menambahkan stok.'
+            ], 403);
         }
 
         $penerimaan = new PenerimaanObat();
