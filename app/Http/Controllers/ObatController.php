@@ -42,10 +42,11 @@ class ObatController extends Controller
             });
         }
 
-        // Ambil hasil dengan paginasi
         $obats = $query->latest()->paginate(10);
+        $bulan = now()->month;
+        $tahun = now()->year;
 
-        return view('obat.index', compact('obats'));
+        return view('obat.index', compact('obats', 'bulan', 'tahun'));
     }
 
 
@@ -170,15 +171,15 @@ class ObatController extends Controller
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'stok_awal' => 'required|integer|min:0',
+            // 'stok_awal' => 'required|integer|min:0',
             'keterangan' => 'nullable|string'
         ]);
 
         $obat->update($validated);
         $this->updateStokObat($obat);
 
-        return redirect()->route('obat.index')
-            ->with('success', 'Obat berhasil diperbarui.');
+        return redirect()->to($request->get('return_url', route('obat.index')))
+            ->with('success', 'Obat berhasil diperbarui');
     }
 
     public function destroy(Obat $obat)
@@ -204,6 +205,15 @@ class ObatController extends Controller
         $tahun = $request->get('tahun', Carbon::now()->year);
 
         // Check if export is requested
+        $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
+        }
+
+        $userUnitId = $user->unit_id;
+
+
         if ($request->get('export') == '1') {
             return $this->exportExcel($request);
         }

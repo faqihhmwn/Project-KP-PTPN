@@ -27,7 +27,6 @@ use App\Http\Controllers\Admin\ObatController as AdminObatController;
 use App\Http\Controllers\Admin\RekapitulasiObatController as AdminRekapitulasiObatController;
 use App\Http\Controllers\Admin\RekapitulasiExportController as AdminRekapitulasiExportController;
 
-
 use App\Http\Controllers\Rekap\RegionalController;
 use App\Http\Controllers\Rekap\KapitasiController;
 use App\Http\Controllers\Rekap\BpjsController;
@@ -36,6 +35,7 @@ use App\Http\Controllers\Rekap\SisaSaldoController;
 use App\Http\Controllers\Rekap\RekapBiayaKesehatanExportController;
 use App\Http\Controllers\Rekap\BpjsExportController;
 use App\Http\Controllers\Rekap\KapitasiExportController;
+use App\Http\Controllers\PenerimaanObatController;
 
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -68,7 +68,7 @@ Route::put('/password', [\App\Http\Controllers\PasswordController::class, 'updat
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('laporan.kependudukan.')->group(function () {
     Route::get('/', [KependudukanController::class, 'index'])->name('index');
@@ -77,7 +77,7 @@ Route::prefix('laporan/kependudukan')->middleware('auth:web,admin')->name('lapor
     Route::delete('/destroy/{id}', [KependudukanController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KependudukanController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KependudukanController::class, 'unapprove'])->name('unapprove');
-    
+
     Route::get('/export', [KependudukanController::class, 'export'])->name('export');
 });
 
@@ -231,19 +231,23 @@ Route::prefix('obat')->name('obat.')->group(function () {
     Route::get('/{obat}/edit', [ObatController::class, 'edit'])->name('edit');
     Route::put('/{obat}', [ObatController::class, 'update'])->name('update');
     Route::delete('/{obat}', [ObatController::class, 'destroy'])->name('destroy');
-    
+
     // Rekapitulasi
     Route::post('/rekapitulasi-obat/input-harian', [RekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [ObatController::class, 'rekapitulasi'])->name('rekapitulasi');
     Route::get('/export', [RekapitulasiExportController::class, 'export'])->name('export');
     Route::get('/{obat}/rekapitulasi', [ObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
-    
+
     // Transaksi
     Route::post('/{obat}/transaksi', [ObatController::class, 'addTransaksi'])->name('transaksi.store');
     Route::post('/{obat}/transaksi-harian', [ObatController::class, 'updateTransaksiHarian'])->name('transaksi.harian');
-    
+
     // Import
     Route::post('/import', [ObatController::class, 'import'])->name('import');
+
+    Route::middleware(['auth'])->group(function () {
+        Route::post('/obat/penerimaan/store', [PenerimaanObatController::class, 'store'])->name('penerimaan.store');
+    });
 });
 
 // REKAPITULASI BIAYA
@@ -269,7 +273,6 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::delete('/{tahun}/{bulan_id}', [BpjsController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [BpjsController::class, 'validateRekap'])->name('validate');
         Route::get('/bpjs/export', [BpjsExportController::class, 'export'])->name('bpjs.export');
-
     });
 
     // Kapitasi
@@ -281,7 +284,6 @@ Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
         Route::delete('/{tahun}/{bulan_id}', [KapitasiController::class, 'destroy'])->name('destroy');
         Route::put('/{tahun}/{bulan_id}/validate', [KapitasiController::class, 'validateRekap'])->name('validate');
         Route::get('/kapitasi/export', [KapitasiExportController::class, 'export'])->name('kapitasi.export');
-
     });
 });
 
