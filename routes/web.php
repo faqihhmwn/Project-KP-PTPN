@@ -251,7 +251,7 @@ Route::prefix('obat')->name('obat.')->group(function () {
 });
 
 // REKAPITULASI BIAYA
-Route::prefix('rekap')->middleware('auth')->name('rekap.')->group(function () {
+Route::prefix('rekap')->middleware('auth:admin')->name('rekap.')->group(function () {
 
     // Regional
     Route::prefix('regional')->name('regional.')->group(function () {

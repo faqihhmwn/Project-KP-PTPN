@@ -29429,327 +29429,175 @@ class KapitasiExport implements FromArray, WithTitle, WithStyles, WithColumnForm
 
 </code>
 
-app\Exports\LaporanKependudukanExport.php:
+app\Exports\LaporanKesehatanRekapExport.php:
 <code>
 <?php
 
 namespace App\Exports;
 
-use App\Models\LaporanBulanan; // Ganti model ke LaporanBulanan
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-
-class LaporanKependudukanExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
-{
-    protected $unitId;
-    protected $bulan;
-    protected $tahun;
-    protected $subkategoriId;
-
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
-    {
-        $this->unitId = $unitId;
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
-    }
-
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 1); // Filter hanya untuk kategori Kependudukan
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        // Urutkan berdasarkan ID untuk menjaga urutan seperti di tabel
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
-    public function headings(): array
-    {
-        // Kolom header sesuai permintaan
-        return [
-            'No',
-            'Unit',
-            'Subkategori',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
-        ];
-    }
-
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
-    {
-        // Format setiap baris data
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
-    }
-
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
-    }
-}
-</code>
-
-app\Exports\LaporanOpnameExport.php:
-<code>
-<?php
-
-namespace App\Exports;
-
+use App\Models\Unit;
+use App\Models\Kategori;
 use App\Models\LaporanBulanan;
-use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
-class LaporanOpnameExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithEvents
 {
-    protected $unitId;
     protected $bulan;
     protected $tahun;
-    protected $subkategoriId;
+    protected $data;
+    protected $units;
+    protected $kategori;
 
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
+    protected $sheetData = [];
+    protected $mergeTitleCells = [];
+
+    public function __construct($bulan, $tahun)
     {
-        $this->unitId = $unitId;
         $this->bulan = $bulan;
         $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
+        $this->units = Unit::orderBy('id')->get();
+        $this->kategori = Kategori::with('subkategori')->orderBy('id')->get();
+
+        $this->data = LaporanBulanan::where('bulan', $this->bulan)
+            ->where('tahun', $this->tahun)
+            ->get()
+            ->groupBy(['subkategori_id', 'unit_id']);
     }
 
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        // Ganti KATEGORI_ID menjadi 3 untuk Opname
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 3); // ID 3 untuk Kategori Opname
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
     public function headings(): array
     {
+        // Baris 1: Judul besar
+        // Baris 2: Subjudul bulan & tahun
         return [
-            'No',
-            'Unit',
-            'Subkategori (Opname)',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
+            ["REKAPITULASI LAPORAN KESEHATAN"],
+            ["Bulan: " . strtoupper($this->bulan) . " - Tahun: " . $this->tahun],
         ];
     }
 
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
+    public function collection()
     {
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
+        $collection = collect();
+
+        $collection->push(collect(['']));
+        $collection->push(collect(['']));
+
+        foreach ($this->kategori as $kategori) {
+            // Simpan index baris awal kategori ini
+            $collection->push(collect()); // Tempatkan header kategori nanti di AfterSheet
+
+            // Header kategori: nama unit + TOTAL
+            $headerRow = collect(["Kat. " . strtoupper($kategori->nama)]);
+            foreach ($this->units as $unit) {
+                $headerRow->push($unit->nama);
+            }
+            $headerRow->push("TOTAL");
+            $collection->push($headerRow);
+
+            // Subkategori data
+            $kategoriTotal = array_fill(0, $this->units->count(), 0);
+            foreach ($kategori->subkategori as $sub) {
+                $row = collect([$sub->nama]);
+                $total = 0;
+                foreach ($this->units as $i => $unit) {
+                    $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
+                    $row->push($jumlah);
+                    $kategoriTotal[$i] += $jumlah;
+                    $total += $jumlah;
+                }
+                $row->push($total);
+                $collection->push($row);
+            }
+
+            // Baris TOTAL kategori
+            $totalRow = collect(['TOTAL']);
+            $totalSum = 0;
+            foreach ($kategoriTotal as $jumlah) {
+                $totalRow->push($jumlah);
+                $totalSum += $jumlah;
+            }
+            $totalRow->push($totalSum);
+            $collection->push($totalRow);
+
+            // Baris kosong antar kategori
+            $collection->push(collect(['']));
+        }
+
+        return $collection;
     }
 
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
     public function styles(Worksheet $sheet)
     {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+        // Judul (A1), Subjudul (A2)
+        $lastCol = Coordinate::stringFromColumnIndex($this->units->count() + 2);
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->mergeCells("A2:{$lastCol}2");
 
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
-    }
-}
-</code>
-
-app\Exports\LaporanPenyakitExport.php:
-<code>
-<?php
-
-namespace App\Exports;
-
-use App\Models\LaporanBulanan;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-
-class LaporanPenyakitExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
-{
-    protected $unitId;
-    protected $bulan;
-    protected $tahun;
-    protected $subkategoriId;
-
-    public function __construct($unitId, $bulan, $tahun, $subkategoriId)
-    {
-        $this->unitId = $unitId;
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
-        $this->subkategoriId = $subkategoriId;
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setItalic(true);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     }
 
-    /**
-     * @return \Illuminate\Database\Query\Builder
-     */
-    public function query()
-    {
-        // Ganti KATEGORI_ID menjadi 2 untuk Penyakit
-        $query = LaporanBulanan::query()
-            ->with(['unit', 'subkategori'])
-            ->where('kategori_id', 2); // ID 2 untuk Kategori Penyakit
-
-        if ($this->unitId) {
-            $query->where('unit_id', $this->unitId);
-        }
-        if ($this->bulan) {
-            $query->where('bulan', $this->bulan);
-        }
-        if ($this->tahun) {
-            $query->where('tahun', $this->tahun);
-        }
-        if ($this->subkategoriId) {
-            $query->where('subkategori_id', $this->subkategoriId);
-        }
-
-        return $query->orderBy('id', 'asc');
-    }
-
-    /**
-     * @return array
-     */
-    public function headings(): array
+    public function registerEvents(): array
     {
         return [
-            'No',
-            'Unit',
-            'Subkategori (Penyakit)',
-            'Jumlah',
-            'Bulan',
-            'Tahun',
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
+                $highestColIndex = $this->units->count() + 2;
+                $highestColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+
+                $borderStyle = [
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
+                ];
+
+                // Apply border ke semua sel mulai dari row 3
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $isEmptyRow = true;
+                    for ($col = 1; $col <= $highestColIndex; $col++) {
+                        $cell = $sheet->getCellByColumnAndRow($col, $row);
+                        if (trim((string)$cell->getValue()) !== '') {
+                            $isEmptyRow = false;
+                            break;
+                        }
+                    }
+
+                    if (!$isEmptyRow) {
+                        $range = 'A' . $row . ':' . $highestColLetter . $row;
+                        $sheet->getStyle($range)->applyFromArray($borderStyle);
+                    }
+                }
+
+                // Header kategori diberi bold dan align center
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    $firstCell = $sheet->getCell("A{$row}");
+                    if (stripos((string) $firstCell->getValue(), 'Kat.') === 0) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
+                    if ((string) $firstCell->getValue() === 'TOTAL') {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    }
+                }
+            },
         ];
-    }
-
-    /**
-     * @param LaporanBulanan $laporan
-     * @return array
-     */
-    public function map($laporan): array
-    {
-        static $index = 0;
-        $index++;
-        
-        return [
-            $index,
-            $laporan->unit->nama ?? 'N/A',
-            $laporan->subkategori->nama ?? 'N/A',
-            $laporan->jumlah,
-            \Carbon\Carbon::createFromDate(null, (int)$laporan->bulan, 1)->format('F'),
-            $laporan->tahun,
-        ];
-    }
-
-    /**
-     * @param Worksheet $sheet
-     * @return array
-     */
-    public function styles(Worksheet $sheet)
-    {
-        // Memberi gaya pada header (baris pertama)
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-
-        // Memberi garis pada seluruh tabel
-        $lastRow = $sheet->getHighestRow();
-        $sheet->getStyle('A1:F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
-        return [];
     }
 }
+
 </code>
 
 app\Exports\ObatExport.php:
@@ -30240,8 +30088,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LaporanBulanan;
+use App\Models\InputManual; // Tambahkan ini
 use App\Models\Unit;
 use App\Models\Obat;
+use App\Models\Kategori; // Tambahkan ini
+use App\Exports\LaporanKesehatanRekapExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
@@ -30249,105 +30101,115 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $tab = $request->input('tab', 'laporan');
+        $is_admin = Auth::guard('admin')->check();
+        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
 
-        $kategoriList = [
-            1 => 'Kependudukan',
-            2 => 'Penyakit',
-            3 => 'Opname',
-            4 => 'Penyakit Kronis',
-            5 => 'Konsultasi Klinik',
-            6 => 'Cuti Sakit',
-            7 => 'Peserta KB',
-            8 => 'Metode KB',
-            9 => 'Kehamilan',
-            10 => 'Imunisasi',
-            11 => 'Kematian',
-            12 => 'Klaim Asuransi',
-            13 => 'Kecelakaan Kerja',
-            14 => 'Sakit Berkepanjangan',
-            15 => 'Absensi Dokter Honorer',
-            21 => 'Kategori Khusus',
-        ];
+        // Mengambil semua kategori dari database
+        $kategoriList = Kategori::with('subkategori')->get();
+        $units = Unit::all();
 
+        // Filter
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
         $unitId = $request->input('unit_id');
-        $search = $request->input('search');
-
-        $units = Unit::all();
+        $searchSubkategori = $request->input('search');
+        
+        // Filter terpisah untuk Obat
+        $unitIdObat = $request->input('unit_id_obat');
+        $bulanObat = $request->input('bulan_obat');
+        $tahunObat = $request->input('tahun_obat');
+        $searchNamaObat = $request->input('search_nama');
+        $searchJenisObat = $request->input('search_jenis');
 
         $ringkasan = [];
 
-        $authUser = Auth::guard('admin')->user() ?? Auth::guard('web')->user();
-        $is_admin = Auth::guard('admin')->check();
+        if ($tab === 'laporan') {
+            foreach ($kategoriList as $kategori) {
+                $subkategoriData = $kategori->subkategori;
+                $laporan = collect();
 
-        foreach ($kategoriList as $kategoriId => $kategoriNama) {
-            $subkategoriData = \App\Models\SubKategori::where('kategori_id', $kategoriId)->get();
+                // --- PERUBAHAN UTAMA DI SINI ---
+                if ($kategori->id == 21) { // Jika KATEGORI KHUSUS
+                    $query = InputManual::query(); // Ambil dari tabel input_manual
+                    
+                    // Terapkan filter yang sama
+                    if ($is_admin && $unitId) $query->where('unit_id', $unitId);
+                    if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
+                    if ($bulan) $query->where('bulan', $bulan);
+                    if ($tahun) $query->where('tahun', $tahun);
+                    
+                    $laporan = $query->get();
 
-            $laporanQuery = \App\Models\LaporanBulanan::where('kategori_id', $kategoriId);
+                    // Hitung berdasarkan jumlah baris (count), bukan menjumlahkan kolom 'jumlah'
+                    $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                        $jumlah = $laporan->where('subkategori_id', $sub->id)->count();
+                        return ['nama' => $sub->nama, 'total' => $jumlah];
+                    });
 
-            if ($is_admin) {
-                if ($unitId) {
-                    $laporanQuery->where('unit_id', $unitId);
+                } else { // Untuk semua kategori lainnya
+                    $query = LaporanBulanan::where('kategori_id', $kategori->id); // Ambil dari laporan_bulanan
+                    
+                    // Terapkan filter
+                    if ($is_admin && $unitId) $query->where('unit_id', $unitId);
+                    if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
+                    if ($bulan) $query->where('bulan', $bulan);
+                    if ($tahun) $query->where('tahun', $tahun);
+                    
+                    $laporan = $query->get();
+
+                    // Hitung dengan menjumlahkan kolom 'jumlah'
+                    $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
+                        $jumlah = $laporan->where('subkategori_id', $sub->id)->sum('jumlah');
+                        return ['nama' => $sub->nama, 'total' => $jumlah];
+                    });
                 }
-            } else {
-                $laporanQuery->where('unit_id', $authUser->unit_id);
-            }
+                // --- AKHIR PERUBAHAN ---
 
-            if ($bulan) {
-                $laporanQuery->where('bulan', $bulan);
-            }
-            if ($tahun) {
-                $laporanQuery->where('tahun', $tahun);
-            }
-
-            $laporan = $laporanQuery->get();
-
-            $subkategoriRingkasan = $subkategoriData->map(function ($sub) use ($laporan) {
-                $jumlah = $laporan->where('subkategori_id', $sub->id)->sum('jumlah');
-                return [
-                    'id' => $sub->id,
-                    'nama' => $sub->nama,
-                    'total' => $jumlah,
+                $ringkasan[] = [
+                    'nama' => $kategori->nama,
+                    'total' => $subkategoriRingkasan->sum('total'),
+                    'subkategori' => $subkategoriRingkasan,
                 ];
-            });
-
-            $ringkasan[] = [
-                'id' => $kategoriId,
-                'nama' => $kategoriNama,
-                'total' => $subkategoriRingkasan->sum('total'),
-                'subkategori' => $subkategoriRingkasan,
-            ];
+            }
         }
 
-        // Tab obat
+        // Logika untuk Tab Obat
         $obats = collect();
         if ($tab === 'obat') {
             $obatQuery = Obat::query();
 
-            if ($is_admin && $unitId) {
-                $obatQuery->where('unit_id', $unitId);
-            } elseif (!$is_admin) {
-                $obatQuery->where('unit_id', $authUser->unit_id);
-            }
-
-            if ($search) {
-                $obatQuery->where('nama_obat', 'like', '%' . $search . '%');
-            }
-
+            if ($is_admin && $unitIdObat) $obatQuery->where('unit_id', $unitIdObat);
+            if (!$is_admin) $obatQuery->where('unit_id', $authUser->unit_id);
+            if ($searchNamaObat) $obatQuery->where('nama_obat', 'like', '%' . $searchNamaObat . '%');
+            if ($searchJenisObat) $obatQuery->where('jenis_obat', 'like', '%' . $searchJenisObat . '%');
+            
             $obats = $obatQuery->get();
         }
 
-        $viewData = compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'tab', 'obats');
+        $viewData = compact(
+            'ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'searchSubkategori',
+            'tab', 'obats', 'unitIdObat', 'bulanObat', 'tahunObat', 'searchNamaObat'
+        );
 
-        if ($is_admin) {
-            return view('admin-dashboard', $viewData);
-        } else {
-            return view('dashboard', $viewData);
-        }
+        return $is_admin ? view('admin-dashboard', $viewData) : view('dashboard', $viewData);
+    }
+
+    public function exportRekap(Request $request)
+    {
+        $request->validate([
+            'bulan' => 'required|integer|between:1,12',
+            'tahun' => 'required|integer|min:2000',
+        ]);
+
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        
+        $namaBulan = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->format('F');
+        $fileName = 'REKAP_LAPORAN_KESEHATAN_' . strtoupper($namaBulan) . '_' . $tahun . '.xlsx';
+
+        return Excel::download(new LaporanKesehatanRekapExport($bulan, $tahun), $fileName);
     }
 }
-
 </code>
 
 app\Http\Controllers\ObatController.php:
@@ -39891,181 +39753,32 @@ resources\views\admin-dashboard.blade.php:
         @endif
     </div>
 
-    {{-- Filter Periode dan Search --}}
-    <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
-        {{-- TAMBAHKAN DROPDOWN UNIT KHUSUS ADMIN --}}
-        @if ($is_admin)
-        <div class="col-md-3">
-            <label for="unit_id" class="form-label">Pilih Unit</label>
-            <select name="unit_id" class="form-select" id="unit_id">
-                <option value="">Semua Unit</option>
-                @foreach ($units as $unit)
-                    <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
-                        {{ $unit->nama }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        @endif
-        
-        <div class="col-md-3">
-            <label for="bulan" class="form-label">Bulan</label>
-            <select name="bulan" class="form-select" id="bulan">
-                <option value="">Semua Bulan</option>
-                @for ($i = 1; $i <= 12; $i++)
-                    <option value="{{ $i }}" {{ ($bulan == $i) ? 'selected' : '' }}>
-                        {{ DateTime::createFromFormat('!m', $i)->format('F') }}
-                    </option>
-                @endfor
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label for="tahun" class="form-label">Tahun</label>
-            <select name="tahun" class="form-select" id="tahun">
-                <option value="">Semua Tahun</option>
-                @for ($y = date('Y'); $y >= 2000; $y--)
-                    <option value="{{ $y }}" {{ ($tahun == $y) ? 'selected' : '' }}>{{ $y }}</option>
-                @endfor
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label for="search" class="form-label">Cari Subkategori</label>
-            <input type="text" name="search" class="form-control" id="search" value="{{ request('search') }}" placeholder="Ketik nama subkategori...">
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary mt-2" type="submit">Tampilkan</button>
-        </div>
-    </form>
-
     {{-- Tabs --}}
     <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="ringkasan-tab" data-bs-toggle="tab" data-bs-target="#ringkasan" type="button" role="tab">Ringkasan</button>
+            <a class="nav-link {{ $tab === 'laporan' ? 'active' : '' }}"
+                href="{{ route('dashboard', ['tab' => 'laporan']) }}">
+                Laporan
+            </a>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="grafik-tab" data-bs-toggle="tab" data-bs-target="#grafik" type="button" role="tab">Grafik</button>
+            <a class="nav-link {{ $tab === 'obat' ? 'active' : '' }}"
+                href="{{ route('dashboard', ['tab' => 'obat']) }}">
+                Daftar Obat
+            </a>
         </li>
     </ul>
+
     <div class="tab-content" id="dashboardTabContent">
-        {{-- Ringkasan Tab --}}
-        <div class="tab-pane fade show active" id="ringkasan" role="tabpanel">
-            <div class="row g-4">
-                @foreach ($ringkasan as $kategori)
-                    @php
-                        $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
-                        $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
-                        $color = $colors[$loop->index % count($colors)];
-                        $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
-                            return request('search') === null || stripos($sub['nama'], request('search')) !== false;
-                        });
-                    @endphp
 
-                    @if ($filteredSubs->count())
-                        <div class="col-md-6">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h5 class="card-title text-{{ $color }}">{{ $kategori['nama'] }}</h5>
-                                        <span class="badge bg-{{ $color }} rounded-pill">
-                                            Total: {{ $filteredSubs->sum('total') }}
-                                        </span>
-                                    </div>
-                                    <ul class="list-group list-group-flush small">
-                                        @foreach ($filteredSubs as $sub)
-                                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                                {{ $sub['nama'] }}
-                                                <span class="badge bg-light text-dark">{{ $sub['total'] }}</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                    @if(!$is_admin)
-                                    <div class="mt-3 text-end">
-                                        <a href="{{ url('/laporan/' . $slug) }}" class="btn btn-sm btn-outline-{{ $color }}">
-                                            Lihat Detail
-                                        </a>
-                                    </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Grafik Tab --}}
-        <div class="tab-pane fade" id="grafik" role="tabpanel">
-            <canvas id="kategoriChart"></canvas>
-        </div>
-    </div>
-</div>
-
-{{-- Alert Dismiss --}}
-<script>
-    setTimeout(() => {
-        const alert = document.getElementById('welcome-alert');
-        if (alert) {
-            alert.style.transition = "opacity 0.5s ease";
-            alert.style.opacity = 0;
-            setTimeout(() => alert.remove(), 500);
-        }
-    }, 2000);
-</script>
-
-{{-- Chart.js --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const ctx = document.getElementById('kategoriChart').getContext('2d');
-    const kategoriChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {!! json_encode(array_column($ringkasan, 'nama')) !!},
-            datasets: [{
-                label: 'Jumlah Laporan',
-                data: {!! json_encode(array_column($ringkasan, 'total')) !!},
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-</script>
-@endsection
-</code>
-
-resources\views\dashboard.blade.php:
-<code>
-@extends('layout.app')
-
-@section('content')
-    <div class="container py-4">
-        {{-- Welcome --}}
-        <div class="alert alert-success" id="welcome-alert">
-            Selamat datang, {{ $authUser->name }}!
-            @if ($is_admin)
-                Anda masuk sebagai Admin Pusat.
-            @else
-                Anda masuk dari unit {{ $authUser->unit->nama ?? '-' }}.
-            @endif
-        </div>
-
-        {{-- FILTER untuk LAPORAN --}}
+        {{-- ======================= TAB LAPORAN ======================= --}}
         @if ($tab === 'laporan')
-            <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
-                @if ($is_admin)
+            <div class="tab-pane fade show active" id="laporan" role="tabpanel">
+                
+                {{-- Filter untuk Laporan --}}
+                <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="tab" value="laporan">
+                    @if ($is_admin)
                     <div class="col-md-3">
                         <label for="unit_id" class="form-label">Pilih Unit</label>
                         <select name="unit_id" class="form-select" id="unit_id">
@@ -40077,227 +39790,438 @@ resources\views\dashboard.blade.php:
                             @endforeach
                         </select>
                     </div>
-                @else
+                    @endif
+                    
+                    <div class="col-md-3">
+                        <label for="bulan" class="form-label">Bulan</label>
+                        <select name="bulan" class="form-select" id="bulan">
+                            <option value="">Semua Bulan</option>
+                            @for ($i = 1; $i <= 12; $i++)
+                                <option value="{{ $i }}" {{ ($bulan == $i) ? 'selected' : '' }}>
+                                    {{ DateTime::createFromFormat('!m', $i)->format('F') }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tahun" class="form-label">Tahun</label>
+                        <select name="tahun" class="form-select" id="tahun">
+                            <option value="">Semua Tahun</option>
+                            @for ($y = date('Y'); $y >= 2000; $y--)
+                                <option value="{{ $y }}" {{ ($tahun == $y) ? 'selected' : '' }}>{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Cari Subkategori</label>
+                        <input type="text" name="search" class="form-control" id="search" value="{{ $searchSubkategori }}" placeholder="Ketik nama subkategori...">
+                    </div>
+                    <div class="col-md-12">
+                        <button class="btn btn-primary mt-2 w-100" type="submit">Tampilkan Laporan</button>
+                    </div>
+                    <div class="d-flex justify-content-end mb-4">
+                        <a href="{{ route('dashboard.export-rekap', ['bulan' => $bulan, 'tahun' => $tahun]) }}" class="btn btn-outline-success @if(!$bulan || !$tahun) disabled @endif" target="_blank">
+                            <i class="fas fa-file-excel"></i> Export Rekap Laporan
+                        </a>
+                    </div>
+                </form>
+
+                {{-- Konten Laporan --}}
+                <div class="row g-4">
+                    @foreach ($ringkasan as $kategori)
+                        @php
+                            $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
+                            $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
+                            $color = $colors[$loop->index % count($colors)];
+                            $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
+                                return request('search') === null ||
+                                    stripos($sub['nama'], request('search')) !== false;
+                            });
+                        @endphp
+
+                        @if ($filteredSubs->count())
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title text-{{ $color }}">{{ $kategori['nama'] }}</h5>
+                                            <span class="badge bg-{{ $color }} rounded-pill">Total: {{ $filteredSubs->sum('total') }}</span>
+                                        </div>
+                                        <ul class="list-group list-group-flush small">
+                                            @foreach ($filteredSubs as $sub)
+                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    {{ $sub['nama'] }}
+                                                    <span class="badge bg-light text-dark">{{ $sub['total'] }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+
+                {{-- Chart --}}
+                <div class="mt-5">
+                    <canvas id="kategoriChart"></canvas>
+                </div>
+            </div>
+        @endif
+
+        {{-- ======================= TAB OBAT ======================= --}}
+        @if ($tab === 'obat')
+            <div class="tab-pane fade show active" id="obat" role="tabpanel">
+                
+                {{-- Filter untuk Obat --}}
+                <form method="GET" action="{{ route('dashboard') }}" class="mb-3 row g-2 align-items-end">
+                    <input type="hidden" name="tab" value="obat">
+                    @if ($is_admin)
+                        <div class="col-md-4">
+                            <label for="unit_id_obat" class="form-label">Pilih Unit</label>
+                            <select name="unit_id_obat" class="form-select" id="unit_id_obat">
+                                <option value="">Semua Unit</option>
+                                @foreach ($units as $unit)
+                                    <option value="{{ $unit->id }}" {{ $unitIdObat == $unit->id ? 'selected' : '' }}>
+                                        {{ $unit->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="col-md-4">
+                        <label for="search_nama" class="form-label">Nama Obat</label>
+                        <input type="text" name="search_nama" class="form-control" value="{{ $searchNamaObat }}" placeholder="Masukkan nama obat...">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search_jenis" class="form-label">Jenis Obat</label>
+                        <input type="text" name="search_jenis" id="search_jenis" class="form-control" value="{{ request('search_jenis') }}"
+                            placeholder="Masukkan jenis obat...">
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary mt-2 w-100">Tampilkan Daftar Obat</button>
+                    </div>
+                </form>
+
+                {{-- Konten Daftar Obat --}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>No</th>
+                                <th>Unit</th>
+                                <th>Nama Obat</th>
+                                <th>Jenis</th>
+                                <th>Harga</th>
+                                <th>Stok Awal</th>
+                                <th>Stok Sisa</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($obats as $obat)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
+                                    <td>{{ $obat->nama_obat }}</td>
+                                    <td>{{ $obat->jenis_obat }}</td>
+                                    <td>{{ number_format($obat->harga_satuan) }}</td>
+                                    <td>{{ $obat->stok_awal }}</td>
+                                    <td>{{ $obat->stok_sisa }}</td>
+                                    <td>{{ $obat->satuan }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center">Tidak ada data obat yang cocok.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
+
+{{-- Script --}}
+<script>
+    setTimeout(() => {
+        const alert = document.getElementById('welcome-alert');
+        if (alert) {
+            alert.style.transition = "opacity 0.5s ease";
+            alert.style.opacity = 0;
+            setTimeout(() => alert.remove(), 500);
+        }
+    }, 2000);
+</script>
+
+@if ($tab === 'laporan')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('kategoriChart').getContext('2d');
+        const kategoriChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_column($ringkasan, 'nama')) !!},
+                datasets: [{
+                    label: 'Jumlah Laporan',
+                    data: {!! json_encode(array_column($ringkasan, 'total')) !!},
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+@endif
+@endsection
+</code>
+
+resources\views\dashboard.blade.php:
+<code>
+@extends('layout.app')
+
+@section('content')
+<div class="container py-4">
+    {{-- Welcome --}}
+    <div class="alert alert-success" id="welcome-alert">
+        Selamat datang, {{ $authUser->name }}!
+        @if ($is_admin)
+            Anda masuk sebagai Admin Pusat.
+        @else
+            Anda masuk dari unit {{ $authUser->unit->nama ?? '-' }}.
+        @endif
+    </div>
+
+    {{-- Tabs --}}
+    <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {{ $tab === 'laporan' ? 'active' : '' }}"
+                href="{{ route('dashboard', ['tab' => 'laporan']) }}">
+                Laporan
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link {{ $tab === 'obat' ? 'active' : '' }}"
+                href="{{ route('dashboard', ['tab' => 'obat']) }}">
+                Daftar Obat
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="dashboardTabContent">
+
+        {{-- ======================= TAB LAPORAN ======================= --}}
+        @if ($tab === 'laporan')
+            <div class="tab-pane fade show active" id="laporan" role="tabpanel">
+                
+                {{-- Filter untuk Laporan --}}
+                <form method="GET" action="{{ route('dashboard') }}" class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="tab" value="laporan">
+                    {{-- THIS IS THE MODIFIED PART FOR USERS --}}
                     <div class="col-md-3">
                         <label class="form-label">Unit</label>
                         <input type="text" class="form-control" value="{{ $authUser->unit->nama ?? '' }}" disabled>
                         <input type="hidden" name="unit_id" value="{{ $authUser->unit_id }}">
                     </div>
-                @endif
 
-                <div class="col-md-3">
-                    <label for="bulan" class="form-label">Bulan</label>
-                    <select name="bulan" class="form-select">
-                        <option value="">Semua Bulan</option>
-                        @for ($i = 1; $i <= 12; $i++)
-                            <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
-                                {{ DateTime::createFromFormat('!m', $i)->format('F') }}
-                            </option>
-                        @endfor
-                    </select>
-                </div>
+                    <div class="col-md-3">
+                        <label for="bulan" class="form-label">Bulan</label>
+                        <select name="bulan" class="form-select">
+                            <option value="">Semua Bulan</option>
+                            @for ($i = 1; $i <= 12; $i++)
+                                <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
+                                    {{ DateTime::createFromFormat('!m', $i)->format('F') }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
 
-                <div class="col-md-3">
-                    <label for="tahun" class="form-label">Tahun</label>
-                    <select name="tahun" class="form-select">
-                        <option value="">Semua Tahun</option>
-                        @for ($y = date('Y'); $y >= 2000; $y--)
-                            <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}
-                            </option>
-                        @endfor
-                    </select>
-                </div>
+                    <div class="col-md-3">
+                        <label for="tahun" class="form-label">Tahun</label>
+                        <select name="tahun" class="form-select">
+                            <option value="">Semua Tahun</option>
+                            @for ($y = date('Y'); $y >= 2000; $y--)
+                                <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
 
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Cari Subkategori</label>
-                    <input type="text" name="search" class="form-control" value="{{ request('search') }}"
-                        placeholder="Ketik nama subkategori...">
-                </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Cari Subkategori</label>
+                        <input type="text" name="search" class="form-control" value="{{ request('search') }}"
+                            placeholder="Ketik nama subkategori...">
+                    </div>
 
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary mt-2">Tampilkan</button>
-                </div>
-            </form>
-        @endif
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary mt-2 w-100">Tampilkan Laporan</button>
+                    </div>
+                </form>
 
-        {{-- Tabs --}}
-        <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <a class="nav-link {{ $tab === 'laporan' ? 'active' : '' }}"
-                    href="{{ route('dashboard', array_merge(request()->except('search'), ['tab' => 'laporan'])) }}">
-                    Laporan
-                </a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link {{ $tab === 'obat' ? 'active' : '' }}"
-                    href="{{ route('dashboard', array_merge(request()->except('search'), ['tab' => 'obat'])) }}">
-                    Daftar Obat
-                </a>
-            </li>
-        </ul>
+                {{-- Konten Laporan --}}
+                <div class="row g-4">
+                    @foreach ($ringkasan as $kategori)
+                        @php
+                            $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
+                            $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
+                            $color = $colors[$loop->index % count($colors)];
+                            $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
+                                return request('search') === null ||
+                                    stripos($sub['nama'], request('search')) !== false;
+                            });
+                        @endphp
 
-        <div class="tab-content" id="dashboardTabContent">
-
-            {{-- Laporan --}}
-            @if ($tab === 'laporan')
-                <div class="tab-pane fade show active" id="laporan" role="tabpanel">
-                    <div class="row g-4">
-                        @foreach ($ringkasan as $kategori)
-                            @php
-                                $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
-                                $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
-                                $color = $colors[$loop->index % count($colors)];
-                                $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
-                                    return request('search') === null ||
-                                        stripos($sub['nama'], request('search')) !== false;
-                                });
-                            @endphp
-
-                            @if ($filteredSubs->count())
-                                <div class="col-md-6">
-                                    <div class="card shadow-sm border-0 h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <h5 class="card-title text-{{ $color }}">{{ $kategori['nama'] }}
-                                                </h5>
-                                                <span class="badge bg-{{ $color }} rounded-pill">
-                                                    Total: {{ $filteredSubs->sum('total') }}
-                                                </span>
-                                            </div>
-                                            <ul class="list-group list-group-flush small">
-                                                @foreach ($filteredSubs as $sub)
-                                                    <li
-                                                        class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                                        {{ $sub['nama'] }}
-                                                        <span class="badge bg-light text-dark">{{ $sub['total'] }}</span>
-                                                    </li>
-                                                @endforeach
-                                            </ul>
-                                            @if (!$is_admin)
-                                                <div class="mt-3 text-end">
-                                                    <a href="{{ url('/laporan/' . $slug) }}"
-                                                        class="btn btn-sm btn-outline-{{ $color }}">
-                                                        Lihat Detail
-                                                    </a>
-                                                </div>
-                                            @endif
+                        @if ($filteredSubs->count())
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title text-{{ $color }}">{{ $kategori['nama'] }}
+                                            </h5>
+                                            <span class="badge bg-{{ $color }} rounded-pill">
+                                                Total: {{ $filteredSubs->sum('total') }}
+                                            </span>
+                                        </div>
+                                        <ul class="list-group list-group-flush small">
+                                            @foreach ($filteredSubs as $sub)
+                                                <li
+                                                    class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    {{ $sub['nama'] }}
+                                                    <span class="badge bg-light text-dark">{{ $sub['total'] }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                        <div class="mt-3 text-end">
+                                            <a href="{{ url('/laporan/' . $slug) }}"
+                                                class="btn btn-sm btn-outline-{{ $color }}">
+                                                Lihat Detail
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
-                            @endif
-                        @endforeach
-                    </div>
-
-                    {{-- Chart --}}
-                    <div class="mt-5">
-                        <canvas id="kategoriChart"></canvas>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Obat --}}
-            @if ($tab === 'obat')
-                <div class="tab-pane fade show active" id="obat" role="tabpanel">
-                    <form method="GET" action="{{ route('dashboard') }}" class="mb-3 row">
-                        <input type="hidden" name="tab" value="obat">
-                        @if ($is_admin)
-                            <input type="hidden" name="unit_id" value="{{ $unitId }}">
-                        @else
-                            <input type="hidden" name="unit_id" value="{{ $authUser->unit_id }}">
+                            </div>
                         @endif
-
-                        <div class="col-md-6">
-                            <label for="search" class="form-label">Cari Nama Obat</label>
-                            <input type="text" name="search" class="form-control" value="{{ request('search') }}"
-                                placeholder="Ketik nama obat...">
-                        </div>
-                        <div class="col-md-2 align-self-end">
-                            <button type="submit" class="btn btn-primary">Cari</button>
-                        </div>
-                    </form>
-
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr>
-                                    <th>Nama Obat</th>
-                                    <th>Jenis</th>
-                                    <th>Harga</th>
-                                    <th>Stok Awal</th>
-                                    <th>Stok Sisa</th>
-                                    <th>Satuan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($obats as $obat)
-                                    <tr>
-                                        <td>{{ $obat->nama_obat }}</td>
-                                        <td>{{ $obat->jenis_obat }}</td>
-                                        <td>{{ number_format($obat->harga_satuan) }}</td>
-                                        <td>{{ $obat->stok_awal }}</td>
-                                        <td>{{ $obat->stok_sisa }}</td>
-                                        <td>{{ $obat->satuan }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6">Tidak ada data obat.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                    @endforeach
                 </div>
-            @endif
-        </div>
+
+                {{-- Chart --}}
+                <div class="mt-5">
+                    <canvas id="kategoriChart"></canvas>
+                </div>
+            </div>
+        @endif
+
+        {{-- ======================= TAB OBAT ======================= --}}
+        @if ($tab === 'obat')
+            <div class="tab-pane fade show active" id="obat" role="tabpanel">
+                
+                {{-- Filter untuk Obat --}}
+                <form method="GET" action="{{ route('dashboard') }}" class="mb-3 row g-2 align-items-end">
+                    <input type="hidden" name="tab" value="obat">
+                    {{-- THIS IS THE MODIFIED PART FOR USERS --}}
+                    <div class="col-md-4">
+                        <label class="form-label">Unit</label>
+                        <input type="text" class="form-control" value="{{ $authUser->unit->nama ?? '' }}" disabled>
+                        <input type="hidden" name="unit_id_obat" value="{{ $authUser->unit_id }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="search_nama" class="form-label">Nama Obat</label>
+                        <input type="text" name="search_nama" class="form-control" value="{{ $searchNamaObat }}" placeholder="Masukkan nama obat...">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search_jenis" class="form-label">Jenis Obat</label>
+                        <input type="text" name="search_jenis" id="search_jenis" class="form-control" value="{{ request('search_jenis') }}"
+                            placeholder="Masukkan jenis obat...">
+                    </div>
+                    <div class="col-md-12 align-self-end">
+                        <button type="submit" class="btn btn-primary w-100">Tampilkan Daftar Obat</button>
+                    </div>
+                </form>
+
+                {{-- Konten Daftar Obat --}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>No</th>
+                                <th>Unit</th>
+                                <th>Nama Obat</th>
+                                <th>Jenis</th>
+                                <th>Harga</th>
+                                <th>Stok Awal</th>
+                                <th>Stok Sisa</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($obats as $obat)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
+                                    <td>{{ $obat->nama_obat }}</td>
+                                    <td>{{ $obat->jenis_obat }}</td>
+                                    <td>{{ number_format($obat->harga_satuan) }}</td>
+                                    <td>{{ $obat->stok_awal }}</td>
+                                    <td>{{ $obat->stok_sisa }}</td>
+                                    <td>{{ $obat->satuan }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center">Tidak ada data obat yang cocok.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </div>
+</div>
 
-    {{-- Alert Fade --}}
+{{-- Script & Chart --}}
+<script>
+    setTimeout(() => {
+        const alert = document.getElementById('welcome-alert');
+        if (alert) {
+            alert.style.transition = "opacity 0.5s ease";
+            alert.style.opacity = 0;
+            setTimeout(() => alert.remove(), 500);
+        }
+    }, 2000);
+</script>
+
+@if ($tab === 'laporan')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        setTimeout(() => {
-            const alert = document.getElementById('welcome-alert');
-            if (alert) {
-                alert.style.transition = "opacity 0.5s ease";
-                alert.style.opacity = 0;
-                setTimeout(() => alert.remove(), 500);
+        const ctx = document.getElementById('kategoriChart').getContext('2d');
+        const kategoriChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_column($ringkasan, 'nama')) !!},
+                datasets: [{
+                    label: 'Jumlah Laporan',
+                    data: {!! json_encode(array_column($ringkasan, 'total')) !!},
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
             }
-        }, 2000);
+        });
     </script>
-
-    {{-- Chart Script --}}
-    @if ($tab === 'laporan')
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            const ctx = document.getElementById('kategoriChart').getContext('2d');
-            const kategoriChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: {!! json_encode(array_column($ringkasan, 'nama')) !!},
-                    datasets: [{
-                        label: 'Jumlah Laporan',
-                        data: {!! json_encode(array_column($ringkasan, 'total')) !!},
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        </script>
-    @endif
+@endif
 @endsection
-
 </code>
 
 resources\views\login.blade.php:
@@ -50493,13 +50417,6 @@ resources\views\laporan\partials\kematian_table.blade.php:
 
 resources\views\laporan\partials\kependudukan_table.blade.php:
 <code>
-{{-- TOMBOL EXPORT DI SINI --}}
-<div class="d-flex justify-content-end mb-3">
-    <a href="{{ route('laporan.kependudukan.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
-        <i class="fas fa-file-excel"></i> Export Excel
-    </a>
-</div>
-
 <div class="card">
     <div class="card-body">
         <table class="table table-striped">
@@ -54897,6 +54814,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth:web,admin')
     ->name('dashboard');
 
+Route::get('/dashboard/export-rekap', [App\Http\Controllers\DashboardController::class, 'exportRekap'])
+    ->middleware('auth:admin')
+    ->name('dashboard.export-rekap');
+
 // Route untuk export obat
 Route::get('/obat/export', [RekapitulasiExportController::class, 'export'])->name('obat.export');
 
@@ -58258,6 +58179,36 @@ storage\framework\views\112fe2ef9a96e9d3235a15ef8d4702b4.php:
 storage\framework\views\120d2afa60fe0bad3d18f8a2a3437b51.php:
 <code>
 
+<?php if($unitId && $bulan && $tahun): ?>
+    <?php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); ?>
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="fw-bold">Persetujuan Periode</p>
+            <?php if(!$isApproved): ?>
+                <form action="<?php echo e(route('laporan.kependudukan.approve')); ?>" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci data untuk periode ini?')">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>">
+                    <input type="hidden" name="bulan" value="<?php echo e($bulan); ?>">
+                    <input type="hidden" name="tahun" value="<?php echo e($tahun); ?>">
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
+                </form>
+            <?php else: ?>
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                    <span>Periode ini telah disetujui pada <?php echo e($approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i')); ?>.</span>
+                    <form action="<?php echo e(route('laporan.kependudukan.unapprove')); ?>" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan?')">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>">
+                        <input type="hidden" name="bulan" value="<?php echo e($bulan); ?>">
+                        <input type="hidden" name="tahun" value="<?php echo e($tahun); ?>">
+                        <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+                    </form>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
+
+
 <div class="d-flex justify-content-end mb-3">
     <a href="<?php echo e(route('laporan.kependudukan.export', request()->query())); ?>" class="btn btn-outline-success" target="_blank">
         <i class="fas fa-file-excel"></i> Export Excel
@@ -61375,115 +61326,196 @@ storage\framework\views\29509566cf679cded4e24a7627394d39.php:
     </div>
 
     
-    <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="row g-2 align-items-end mb-4">
-        
-        <?php if($is_admin): ?>
-        <div class="col-md-3">
-            <label for="unit_id" class="form-label">Pilih Unit</label>
-            <select name="unit_id" class="form-select" id="unit_id">
-                <option value="">Semua Unit</option>
-                <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <option value="<?php echo e($unit->id); ?>" <?php echo e($unitId == $unit->id ? 'selected' : ''); ?>>
-                        <?php echo e($unit->nama); ?>
-
-                    </option>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </select>
-        </div>
-        <?php endif; ?>
-        
-        <div class="col-md-3">
-            <label for="bulan" class="form-label">Bulan</label>
-            <select name="bulan" class="form-select" id="bulan">
-                <option value="">Semua Bulan</option>
-                <?php for($i = 1; $i <= 12; $i++): ?>
-                    <option value="<?php echo e($i); ?>" <?php echo e(($bulan == $i) ? 'selected' : ''); ?>>
-                        <?php echo e(DateTime::createFromFormat('!m', $i)->format('F')); ?>
-
-                    </option>
-                <?php endfor; ?>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label for="tahun" class="form-label">Tahun</label>
-            <select name="tahun" class="form-select" id="tahun">
-                <option value="">Semua Tahun</option>
-                <?php for($y = date('Y'); $y >= 2000; $y--): ?>
-                    <option value="<?php echo e($y); ?>" <?php echo e(($tahun == $y) ? 'selected' : ''); ?>><?php echo e($y); ?></option>
-                <?php endfor; ?>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label for="search" class="form-label">Cari Subkategori</label>
-            <input type="text" name="search" class="form-control" id="search" value="<?php echo e(request('search')); ?>" placeholder="Ketik nama subkategori...">
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary mt-2" type="submit">Tampilkan</button>
-        </div>
-    </form>
-
-    
     <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="ringkasan-tab" data-bs-toggle="tab" data-bs-target="#ringkasan" type="button" role="tab">Ringkasan</button>
+            <a class="nav-link <?php echo e($tab === 'laporan' ? 'active' : ''); ?>"
+                href="<?php echo e(route('dashboard', ['tab' => 'laporan'])); ?>">
+                Laporan
+            </a>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="grafik-tab" data-bs-toggle="tab" data-bs-target="#grafik" type="button" role="tab">Grafik</button>
+            <a class="nav-link <?php echo e($tab === 'obat' ? 'active' : ''); ?>"
+                href="<?php echo e(route('dashboard', ['tab' => 'obat'])); ?>">
+                Daftar Obat
+            </a>
         </li>
     </ul>
+
     <div class="tab-content" id="dashboardTabContent">
+
         
-        <div class="tab-pane fade show active" id="ringkasan" role="tabpanel">
-            <div class="row g-4">
-                <?php $__currentLoopData = $ringkasan; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $kategori): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <?php
-                        $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
-                        $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
-                        $color = $colors[$loop->index % count($colors)];
-                        $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
-                            return request('search') === null || stripos($sub['nama'], request('search')) !== false;
-                        });
-                    ?>
+        <?php if($tab === 'laporan'): ?>
+            <div class="tab-pane fade show active" id="laporan" role="tabpanel">
+                
+                
+                <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="tab" value="laporan">
+                    <?php if($is_admin): ?>
+                    <div class="col-md-3">
+                        <label for="unit_id" class="form-label">Pilih Unit</label>
+                        <select name="unit_id" class="form-select" id="unit_id">
+                            <option value="">Semua Unit</option>
+                            <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($unit->id); ?>" <?php echo e($unitId == $unit->id ? 'selected' : ''); ?>>
+                                    <?php echo e($unit->nama); ?>
 
-                    <?php if($filteredSubs->count()): ?>
-                        <div class="col-md-6">
-                            <div class="card shadow-sm border-0 h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h5 class="card-title text-<?php echo e($color); ?>"><?php echo e($kategori['nama']); ?></h5>
-                                        <span class="badge bg-<?php echo e($color); ?> rounded-pill">
-                                            Total: <?php echo e($filteredSubs->sum('total')); ?>
+                                </option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="col-md-3">
+                        <label for="bulan" class="form-label">Bulan</label>
+                        <select name="bulan" class="form-select" id="bulan">
+                            <option value="">Semua Bulan</option>
+                            <?php for($i = 1; $i <= 12; $i++): ?>
+                                <option value="<?php echo e($i); ?>" <?php echo e(($bulan == $i) ? 'selected' : ''); ?>>
+                                    <?php echo e(DateTime::createFromFormat('!m', $i)->format('F')); ?>
 
-                                        </span>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tahun" class="form-label">Tahun</label>
+                        <select name="tahun" class="form-select" id="tahun">
+                            <option value="">Semua Tahun</option>
+                            <?php for($y = date('Y'); $y >= 2000; $y--): ?>
+                                <option value="<?php echo e($y); ?>" <?php echo e(($tahun == $y) ? 'selected' : ''); ?>><?php echo e($y); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Cari Subkategori</label>
+                        <input type="text" name="search" class="form-control" id="search" value="<?php echo e($searchSubkategori); ?>" placeholder="Ketik nama subkategori...">
+                    </div>
+                    <div class="col-md-12">
+                        <button class="btn btn-primary mt-2 w-100" type="submit">Tampilkan Laporan</button>
+                    </div>
+                    <div class="d-flex justify-content-end mb-4">
+                        <a href="<?php echo e(route('dashboard.export-rekap', ['bulan' => $bulan, 'tahun' => $tahun])); ?>" class="btn btn-outline-success <?php if(!$bulan || !$tahun): ?> disabled <?php endif; ?>" target="_blank">
+                            <i class="fas fa-file-excel"></i> Export Rekap Laporan
+                        </a>
+                    </div>
+                </form>
+
+                
+                <div class="row g-4">
+                    <?php $__currentLoopData = $ringkasan; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $kategori): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
+                            $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
+                            $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
+                            $color = $colors[$loop->index % count($colors)];
+                            $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
+                                return request('search') === null ||
+                                    stripos($sub['nama'], request('search')) !== false;
+                            });
+                        ?>
+
+                        <?php if($filteredSubs->count()): ?>
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title text-<?php echo e($color); ?>"><?php echo e($kategori['nama']); ?></h5>
+                                            <span class="badge bg-<?php echo e($color); ?> rounded-pill">Total: <?php echo e($filteredSubs->sum('total')); ?></span>
+                                        </div>
+                                        <ul class="list-group list-group-flush small">
+                                            <?php $__currentLoopData = $filteredSubs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <?php echo e($sub['nama']); ?>
+
+                                                    <span class="badge bg-light text-dark"><?php echo e($sub['total']); ?></span>
+                                                </li>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </ul>
                                     </div>
-                                    <ul class="list-group list-group-flush small">
-                                        <?php $__currentLoopData = $filteredSubs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                                <?php echo e($sub['nama']); ?>
-
-                                                <span class="badge bg-light text-dark"><?php echo e($sub['total']); ?></span>
-                                            </li>
-                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                    </ul>
-                                    <?php if(!$is_admin): ?>
-                                    <div class="mt-3 text-end">
-                                        <a href="<?php echo e(url('/laporan/' . $slug)); ?>" class="btn btn-sm btn-outline-<?php echo e($color); ?>">
-                                            Lihat Detail
-                                        </a>
-                                    </div>
-                                    <?php endif; ?>
                                 </div>
                             </div>
-                        </div>
-                    <?php endif; ?>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <?php endif; ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </div>
+
+                
+                <div class="mt-5">
+                    <canvas id="kategoriChart"></canvas>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
         
-        <div class="tab-pane fade" id="grafik" role="tabpanel">
-            <canvas id="kategoriChart"></canvas>
-        </div>
+        <?php if($tab === 'obat'): ?>
+            <div class="tab-pane fade show active" id="obat" role="tabpanel">
+                
+                
+                <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="mb-3 row g-2 align-items-end">
+                    <input type="hidden" name="tab" value="obat">
+                    <?php if($is_admin): ?>
+                        <div class="col-md-4">
+                            <label for="unit_id_obat" class="form-label">Pilih Unit</label>
+                            <select name="unit_id_obat" class="form-select" id="unit_id_obat">
+                                <option value="">Semua Unit</option>
+                                <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($unit->id); ?>" <?php echo e($unitIdObat == $unit->id ? 'selected' : ''); ?>>
+                                        <?php echo e($unit->nama); ?>
+
+                                    </option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+                    <div class="col-md-4">
+                        <label for="search_nama" class="form-label">Nama Obat</label>
+                        <input type="text" name="search_nama" class="form-control" value="<?php echo e($searchNamaObat); ?>" placeholder="Masukkan nama obat...">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search_jenis" class="form-label">Jenis Obat</label>
+                        <input type="text" name="search_jenis" id="search_jenis" class="form-control" value="<?php echo e(request('search_jenis')); ?>"
+                            placeholder="Masukkan jenis obat...">
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary mt-2 w-100">Tampilkan Daftar Obat</button>
+                    </div>
+                </form>
+
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>No</th>
+                                <th>Unit</th>
+                                <th>Nama Obat</th>
+                                <th>Jenis</th>
+                                <th>Harga</th>
+                                <th>Stok Awal</th>
+                                <th>Stok Sisa</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $__empty_1 = true; $__currentLoopData = $obats; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $obat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                <tr>
+                                    <td><?php echo e($loop->iteration); ?></td>
+                                    <td><?php echo e($obat->unit->nama ?? 'N/A'); ?></td>
+                                    <td><?php echo e($obat->nama_obat); ?></td>
+                                    <td><?php echo e($obat->jenis_obat); ?></td>
+                                    <td><?php echo e(number_format($obat->harga_satuan)); ?></td>
+                                    <td><?php echo e($obat->stok_awal); ?></td>
+                                    <td><?php echo e($obat->stok_sisa); ?></td>
+                                    <td><?php echo e($obat->satuan); ?></td>
+                                </tr>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center">Tidak ada data obat yang cocok.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -61499,37 +61531,30 @@ storage\framework\views\29509566cf679cded4e24a7627394d39.php:
     }, 2000);
 </script>
 
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const ctx = document.getElementById('kategoriChart').getContext('2d');
-    const kategoriChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: <?php echo json_encode(array_column($ringkasan, 'nama')); ?>,
-            datasets: [{
-                label: 'Jumlah Laporan',
-                data: <?php echo json_encode(array_column($ringkasan, 'total')); ?>,
-                backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
+<?php if($tab === 'laporan'): ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('kategoriChart').getContext('2d');
+        const kategoriChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode(array_column($ringkasan, 'nama')); ?>,
+                datasets: [{
+                    label: 'Jumlah Laporan',
+                    data: <?php echo json_encode(array_column($ringkasan, 'total')); ?>,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
             }
-        }
-    });
-</script>
+        });
+    </script>
+<?php endif; ?>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layout.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN7/resources/views/admin-dashboard.blade.php ENDPATH**/ ?>
 </code>
@@ -71503,8 +71528,6 @@ unset($__defined_vars); ?>
 
 storage\framework\views\8bb959273ac4f5e7bd7dff883d935b0d.php:
 <code>
-
-
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
     <h3 class="mb-4">Laporan Kategori Khusus (Admin)</h3>
@@ -72032,259 +72055,246 @@ storage\framework\views\8f03df01aca768f4ebea6c428436245b.php:
 storage\framework\views\8f0ee1fa89c404ca991fda3230c384d0.php:
 <code>
 <?php $__env->startSection('content'); ?>
-    <div class="container py-4">
-        
-        <div class="alert alert-success" id="welcome-alert">
-            Selamat datang, <?php echo e($authUser->name); ?>!
-            <?php if($is_admin): ?>
-                Anda masuk sebagai Admin Pusat.
-            <?php else: ?>
-                Anda masuk dari unit <?php echo e($authUser->unit->nama ?? '-'); ?>.
-            <?php endif; ?>
-        </div>
+<div class="container py-4">
+    
+    <div class="alert alert-success" id="welcome-alert">
+        Selamat datang, <?php echo e($authUser->name); ?>!
+        <?php if($is_admin): ?>
+            Anda masuk sebagai Admin Pusat.
+        <?php else: ?>
+            Anda masuk dari unit <?php echo e($authUser->unit->nama ?? '-'); ?>.
+        <?php endif; ?>
+    </div>
+
+    
+    <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link <?php echo e($tab === 'laporan' ? 'active' : ''); ?>"
+                href="<?php echo e(route('dashboard', ['tab' => 'laporan'])); ?>">
+                Laporan
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link <?php echo e($tab === 'obat' ? 'active' : ''); ?>"
+                href="<?php echo e(route('dashboard', ['tab' => 'obat'])); ?>">
+                Daftar Obat
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="dashboardTabContent">
 
         
         <?php if($tab === 'laporan'): ?>
-            <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="row g-2 align-items-end mb-4">
-                <?php if($is_admin): ?>
-                    <div class="col-md-3">
-                        <label for="unit_id" class="form-label">Pilih Unit</label>
-                        <select name="unit_id" class="form-select" id="unit_id">
-                            <option value="">Semua Unit</option>
-                            <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $unit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <option value="<?php echo e($unit->id); ?>" <?php echo e($unitId == $unit->id ? 'selected' : ''); ?>>
-                                    <?php echo e($unit->nama); ?>
-
-                                </option>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                        </select>
-                    </div>
-                <?php else: ?>
+            <div class="tab-pane fade show active" id="laporan" role="tabpanel">
+                
+                
+                <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="tab" value="laporan">
+                    
                     <div class="col-md-3">
                         <label class="form-label">Unit</label>
                         <input type="text" class="form-control" value="<?php echo e($authUser->unit->nama ?? ''); ?>" disabled>
                         <input type="hidden" name="unit_id" value="<?php echo e($authUser->unit_id); ?>">
                     </div>
-                <?php endif; ?>
 
-                <div class="col-md-3">
-                    <label for="bulan" class="form-label">Bulan</label>
-                    <select name="bulan" class="form-select">
-                        <option value="">Semua Bulan</option>
-                        <?php for($i = 1; $i <= 12; $i++): ?>
-                            <option value="<?php echo e($i); ?>" <?php echo e($bulan == $i ? 'selected' : ''); ?>>
-                                <?php echo e(DateTime::createFromFormat('!m', $i)->format('F')); ?>
+                    <div class="col-md-3">
+                        <label for="bulan" class="form-label">Bulan</label>
+                        <select name="bulan" class="form-select">
+                            <option value="">Semua Bulan</option>
+                            <?php for($i = 1; $i <= 12; $i++): ?>
+                                <option value="<?php echo e($i); ?>" <?php echo e($bulan == $i ? 'selected' : ''); ?>>
+                                    <?php echo e(DateTime::createFromFormat('!m', $i)->format('F')); ?>
 
-                            </option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
 
-                <div class="col-md-3">
-                    <label for="tahun" class="form-label">Tahun</label>
-                    <select name="tahun" class="form-select">
-                        <option value="">Semua Tahun</option>
-                        <?php for($y = date('Y'); $y >= 2000; $y--): ?>
-                            <option value="<?php echo e($y); ?>" <?php echo e($tahun == $y ? 'selected' : ''); ?>><?php echo e($y); ?>
+                    <div class="col-md-3">
+                        <label for="tahun" class="form-label">Tahun</label>
+                        <select name="tahun" class="form-select">
+                            <option value="">Semua Tahun</option>
+                            <?php for($y = date('Y'); $y >= 2000; $y--): ?>
+                                <option value="<?php echo e($y); ?>" <?php echo e($tahun == $y ? 'selected' : ''); ?>><?php echo e($y); ?>
 
-                            </option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
+                                </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
 
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Cari Subkategori</label>
-                    <input type="text" name="search" class="form-control" value="<?php echo e(request('search')); ?>"
-                        placeholder="Ketik nama subkategori...">
-                </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Cari Subkategori</label>
+                        <input type="text" name="search" class="form-control" value="<?php echo e(request('search')); ?>"
+                            placeholder="Ketik nama subkategori...">
+                    </div>
 
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary mt-2">Tampilkan</button>
-                </div>
-            </form>
-        <?php endif; ?>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary mt-2 w-100">Tampilkan Laporan</button>
+                    </div>
+                </form>
 
-        
-        <ul class="nav nav-tabs mb-3" id="dashboardTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <a class="nav-link <?php echo e($tab === 'laporan' ? 'active' : ''); ?>"
-                    href="<?php echo e(route('dashboard', array_merge(request()->except('search'), ['tab' => 'laporan']))); ?>">
-                    Laporan
-                </a>
-            </li>
-            <li class="nav-item" role="presentation">
-                <a class="nav-link <?php echo e($tab === 'obat' ? 'active' : ''); ?>"
-                    href="<?php echo e(route('dashboard', array_merge(request()->except('search'), ['tab' => 'obat']))); ?>">
-                    Daftar Obat
-                </a>
-            </li>
-        </ul>
+                
+                <div class="row g-4">
+                    <?php $__currentLoopData = $ringkasan; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $kategori): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
+                            $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
+                            $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
+                            $color = $colors[$loop->index % count($colors)];
+                            $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
+                                return request('search') === null ||
+                                    stripos($sub['nama'], request('search')) !== false;
+                            });
+                        ?>
 
-        <div class="tab-content" id="dashboardTabContent">
+                        <?php if($filteredSubs->count()): ?>
+                            <div class="col-md-6">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title text-<?php echo e($color); ?>"><?php echo e($kategori['nama']); ?>
 
-            
-            <?php if($tab === 'laporan'): ?>
-                <div class="tab-pane fade show active" id="laporan" role="tabpanel">
-                    <div class="row g-4">
-                        <?php $__currentLoopData = $ringkasan; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $kategori): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <?php
-                                $slug = \Illuminate\Support\Str::slug($kategori['nama'], '-');
-                                $colors = ['primary', 'success', 'warning', 'info', 'danger', 'secondary'];
-                                $color = $colors[$loop->index % count($colors)];
-                                $filteredSubs = collect($kategori['subkategori'])->filter(function ($sub) {
-                                    return request('search') === null ||
-                                        stripos($sub['nama'], request('search')) !== false;
-                                });
-                            ?>
+                                            </h5>
+                                            <span class="badge bg-<?php echo e($color); ?> rounded-pill">
+                                                Total: <?php echo e($filteredSubs->sum('total')); ?>
 
-                            <?php if($filteredSubs->count()): ?>
-                                <div class="col-md-6">
-                                    <div class="card shadow-sm border-0 h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <h5 class="card-title text-<?php echo e($color); ?>"><?php echo e($kategori['nama']); ?>
+                                            </span>
+                                        </div>
+                                        <ul class="list-group list-group-flush small">
+                                            <?php $__currentLoopData = $filteredSubs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <li
+                                                    class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <?php echo e($sub['nama']); ?>
 
-                                                </h5>
-                                                <span class="badge bg-<?php echo e($color); ?> rounded-pill">
-                                                    Total: <?php echo e($filteredSubs->sum('total')); ?>
-
-                                                </span>
-                                            </div>
-                                            <ul class="list-group list-group-flush small">
-                                                <?php $__currentLoopData = $filteredSubs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                                    <li
-                                                        class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                                        <?php echo e($sub['nama']); ?>
-
-                                                        <span class="badge bg-light text-dark"><?php echo e($sub['total']); ?></span>
-                                                    </li>
-                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                            </ul>
-                                            <?php if(!$is_admin): ?>
-                                                <div class="mt-3 text-end">
-                                                    <a href="<?php echo e(url('/laporan/' . $slug)); ?>"
-                                                        class="btn btn-sm btn-outline-<?php echo e($color); ?>">
-                                                        Lihat Detail
-                                                    </a>
-                                                </div>
-                                            <?php endif; ?>
+                                                    <span class="badge bg-light text-dark"><?php echo e($sub['total']); ?></span>
+                                                </li>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </ul>
+                                        <div class="mt-3 text-end">
+                                            <a href="<?php echo e(url('/laporan/' . $slug)); ?>"
+                                                class="btn btn-sm btn-outline-<?php echo e($color); ?>">
+                                                Lihat Detail
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
-                            <?php endif; ?>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </div>
-
-                    
-                    <div class="mt-5">
-                        <canvas id="kategoriChart"></canvas>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            
-            <?php if($tab === 'obat'): ?>
-                <div class="tab-pane fade show active" id="obat" role="tabpanel">
-                    <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="mb-3 row">
-                        <input type="hidden" name="tab" value="obat">
-                        <?php if($is_admin): ?>
-                            <input type="hidden" name="unit_id" value="<?php echo e($unitId); ?>">
-                        <?php else: ?>
-                            <input type="hidden" name="unit_id" value="<?php echo e($authUser->unit_id); ?>">
+                            </div>
                         <?php endif; ?>
-
-                        <div class="col-md-6">
-                            <label for="search" class="form-label">Cari Nama Obat</label>
-                            <input type="text" name="search" class="form-control" value="<?php echo e(request('search')); ?>"
-                                placeholder="Ketik nama obat...">
-                        </div>
-                        <div class="col-md-2 align-self-end">
-                            <button type="submit" class="btn btn-primary">Cari</button>
-                        </div>
-                    </form>
-
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr>
-                                    <th>Nama Obat</th>
-                                    <th>Jenis</th>
-                                    <th>Harga</th>
-                                    <th>Stok Awal</th>
-                                    <th>Stok Sisa</th>
-                                    <th>Satuan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $__empty_1 = true; $__currentLoopData = $obats; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $obat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                                    <tr>
-                                        <td><?php echo e($obat->nama_obat); ?></td>
-                                        <td><?php echo e($obat->jenis_obat); ?></td>
-                                        <td><?php echo e(number_format($obat->harga_satuan)); ?></td>
-                                        <td><?php echo e($obat->stok_awal); ?></td>
-                                        <td><?php echo e($obat->stok_sisa); ?></td>
-                                        <td><?php echo e($obat->satuan); ?></td>
-                                    </tr>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                                    <tr>
-                                        <td colspan="6">Tidak ada data obat.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
-            <?php endif; ?>
-        </div>
+
+                
+                <div class="mt-5">
+                    <canvas id="kategoriChart"></canvas>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        
+        <?php if($tab === 'obat'): ?>
+            <div class="tab-pane fade show active" id="obat" role="tabpanel">
+                
+                
+                <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="mb-3 row g-2 align-items-end">
+                    <input type="hidden" name="tab" value="obat">
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Unit</label>
+                        <input type="text" class="form-control" value="<?php echo e($authUser->unit->nama ?? ''); ?>" disabled>
+                        <input type="hidden" name="unit_id_obat" value="<?php echo e($authUser->unit_id); ?>">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="search_nama" class="form-label">Nama Obat</label>
+                        <input type="text" name="search_nama" class="form-control" value="<?php echo e($searchNamaObat); ?>" placeholder="Masukkan nama obat...">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search_jenis" class="form-label">Jenis Obat</label>
+                        <input type="text" name="search_jenis" id="search_jenis" class="form-control" value="<?php echo e(request('search_jenis')); ?>"
+                            placeholder="Masukkan jenis obat...">
+                    </div>
+                    <div class="col-md-12 align-self-end">
+                        <button type="submit" class="btn btn-primary w-100">Tampilkan Daftar Obat</button>
+                    </div>
+                </form>
+
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>No</th>
+                                <th>Unit</th>
+                                <th>Nama Obat</th>
+                                <th>Jenis</th>
+                                <th>Harga</th>
+                                <th>Stok Awal</th>
+                                <th>Stok Sisa</th>
+                                <th>Satuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $__empty_1 = true; $__currentLoopData = $obats; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $obat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                <tr>
+                                    <td><?php echo e($loop->iteration); ?></td>
+                                    <td><?php echo e($obat->unit->nama ?? 'N/A'); ?></td>
+                                    <td><?php echo e($obat->nama_obat); ?></td>
+                                    <td><?php echo e($obat->jenis_obat); ?></td>
+                                    <td><?php echo e(number_format($obat->harga_satuan)); ?></td>
+                                    <td><?php echo e($obat->stok_awal); ?></td>
+                                    <td><?php echo e($obat->stok_sisa); ?></td>
+                                    <td><?php echo e($obat->satuan); ?></td>
+                                </tr>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                                <tr>
+                                    <td colspan="8" class="text-center">Tidak ada data obat yang cocok.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
+</div>
 
-    
+
+<script>
+    setTimeout(() => {
+        const alert = document.getElementById('welcome-alert');
+        if (alert) {
+            alert.style.transition = "opacity 0.5s ease";
+            alert.style.opacity = 0;
+            setTimeout(() => alert.remove(), 500);
+        }
+    }, 2000);
+</script>
+
+<?php if($tab === 'laporan'): ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        setTimeout(() => {
-            const alert = document.getElementById('welcome-alert');
-            if (alert) {
-                alert.style.transition = "opacity 0.5s ease";
-                alert.style.opacity = 0;
-                setTimeout(() => alert.remove(), 500);
+        const ctx = document.getElementById('kategoriChart').getContext('2d');
+        const kategoriChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo json_encode(array_column($ringkasan, 'nama')); ?>,
+                datasets: [{
+                    label: 'Jumlah Laporan',
+                    data: <?php echo json_encode(array_column($ringkasan, 'total')); ?>,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
             }
-        }, 2000);
+        });
     </script>
-
-    
-    <?php if($tab === 'laporan'): ?>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            const ctx = document.getElementById('kategoriChart').getContext('2d');
-            const kategoriChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: <?php echo json_encode(array_column($ringkasan, 'nama')); ?>,
-                    datasets: [{
-                        label: 'Jumlah Laporan',
-                        data: <?php echo json_encode(array_column($ringkasan, 'total')); ?>,
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        </script>
-    <?php endif; ?>
+<?php endif; ?>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('layout.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /mnt/c/Users/aloys/Downloads/Project-KP-PTPN7/resources/views/dashboard.blade.php ENDPATH**/ ?>
 </code>
 
@@ -79776,13 +79786,6 @@ storage\framework\views\d3a16b5482762f03bc5180cdb69b7a0e.php:
         </div>
     </div>
 <?php endif; ?>
-
-
-<div class="d-flex justify-content-end mb-3">
-    <a href="<?php echo e(route('laporan.peserta-kb.export', request()->query())); ?>" class="btn btn-outline-success" target="_blank">
-        <i class="fas fa-file-excel"></i> Export Excel
-    </a>
-</div>
 
 
 <div class="card">
