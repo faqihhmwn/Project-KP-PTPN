@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Obat;
 use App\Models\RekapitulasiObat;
+use App\Models\PenerimaanObat;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -21,7 +22,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     protected $startDate;
     protected $endDate;
     protected $daysInMonth;
-    protected $rowNumber = 0;  // Tambahkan property untuk penomoran
+    protected $rowNumber = 0;
 
     public function __construct($startDate, $endDate)
     {
@@ -32,59 +33,45 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function collection()
     {
-        return Obat::with(['rekapitulasiObat' => function($query) {
-            $query->whereBetween('tanggal', [
-                $this->startDate->format('Y-m-d'),
-                $this->endDate->format('Y-m-d')
-            ])
-            ->where('bulan', $this->startDate->month)
-            ->where('tahun', $this->startDate->year)
-            ->orderBy('tanggal');
-        }])->get();
+        return Obat::with(['unit'])->get();
     }
 
     public function headings(): array
     {
-        $headers = [];
-        
-        // Baris pertama - header utama
-        $row = [
-            'No',
-            'Nama Obat',
-            'Jenis',
-            'Harga Satuan',
-            'Stok Awal'
+        $row1 = [
+            'No', 'Nama Obat', 'Jenis', 'Harga Satuan', 'Satuan', 'Unit', 'Catatan', 'Stok Awal'
         ];
+        $row2 = array_fill(0, count($row1), '');
 
-        // Tambah kolom untuk setiap tanggal dalam bulan
         for ($day = 1; $day <= $this->daysInMonth; $day++) {
-            $row[] = $day;
+            $row1[] = $day;
+            $row1[] = '';
+            $row2[] = 'Keluar';
+            $row2[] = 'Masuk';
         }
 
-        // Tambah kolom ringkasan
-        $row[] = 'Total Keluar';
-        $row[] = 'Sisa Stok';
-        $row[] = 'Total Biaya';
+        $row1 = array_merge($row1, ['Total Keluar', 'Total Masuk', 'Sisa Stok', 'Total Biaya']);
+        $row2 = array_merge($row2, ['', '', '', '']);
 
-        $headers[] = $row;
-        
-        return $headers;
+        return [$row1, $row2];
     }
 
     public function map($obat): array
     {
-        $this->rowNumber++;  // Increment nomor urut
-        
-        // Data dasar obat
+        $this->rowNumber++;
+
         $row = [
-            $this->rowNumber,  // Gunakan nomor urut sebagai pengganti ID
+            $this->rowNumber,
             $obat->nama_obat,
             $obat->jenis_obat ?? '-',
             $obat->harga_satuan,
+            $obat->satuan,
+            $obat->unit->nama ?? '-',
+            $obat->keterangan ?? '-',
         ];
 
         // Hitung stok awal
-        $stokAwal = $obat->rekapitulasiObat()
+        $stokAwal = RekapitulasiObat::where('obat_id', $obat->id)
             ->where('tanggal', '<', $this->startDate->format('Y-m-d'))
             ->orderBy('tanggal', 'desc')
             ->first();
@@ -92,24 +79,32 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $row[] = $stokAwalValue;
 
         $totalKeluar = 0;
+        $totalMasuk = 0;
 
-            // Data penggunaan harian
-            for ($day = 1; $day <= $this->daysInMonth; $day++) {
-                $tanggal = Carbon::create($this->startDate->year, $this->startDate->month, $day);
-                $rekapHarian = RekapitulasiObat::where('obat_id', $obat->id)
-                    ->where('tanggal', $tanggal->format('Y-m-d'))
-                    ->where('bulan', $this->startDate->month)
-                    ->where('tahun', $this->startDate->year)
-                    ->first();
-                
-                $jumlahKeluar = $rekapHarian ? $rekapHarian->jumlah_keluar : 0;
-                $totalKeluar += $jumlahKeluar;
-                $row[] = $jumlahKeluar;
-            }        // Tambah data ringkasan
-        $sisaStok = max(0, $stokAwalValue - $totalKeluar);
+        for ($day = 1; $day <= $this->daysInMonth; $day++) {
+            $tanggal = Carbon::create($this->startDate->year, $this->startDate->month, $day)->format('Y-m-d');
+
+            $rekap = RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('tanggal', $tanggal)
+                ->first();
+            $keluar = $rekap ? $rekap->jumlah_keluar : 0;
+
+            $masuk = PenerimaanObat::where('obat_id', $obat->id)
+                ->where('tanggal_masuk', $tanggal)
+                ->sum('jumlah_masuk');
+
+            $row[] = $keluar;
+            $row[] = $masuk;
+
+            $totalKeluar += $keluar;
+            $totalMasuk += $masuk;
+        }
+
+        $sisaStok = $stokAwalValue + $totalMasuk - $totalKeluar;
         $totalBiaya = $totalKeluar * $obat->harga_satuan;
 
         $row[] = $totalKeluar;
+        $row[] = $totalMasuk;
         $row[] = $sisaStok;
         $row[] = $totalBiaya;
 
@@ -118,64 +113,58 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function styles(Worksheet $sheet)
     {
-        // Dapatkan kolom terakhir langsung dari worksheet
         $lastColumn = $sheet->getHighestColumn();
         $lastRow = $sheet->getHighestRow();
 
-        // Style untuk header (baris pertama saja)
-        $headerRange = 'A1:' . $lastColumn . '1';
-        $sheet->getStyle($headerRange)->applyFromArray([
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
+        // Merge header atas
+        for ($col = 1; $col <= 8; $col++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->mergeCells("{$colLetter}1:{$colLetter}2");
+        }
+
+        $colIndex = 9;
+        for ($day = 1; $day <= $this->daysInMonth; $day++) {
+            $colLetter1 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+            $colLetter2 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+            $sheet->mergeCells("{$colLetter1}1:{$colLetter2}1");
+            $colIndex += 2;
+        }
+
+        foreach (['Total Keluar', 'Total Masuk', 'Sisa Stok', 'Total Biaya'] as $i => $title) {
+            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + $i);
+            $sheet->mergeCells("{$col}1:{$col}2");
+        }
+
+        // Styling
+        $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
             ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['argb' => '000000']
+                ]
+            ],
+        ]);
+
+        $sheet->getStyle('A1:' . $lastColumn . '2')->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => '2196F3'],
             ],
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF']
+            ]
         ]);
 
-        // Style untuk seluruh tabel (termasuk header)
-        $sheet->getStyle('A1:' . $lastColumn . $lastRow)->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
-            ],
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // Style untuk baris data (baris kedua dan seterusnya)
-        $sheet->getStyle('A2:' . $lastColumn . $lastRow)->applyFromArray([
-            'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => 'FFFFFF'],
-            ],
-        ]);
-
-        // Rata kiri untuk kolom nama dan jenis obat
-        $sheet->getStyle('B2:C' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-
-        // Format angka untuk kolom harga dan total biaya
-        $sheet->getStyle('D2:D' . $lastRow)->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle($lastColumn . '2:' . $lastColumn . $lastRow)->getNumberFormat()->setFormatCode('#,##0');
-
-        // Freeze pane untuk header
-        $sheet->freezePane('A2');
-
-        return [];
+        $sheet->freezePane('I3'); // Setelah kolom ke-8
     }
 
     public function title(): string
     {
-        return 'Rekapitulasi ' . $this->startDate->format('F Y');
+        return 'Rekap ' . $this->startDate->format('F Y');
     }
 }
