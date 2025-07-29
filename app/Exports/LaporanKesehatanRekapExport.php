@@ -72,27 +72,28 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
             // Subkategori data
             $kategoriTotal = array_fill(0, $this->units->count(), 0);
             foreach ($kategori->subkategori as $sub) {
-                $row = collect([$sub->nama]);
-                $total = 0;
-                foreach ($this->units as $i => $unit) {
-                    $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
-                    $row->push($jumlah);
-                    $kategoriTotal[$i] += $jumlah;
-                    $total += $jumlah;
-                }
-                $row->push($total);
-                $collection->push($row);
-            }
+    $row = collect([$sub->nama]);
+    $total = 0;
+    foreach ($this->units as $i => $unit) {
+        $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
+        $row->push($jumlah);
+        $kategoriTotal[$i] += $jumlah;
+        $total += $jumlah;
+    }
+    $row->push($total ?: '-');
+    $collection->push($row);
+}
 
             // Baris TOTAL kategori
             $totalRow = collect(['TOTAL']);
-            $totalSum = 0;
-            foreach ($kategoriTotal as $jumlah) {
-                $totalRow->push($jumlah);
-                $totalSum += $jumlah;
-            }
-            $totalRow->push($totalSum);
-            $collection->push($totalRow);
+$totalSum = 0;
+foreach ($kategoriTotal as $jumlah) {
+    $value = $jumlah ?: '-';
+    $totalRow->push($value);
+    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+}
+$totalRow->push($totalSum ?: '-');
+$collection->push($totalRow);
 
             // Baris kosong antar kategori
             $collection->push(collect(['']));
@@ -117,8 +118,10 @@ $disabilitasData = \DB::table('input_manual')
     ->where('tahun', $this->tahun)
     ->get();
 
+$index = 1;
 foreach ($disabilitasData as $row) {
-    $namaLengkap = $row->nama . ' (' . ($row->keterangan ?? '-') . ')';
+    $namaLengkap = $index . '. ' . $row->nama . ' (' . ($row->keterangan ?? '-') . ')';
+    $index++;
     $dataRow = collect([$namaLengkap]);
     $total = 0;
     foreach ($this->units as $unit) {
@@ -169,8 +172,10 @@ $cutiHamilData = \DB::table('input_manual')
     ->where('subkategori_id', 83)
     ->get();
 
+$index = 1;
 foreach ($cutiHamilData as $row) {
-    $namaStatus = $row->nama . ' (' . ($row->status ?? '-') . ')';
+    $namaStatus = $index . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
+    $index++;
     $dataRow = collect([$namaStatus]);
     $total = 0;
     foreach ($this->units as $unit) {
@@ -358,24 +363,62 @@ $collection->push($totalRow);
                         }
                     }
 
-                    if (!$isEmptyRow) {
-                        $range = 'A' . $row . ':' . $highestColLetter . $row;
-                        $sheet->getStyle($range)->applyFromArray($borderStyle);
-                    }
+                    // Baris yang TIDAK BOLEH diberi border
+if (!$isEmptyRow) {
+    $range = 'A' . $row . ':' . $highestColLetter . $row;
+    $sheet->getStyle($range)->applyFromArray($borderStyle);
+}
                 }
 
                 // Header kategori diberi bold dan align center
                 for ($row = 3; $row <= $highestRow; $row++) {
-                    $firstCell = $sheet->getCell("A{$row}");
-                    if (stripos((string) $firstCell->getValue(), 'Kat.') === 0) {
-                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    }
-                    if ((string) $firstCell->getValue() === 'TOTAL') {
-                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                    }
-                }
+    $firstCell = $sheet->getCell("A{$row}");
+    $value = strtoupper(trim((string) $firstCell->getValue()));
+    $lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
+    $lastValue = trim((string) $lastCell->getValue());
+
+if ($lastValue !== '' && $value !== 'TOTAL' && !in_array($value, ['NAMA', 'NAMA KARYAWAN/TI(STATUS)'])) {
+    $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+    $sheet->getStyle("{$lastColLetter}{$row}")->getFont()->setBold(true);
+}
+    // Cek apakah kolom TOTAL (kolom terakhir) berisi "-", dan ratakan ke kanan
+$lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
+if (trim((string)$lastCell->getValue()) === '-') {
+    $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+    $sheet->getStyle("{$lastColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+}
+    $headersKhusus = [
+    'NAMA',
+    'NAMA KARYAWAN/TI(STATUS)',
+];
+if (in_array($value, $headersKhusus)) {
+    $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+}
+
+    if (stripos($value, 'KAT.') === 0) {
+        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    }
+
+if ($value === 'TOTAL') {
+    $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+    $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+    // Buat simbol "-" di baris TOTAL jadi rata kanan
+    for ($col = 2; $col <= $highestColIndex; $col++) {
+        $cell = $sheet->getCellByColumnAndRow($col, $row);
+        if (trim((string)$cell->getValue()) === '-') {
+            $cellLetter = Coordinate::stringFromColumnIndex($col);
+            $sheet->getStyle("{$cellLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        }
+    }
+}
+
+    // Tambahkan pengecekan bold untuk judul tabel tambahan
+    if (in_array($value, ['PEKERJA DISABILITAS', 'CUTI HAMIL', 'CUTI MELAHIRKAN', 'CUTI KARYAWAN KARENA ISTRI MELAHIRKAN'])) {
+        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+    }
+}
             },
         ];
     }
