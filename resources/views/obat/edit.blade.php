@@ -34,7 +34,13 @@
                             <input type="hidden" name="return_url" value="{{ request()->get('return_url') }}">
                             @csrf
                             @method('PUT')
-
+                            
+                            <div class="mb-3">
+                                <label for="unit" class="form-label">Unit</label>
+                                <input type="text" class="form-control" id="unit" name="unit"
+                                    value="{{ $obat->unit->nama ?? 'Unit tidak ditemukan' }}" readonly>
+                            </div>
+                            
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
