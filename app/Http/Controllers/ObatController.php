@@ -95,6 +95,7 @@ class ObatController extends Controller
 
     public function show(Obat $obat)
     {
+        $obat->load('unit');
         // Load relasi rekapitulasiObat
         $obat->load('rekapitulasiObat');
 
@@ -161,6 +162,7 @@ class ObatController extends Controller
 
     public function edit(Obat $obat)
     {
+        $obat->load('unit'); // Memuat relasi unit
         return view('obat.edit', compact('obat'));
     }
 

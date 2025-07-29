@@ -136,6 +136,7 @@
                                 <thead class="table-dark">
                                     <tr>
                                         <th class="text-center" style="width: 5%; min-width: 50px;">No</th>
+                                        <th class="text-center" style="width: 12%;">Unit</th>
                                         <th style="width: 15%; min-width: 130px;">Nama Obat</th>
                                         <th class="text-center" style="width: 15%; min-width: 120px;">Jenis</th>
                                         <th class="text-center" style="width: 12%; min-width: 100px;">Harga Satuan</th>
@@ -149,6 +150,7 @@
                                     @forelse($obats as $index => $obat)
                                         <tr>
                                             <td class="text-center fw-medium">{{ $obats->firstItem() + $index }}</td>
+                                            <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
                                             <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
                                             <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
                                             <td class="text-center fw-medium">Rp

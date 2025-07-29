@@ -1,42 +1,31 @@
 @extends('layout.app')
 
-@section('title', 'Dashboard Obat')
+@section('title', 'Dashboard Obat (Admin)')
 
 @section('content')
 <div class="container-fluid">
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.obat.dashboard') }}">
-                <div class="row align-items-end">
-                    <div class="col-md-4">
-                        <label for="unit_id" class="form-label fw-bold">Tampilkan Data Untuk Unit:</label>
-                        <select name="unit_id" id="unit_id" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- Semua Unit --</option>
-                            @foreach ($units as $unit)
-                                <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
-                                    {{ $unit->nama }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card bg-primary text-white">
                 <div class="card-body">
+                    <form method="GET" id="unitFilterForm">
+                        <div class="mb-3">
+                            <label for="unit_id" class="form-label text-white">Pilih Unit</label>
+                            <select name="unit_id" id="unit_id" class="form-select" onchange="document.getElementById('unitFilterForm').submit()">
+                                <option value="">-- Semua Unit --</option>
+                                @foreach ($units as $unit)
+                                    <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
+                                        {{ $unit->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </form>
                     <div class="d-flex justify-content-between">
                         <div>
                             <h4>{{ $totalObat }}</h4>
-                            <p class="mb-0">
-                                Total Obat
-                                @if($unitId && $units->find($unitId))
-                                    ({{ $units->find($unitId)->nama }})
-                                @endif
-                            </p>
+                            <p class="mb-0">Total Obat</p>
                         </div>
                         <div class="align-self-center">
                             <i class="fas fa-pills fa-2x"></i>
@@ -47,6 +36,7 @@
         </div>
     </div>
 
+    <!-- Quick Actions -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -67,12 +57,14 @@
                                 Rekapitulasi
                             </a>
                         </div>
+                        {{-- Tambahkan menu tambahan jika perlu --}}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Summary Info -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -81,14 +73,8 @@
                 </div>
                 <div class="card-body">
                     <p>Sistem Manajemen Obat Puskesmas PTPN</p>
-                    <p>
-                        <strong>Total Obat Terdaftar:</strong> {{ $totalObat }} jenis obat
-                        @if($unitId && $units->find($unitId))
-                            di unit {{ $units->find($unitId)->nama }}
-                        @else
-                            di semua unit
-                        @endif
-                    </p>
+                    <p><strong>Total Obat Terdaftar:</strong> {{ $totalObat }} jenis obat</p>
+
                     <p><strong>Fitur Utama:</strong></p>
                     <ul>
                         <li>Rekapitulasi obat bulanan dengan input harian</li>
