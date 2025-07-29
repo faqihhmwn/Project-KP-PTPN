@@ -204,10 +204,10 @@
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
 
-                                <a href="{{ route('obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}"
-                                    class="btn btn-warning btn-sm" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
+                                {{-- <a href="{{ route('obat.edit', $obat->id) }}?return_url={{ route('obat.index') }}"
+                                    class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a> --}}
                                 <form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
@@ -810,7 +810,7 @@
         });
     </script>
 
-{{-- Mencegah nilai negaitf --}}
+    {{-- Mencegah nilai negaitf --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.daily-input').forEach(function(input) {
