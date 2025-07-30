@@ -22,12 +22,14 @@ class PenerimaanObat extends Model
      * @var array
      */
     protected $fillable = [
-        'obat_id',
-        'unit_id',
-        'jumlah_masuk',
-        'tanggal_masuk',
-        'catatan',
-    ];
+    'obat_id',
+    'unit_id',
+    'jumlah_masuk',
+    'tanggal_masuk',
+    'catatan',
+    'user_id', 
+];
+
 
     public function obat()
     {

@@ -505,7 +505,6 @@
                         localStorage.removeItem(lockKey);
                         setLockedState(false);
                         batalkanValidasiBtn.classList.add('d-none');
-                        location.reload();
                     }
                 });
             }
@@ -753,28 +752,61 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const isLocked = !document.getElementById('validasiInfo').classList.contains('d-none');
+            const btnSimpan = document.getElementById('btnSimpanPenerimaan');
+            let isSubmitting = false;
 
-            const tambahStokBtn = document.querySelector('[data-bs-target="#modalTambahStok"]');
-            const btnSimpanPenerimaan = document.getElementById('btnSimpanPenerimaan');
+            // Prevent double binding
+            if (btnSimpan.dataset.bound === "true") return;
+            btnSimpan.dataset.bound = "true";
 
-            if (isLocked) {
-                if (tambahStokBtn) {
-                    tambahStokBtn.classList.add('disabled');
-                    tambahStokBtn.setAttribute('title', 'Data sudah dikunci');
-                    tambahStokBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        alert(
-                            '❌ Data bulan ini telah divalidasi dan dikunci. Tidak bisa menambahkan stok.'
-                            );
+            btnSimpan.addEventListener('click', function() {
+                if (isSubmitting) return;
+                isSubmitting = true;
+
+                const obatId = document.getElementById('obat_id_penerimaan').value;
+                const jumlahMasuk = document.getElementById('jumlah_masuk').value;
+                const tanggalMasuk = document.getElementById('tanggal_masuk').value;
+                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const route = document.querySelector('meta[name="route-penerimaan-obat-store"]')
+                    .getAttribute('content');
+
+                if (!obatId || !jumlahMasuk || !tanggalMasuk) {
+                    alert('❗ Semua kolom wajib diisi.');
+                    isSubmitting = false;
+                    return;
+                }
+
+                fetch(route, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token
+                        },
+                        body: JSON.stringify({
+                            obat_id: obatId,
+                            jumlah_masuk: jumlahMasuk,
+                            tanggal_masuk: tanggalMasuk
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        isSubmitting = false;
+
+                        // Pastikan `data.success` benar boolean true
+                        if (data.success === true) {
+                            alert(data.message || '✅ Stok berhasil ditambahkan.');
+                            location.reload();
+                        } else {
+                            alert('❌ Gagal menambahkan stok: ' + (data.message ||
+                                'Terjadi kesalahan.'));
+                        }
+                    })
+                    .catch(error => {
+                        isSubmitting = false;
+                        console.error('❌ Error:', error);
+                        alert('❌ Terjadi kesalahan saat mengirim data ke server.');
                     });
-                }
-
-                if (btnSimpanPenerimaan) {
-                    btnSimpanPenerimaan.disabled = true;
-                }
-            }
+            });
         });
     </script>
 
