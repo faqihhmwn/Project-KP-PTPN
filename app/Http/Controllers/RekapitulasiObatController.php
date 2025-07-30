@@ -7,6 +7,7 @@ use App\Models\RekapitulasiObat;
 use Illuminate\Support\Facades\Validator; // Pastikan ini di-import
 use Illuminate\Support\Facades\Log; // Pastikan ini di-import
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\Obat;
@@ -36,7 +37,9 @@ class RekapitulasiObatController extends Controller
             ->where('tahun', $tahun)
             ->get();
 
-        return view('rekapitulasi-obat', compact('obats', 'rekapitulasi', 'bulan', 'tahun', 'daysInMonth'));
+        $isLocked = Storage::exists('validasi/obat_validasi_' . $tahun . '_' . $bulan . '.lock');
+
+        return view('rekapitulasi-obat', compact('obats', 'rekapitulasi', 'bulan', 'tahun', 'daysInMonth', 'isLocked'));
     }
 
     public function storeOrUpdate(Request $request)

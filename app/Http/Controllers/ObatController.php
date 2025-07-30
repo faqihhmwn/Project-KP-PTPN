@@ -173,16 +173,16 @@ class ObatController extends Controller
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            // 'stok_awal' => 'required|integer|min:0',
             'keterangan' => 'nullable|string'
         ]);
 
         $obat->update($validated);
         $this->updateStokObat($obat);
 
-        return redirect()->to($request->get('return_url', route('obat.index')))
+        return redirect()->to($request->query('return_url', route('obat.index')))
             ->with('success', 'Obat berhasil diperbarui');
     }
+
 
     public function destroy(Obat $obat)
     {
