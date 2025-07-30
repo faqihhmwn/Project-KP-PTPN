@@ -95,8 +95,8 @@
                     <tr>
                         <th rowspan="2" class="text-center align-middle">Rekap Bulan</th>
                         <th colspan="{{ $kategori->count() }}" class="group-header text-center">DETAIL BIAYA</th>
-                        <th rowspan="2" class="bg-warning text-dark text-center align-middle">TOTAL BIAYA KESEHATAN</th>
-                        <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
+                        <th rowspan="2" class="bg-warning fw-bold text-center align-middle">TOTAL BIAYA KESEHATAN</th>
+                        <th rowspan="2" class="bg-green fw-bold text-center align-middle">VALIDASI</th>
                         <th rowspan="2" class="text-center align-middle">Aksi</th>
                     </tr>
                     <tr>
@@ -141,9 +141,9 @@
 
                     {{-- Baris: TOTAL 1 TAHUN --}}
                     <tr>
-                        <td class="fw-bold">TOTAL 1 TAHUN</td>
+                        <td class="bg-warning fw-bold">TOTAL 1 TAHUN</td>
                         @foreach ($kategori as $k)
-                            <td class="fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
+                            <td class="bg-warning fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
                         <td class="bg-warning fw-bold">{{ number_format($annualTotals['all_kategoris_total'] ?? 0, 0, ',', '.') }}</td>
                         <td></td> {{-- Kolom Validasi --}}
@@ -152,9 +152,9 @@
 
                     {{-- Baris: BIAYA TERSEDIA --}}
                     <tr>
-                        <td class="fw-bold">BIAYA TERSEDIA</td>
+                        <td class="bg-info fw-bold">BIAYA TERSEDIA</td>
                         @foreach ($kategori as $k)
-                            <td class="fw-bold">{{ number_format($biayaTersedia[$k->id] ?? 0, 0, ',', '.') }}</td>
+                            <td class="bg-info fw-bold">{{ number_format($biayaTersedia[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
                         <td class="bg-info fw-bold">
                             {{ number_format($biayaTersedia['all_kategoris_total'] ?? 0, 0, ',', '.') }}
@@ -169,9 +169,9 @@
 
                     {{-- Baris: PERSENTASE --}}
                     <tr>
-                        <td class="fw-bold">PERSENTASE</td>
+                        <td class="bg-success fw-bold">PERSENTASE</td>
                         @foreach ($kategori as $k)
-                            <td class="fw-bold">
+                            <td class="bg-success fw-bold">
                                 @php
                                     $totalTahun = $annualTotals[$k->id] ?? 0;
                                     $biayaAvail = $biayaTersedia[$k->id] ?? 0;

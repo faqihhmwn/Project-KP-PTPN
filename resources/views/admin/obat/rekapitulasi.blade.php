@@ -3,518 +3,617 @@
 
 @section('content')
 
-    <style>
-        .table-container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            overflow-x: auto;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+<style>
+    .table-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        overflow-x: auto;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
 
-        table {
-            width: max-content;
-            min-width: 100%;
-            border-collapse: collapse;
-        }
+    table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+    }
 
-        thead {
-            background-color: #0077c0;
-            color: white;
-        }
+    thead {
+        background-color: #0077c0;
+        color: white;
+    }
 
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: center;
-            white-space: nowrap;
-            font-size: 12px;
-        }
+    th,
+    td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 12px;
+    }
 
-        th {
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+    th {
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
 
-        input[type="number"],
-        input[type="text"] {
-            width: 60px;
-            padding: 4px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
+    input[type="number"],
+    input[type="text"] {
+        width: 60px;
+        padding: 4px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+    }
 
-        tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
+    tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
 
-        tbody tr:hover {
-            background-color: #e3f2fd;
-        }
-    </style>
+    tbody tr:hover {
+        background-color: #e3f2fd;
+    }
+</style>
 
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
-        <a href="/obat/dashboard" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
+    <a href="obat/dashboard" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
+    </a>
+</div>
 
-    <!-- Controls -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row align-items-center">
-                <!-- Filter Bulan/Tahun -->
-                <div class="col-md-6">
-                    <form method="GET" class="d-flex gap-2" id="filterForm">
-                        <select name="unit_id" class="form-select" id="unit_id">
-                            <option value="">-- Pilih Unit --</option>
-                            @foreach ($units as $unit)
-                                <option value="{{ $unit->id }}" {{ $unitId == $unit->id ? 'selected' : '' }}>
-                                    {{ $unit->nama }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <select name="bulan" class="form-select" id="bulanSelect">
-                            @for ($i = 1; $i <= 12; $i++)
-                                <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
-                                    {{ \Carbon\Carbon::createFromDate(null, $i, 1)->format('F') }}
-                                </option>
+<!-- Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <!-- Filter Bulan/Tahun -->
+            <div class="col-md-6">
+                <form method="GET" class="d-flex gap-2" id="filterForm">
+                    <select name="unit_id" class="form-select" id="unitSelect">
+                        <option value="">-- Semua Unit --</option>
+                        @foreach ($units as $unit)
+                        <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
+                            {{ $unit->nama }}
+                        </option>
+                        @endforeach
+                    </select>
+                    <select name="bulan" class="form-select" id="bulanSelect">
+                        @for ($i = 1; $i <= 12; $i++)
+                            <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::createFromDate(null, $i, 1)->format('F') }}
+                            </option>
                             @endfor
-                        </select>
-                        <select name="tahun" class="form-select" id="tahunSelect">
-                            @php
-                                $currentYear = 2025;
-                                $endYear = $currentYear + 10;
-                            @endphp
-                            @for ($year = $currentYear; $year <= $endYear; $year++)
-                                <option value="{{ $year }}" {{ $tahun == $year ? 'selected' : '' }}>
-                                    {{ $year }}
-                                </option>
-                            @endfor
-                        </select>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
-                    </form>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-    <!-- Table Container -->
-    <div class="table-container">
-        <div id="rekapNotif" class="alert d-none mb-3"></div>
-        <!-- Tambahkan CSRF Token untuk keamanan -->
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-        <table>
-            <thead>
-                <tr>
-                    <th rowspan="2">No</th>
-                    <th rowspan="2">Nama Obat</th>
-                    <th rowspan="2">Jenis</th>
-                    <th rowspan="2">Harga Satuan</th>
-                    <th rowspan="2">Stok Awal</th>
-                    <th rowspan="2">Unit</th>
-                    <th rowspan="2">Bulan</th>
-                    <th rowspan="2">Tahun</th>
-                    <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
-                    <th rowspan="2">Sisa Stok</th>
-                    <th rowspan="2">Total Biaya</th>
-                    <th rowspan="2">Aksi</th>
-                </tr>
-                <tr>
-                    @for ($day = 1; $day <= $daysInMonth; $day++)
-                        <th>{{ $day }}</th>
-                    @endfor
-                </tr>
-            </thead>
-            <tbody id="obatTableBody">
-                @forelse($obats as $index => $obat)
-                    <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
-                        data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
-                        data-harga="{{ $obat->harga_satuan ?? 0 }}">
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $obat->nama_obat }}</td>
-                        <td>{{ $obat->jenis_obat ?? '-' }}</td>
-                        <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
+                    </select>
+                    <select name="tahun" class="form-select" id="tahunSelect">
                         @php
-                            // Ambil sisa stok dari bulan sebelumnya
-                            $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
-                            $tahunSebelumnya = $bulan == 1 ? $tahun - 1 : $tahun;
-
-                            $rekapBulanSebelumnya = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                ->where('unit_id', $unitId)
-                                ->where('bulan', $bulanSebelumnya)
-                                ->where('tahun', $tahunSebelumnya)
-                                ->orderBy('tanggal', 'desc')
-                                ->first();
-
-                            $stokAwal = $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $obat->stok_awal;
+                        $currentYear = 2025;
+                        $endYear = $currentYear + 10;
                         @endphp
-                        <td class="stok-awal" data-obat-id="{{ $obat->id }}">
-                            {{ $obat->stokAwal($bulan, $tahun) }}
-                        </td>
-                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
-                        <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
-                        <td>{{ $tahun }}</td>
-                        @php $totalBiaya = 0; @endphp
-                        @for ($day = 1; $day <= $daysInMonth; $day++)
-                            @php
-                                $jumlahKeluar = 0;
-                                $tanggal = \Carbon\Carbon::createFromDate($tahun, (int) $bulan, $day);
-                                $rekapitulasi = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-                                    ->where('unit_id', $unitId)
-                                    ->where('tanggal', $tanggal->format('Y-m-d'))
-                                    ->where('bulan', $bulan)
-                                    ->where('tahun', $tahun)
-                                    ->first();
-
-                                if ($rekapitulasi) {
-                                    $jumlahKeluar = $rekapitulasi->jumlah_keluar;
-                                }
-                                $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
-                            @endphp
-                            <td>
-                                <input type="number" class="daily-input" type="text" inputmode="numeric"
-                                    pattern="[0-9]*" value="{{ $jumlahKeluar }}" data-obat-id="{{ $obat->id }}"
-                                    data-tanggal="{{ $tanggal->format('Y-m-d') }}">
-                            </td>
-                        @endfor
-                        <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
-                            {{ $obat->stokSisa() }}
-                        </td>
-                        <td class="total-biaya" id="total-biaya-{{ $obat->id }}"><strong>Rp
-                                {{ number_format($totalBiaya, 0, ',', '.') }}</strong></td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ route('admin.obat.rekapitulasi.detail', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}"
-                                    class="btn btn-info btn-sm" title="Detail Rekapitulasi">
-                                    <i class="fas fa-chart-bar"></i>
-                                </a>
-
-                                <a href="{{ route('admin.obat.edit', ['obat' => $obat->id, 'return_url' => url()->current()]) }}"
-                                    class="btn btn-warning btn-sm" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.obat.destroy', $obat) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm"
-                                        onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
-                                        title="Hapus Permanen">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ 11 + $daysInMonth }}" style="text-align: center; padding: 20px;">
-                            Belum ada data obat untuk bulan {{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}
-                            {{ $tahun }}
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-
-        <div id="validasiInfo" class="alert alert-success mt-3 d-none">
-            <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
-            dinonaktifkan untuk menjaga integritas laporan.
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-        <button id="validasiBulanBtn" class="btn btn-success">
-            <i class="fas fa-lock"></i> Validasi Data Bulan Ini
-        </button>
-        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-            <i class="fas fa-file-excel"></i> Export Excel
-        </button>
-        <button id="simpanRekapBtn" class="btn btn-primary ms-2">
-            <i class="fas fa-save"></i> Simpan Rekapitulasi
-        </button>
-    </div>
-
-    <!-- Export Modal -->
-    <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exportModalLabel">
-                        <i class="fas fa-file-excel"></i> Export Excel
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ route('admin.obat.export') }}" method="GET" id="exportForm" target="_blank">
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label for="start_date" class="form-label">Tanggal Mulai</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date"
-                                    value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->startOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}"
-                                    required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="end_date" class="form-label">Tanggal Selesai</label>
-                                <input type="date" class="form-control" id="end_date" name="end_date"
-                                    value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->endOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
-                                    required>
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="include_daily"
-                                        name="include_daily" value="1">
-                                    <label class="form-check-label" for="include_daily">
-                                        Sertakan data harian (maksimal 31 hari)
-                                    </label>
-                                    <small class="form-text text-muted">
-                                        Data harian akan ditampilkan jika range tanggal kurang dari 32 hari
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="alert alert-info mt-3">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Catatan:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>File akan didownload dalam format Excel (.xlsx)</li>
-                                <li>Data harian hanya akan disertakan jika range kurang dari 32 hari</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-download"></i> Download Excel
-                        </button>
-                    </div>
+                        @for ($year = $currentYear; $year <= $endYear; $year++)
+                            <option value="{{ $year }}" {{ $tahun == $year ? 'selected' : '' }}>
+                            {{ $year }}
+                            </option>
+                            @endfor
+                    </select>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
                 </form>
             </div>
+
         </div>
     </div>
+</div>
 
+<!-- Table Container -->
+<div class="table-container">
+    <div id="rekapNotif" class="alert d-none mb-3"></div>
+    <!-- Tambahkan CSRF Token untuk keamanan -->
+    <table>
+        <thead>
+            <meta name="csrf-token" content="{{ csrf_token() }}">
+            <tr>
+                <th rowspan="2">No</th>
+                <th rowspan="2">Unit</th>
+                <th rowspan="2">Nama Obat</th>
+                <th rowspan="2">Jenis</th>
+                <th rowspan="2">Harga Satuan</th>
+                <th rowspan="2">Stok Awal</th>
+                <th rowspan="2">Bulan</th>
+                <th rowspan="2">Tahun</th>
+                <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
+                <th rowspan="2">Sisa Stok</th>
+                <th rowspan="2">Total Biaya</th>
+                <th rowspan="2">Aksi</th>
+            </tr>
+            <tr>
+                @for ($day = 1; $day <= $daysInMonth; $day++)
+                    <th>{{ $day }}</th>
+                    @endfor
+            </tr>
 
-    <!-- SCRIPTS DIPINDAHKAN KE BAWAH AGAR PASTI TERLOAD -->
-    <script>
-        // Deklarasi variabel global untuk bulan dan tahun
-        const CURRENT_BULAN = {{ $bulan }};
-        const CURRENT_TAHUN = {{ $tahun }};
-        const CURRENT_UNIT_ID = {{ $unitId ?? 'null' }}; // <-- TAMBAHKAN BARIS INI
+            <meta name="route-penerimaan-obat-store" content="{{ route('admin.obat.penerimaan.store') }}">
 
-        // Update sisa stok secara dinamis saat input harian berubah
-        function updateSisaStok(obatId) {
-            const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
-            if (!row) return;
-            const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = 0;
-            if (stokAwalCell) {
-                stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
-            }
-            let totalKeluar = 0;
-            row.querySelectorAll('.daily-input').forEach(input => {
-                totalKeluar += parseInt(input.value) || 0;
-            });
-            const sisaStok = stokAwal - totalKeluar;
-            const sisaStokCell = row.querySelector('.sisa-stok');
-            if (sisaStokCell) {
-                sisaStokCell.textContent = sisaStok < 0 ? 0 : sisaStok;
-            }
-        }
+        </thead>
+        <tbody id="obatTableBody">
+            @forelse($obats as $index => $obat)
+            <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
+                data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}"
+                data-obat-row="{{ $obat->id }}"
+                data-harga="{{ $obat->harga_satuan ?? 0 }}">
+                <td>{{ $index + 1 }}</td>
+                <td>{{ $obat->unit->nama ?? '-' }}</td>
+                <td>{{ $obat->nama_obat }}</td>
+                <td>{{ $obat->jenis_obat ?? '-' }}</td>
+                <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
 
-        // Update total biaya secara dinamis saat input harian berubah
-        function updateTotalBiaya(obatId) {
-            const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
-            if (!row) return;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
-            let totalBiaya = 0;
-            row.querySelectorAll('.daily-input').forEach(input => {
-                const jumlahKeluar = parseInt(input.value) || 0;
-                totalBiaya += jumlahKeluar * harga;
-            });
-            const totalBiayaCell = row.querySelector('.total-biaya');
-            if (totalBiayaCell) {
-                totalBiayaCell.innerHTML = `<strong>Rp ${totalBiaya.toLocaleString('id-ID')}</strong>`;
-            }
-        }
+                @php
+                $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
+                $tahunSebelumnya = $bulan == 1 ? $tahun - 1 : $tahun;
 
-        // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
-        document.addEventListener('DOMContentLoaded', function() {
-            // Filter form handling
-            const filterForm = document.getElementById('filterForm');
-            const bulanSelect = document.getElementById('bulanSelect');
-            const tahunSelect = document.getElementById('tahunSelect');
+                $rekapAwalQuery = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                ->where('bulan', $bulanSebelumnya)
+                ->where('tahun', $tahunSebelumnya);
 
-            // if (filterForm) {
-                // bulanSelect.addEventListener('change', function() {
-                    // Set semua input ke 0 sebelum submit form
-                    // document.querySelectorAll('.daily-input').forEach(input => {
-                        // input.value = '0';
-                    // });
-                    // filterForm.submit();
-                // });
-
-                // tahunSelect.addEventListener('change', function() {
-                    // Set semua input ke 0 sebelum submit form
-                    // document.querySelectorAll('.daily-input').forEach(input => {
-                        // input.value = '0';
-                    // });
-                    // filterForm.submit();
-                // });
-            // }
-
-            // Handle inputs for all rows
-            document.querySelectorAll('tr[data-obat-row]').forEach(row => {
-                const obatId = row.getAttribute('data-obat-row');
-                updateSisaStok(obatId);
-                updateTotalBiaya(obatId);
-
-                // Add event listeners to each input
-                row.querySelectorAll('.daily-input').forEach(input => {
-                    // Set initial value to 0 if empty
-                    if (!input.value || input.value.trim() === '') {
-                        input.value = '0';
-                    }
-
-                    // Update calculations on input
-                    input.addEventListener('input', function() {
-                        updateSisaStok(obatId);
-                        updateTotalBiaya(obatId);
-                    });
-
-                    // Handle focus
-                    input.addEventListener('focus', function() {
-                        // Clear the input if it's 0
-                        if (this.value === '0') {
-                            this.value = '';
-                        }
-                    });
-
-                    // Handle blur (unfocus)
-                    input.addEventListener('blur', function() {
-                        // Set to 0 if empty
-                        if (!this.value || this.value.trim() === '') {
-                            this.value = '0';
-                        }
-                        updateSisaStok(obatId);
-                        updateTotalBiaya(obatId);
-                    });
-                });
-            });
-
-            // --- VALIDASI BULAN (LOCKING) ---
-            const bulan = CURRENT_BULAN;
-            const tahun = CURRENT_TAHUN;
-            const lockKey = `obat_validasi_${tahun}_${bulan}`;
-            const isLocked = localStorage.getItem(lockKey) === '1';
-            const validasiBtn = document.getElementById('validasiBulanBtn');
-            const validasiInfo = document.getElementById('validasiInfo');
-
-            function setLockedState(locked) {
-                // Set all daily inputs to readonly
-                document.querySelectorAll('.daily-input').forEach(input => {
-                    input.readOnly = locked;
-                });
-                // Disable edit & delete buttons
-                document.querySelectorAll('a.btn-warning, form .btn-danger').forEach(btn => {
-                    btn.disabled = locked;
-                    if (locked) {
-                        btn.classList.add('disabled');
-                        btn.setAttribute('tabindex', '-1');
-                        btn.setAttribute('aria-disabled', 'true');
-                    } else {
-                        btn.classList.remove('disabled');
-                        btn.removeAttribute('tabindex');
-                        btn.removeAttribute('aria-disabled');
-                    }
-                });
-                // Hide or show validasi button/info
-                if (locked) {
-                    if (validasiBtn) validasiBtn.classList.add('d-none');
-                    if (validasiInfo) validasiInfo.classList.remove('d-none');
-                } else {
-                    if (validasiBtn) validasiBtn.classList.remove('d-none');
-                    if (validasiInfo) validasiInfo.classList.add('d-none');
+                if (request('unit_id')) {
+                $rekapAwalQuery->where('unit_id', request('unit_id'));
                 }
+
+                $rekapBulanSebelumnya = $rekapAwalQuery->orderByDesc('tanggal')->first();
+                $stokAwal = $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $obat->stok_awal;
+                @endphp
+
+                <td class="stok-awal" data-obat-id="{{ $obat->id }}">
+                    {{ $stokAwal }}
+                </td>
+
+                <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
+                <td>{{ $tahun }}</td>
+
+                @php $totalBiaya = 0; @endphp
+
+                @for ($day = 1; $day <= $daysInMonth; $day++)
+                    @php
+                    $tanggal=\Carbon\Carbon::createFromDate($tahun, $bulan, $day)->format('Y-m-d');
+
+                    // Rekapitulasi harian
+                    $rekapQuery = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                    ->where('tanggal', $tanggal);
+
+                    if (request('unit_id')) {
+                    $rekapQuery->where('unit_id', request('unit_id'));
+                    $rekapitulasi = $rekapQuery->first();
+                    $jumlahKeluar = $rekapitulasi->jumlah_keluar ?? 0;
+                    } else {
+                    $jumlahKeluar = $rekapQuery->sum('jumlah_keluar');
+                    }
+
+                    // Penerimaan harian
+                    $masukQuery = \App\Models\PenerimaanObat::where('obat_id', $obat->id)
+                    ->where('tanggal_masuk', $tanggal);
+
+                    if (request('unit_id')) {
+                    $masukQuery->where('unit_id', request('unit_id'));
+                    }
+
+                    $jumlahMasuk = $masukQuery->sum('jumlah_masuk');
+
+                    $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                    @endphp
+
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            <input type="number" class="daily-input"
+                                inputmode="numeric" min="0"
+                                value="{{ $jumlahKeluar }}"
+                                data-obat-id="{{ $obat->id }}"
+                                data-tanggal="{{ $tanggal }}"
+                                @if(!request('unit_id')) readonly @endif>
+
+                            @if ($jumlahMasuk > 0)
+                            <small class="text-success fw-bold">+{{ $jumlahMasuk }}</small>
+                            @endif
+                        </div>
+                    </td>
+                    @endfor
+
+                    @php
+                    // Hitung total keluar semua tanggal (untuk sisa stok)
+                    $totalKeluarQuery = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                    ->whereMonth('tanggal', $bulan)
+                    ->whereYear('tanggal', $tahun);
+
+                    if (request('unit_id')) {
+                    $totalKeluarQuery->where('unit_id', request('unit_id'));
+                    }
+
+                    $totalKeluar = $totalKeluarQuery->sum('jumlah_keluar');
+                    $sisaStok = max(0, $stokAwal - $totalKeluar);
+                    @endphp
+
+                    <td class="sisa-stok" id="sisa-stok-{{ $obat->id }}">
+                        {{ $sisaStok }}
+                    </td>
+
+                    <td class="total-biaya" id="total-biaya-{{ $obat->id }}">
+                        <strong>Rp {{ number_format($totalBiaya, 0, ',', '.') }}</strong>
+                    </td>
+
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ route('admin.obat.rekapitulasi.detail', ['obat' => $obat->id]) }}?bulan={{ $bulan }}&tahun={{ $tahun }}"
+                                class="btn btn-info btn-sm" title="Detail Rekapitulasi">
+                                <i class="fas fa-chart-bar"></i>
+                            </a>
+
+                            <form action="{{ route('admin.obat.destroy', $obat) }}" method="POST" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
+                                    title="Hapus Permanen">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="{{ 11 + $daysInMonth }}" class="text-center py-4">
+                    Belum ada data obat untuk bulan {{ \Carbon\Carbon::create()->month($bulan)->format('F') }} {{ $tahun }}
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+
+    {{-- ✅ Tempatkan include modal di sini (di luar div tombol) --}}
+    @include('admin.obat.modal-penerimaan-obat')
+
+</div>
+
+@if(request('unit_id'))
+<div id="validasiInfo" class="alert alert-warning mt-3 d-none">
+    <i class="fas fa-lock"></i> Data untuk unit ini pada bulan terpilih telah divalidasi.
+</div>
+@endif
+
+<div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+    <button id="validasiBulanBtn" class="btn btn-success"
+        @if(!request('unit_id'))
+        disabled
+        @endif
+        title="{{ request('unit_id') ? 'Validasi data bulan ini' : 'Pilih unit terlebih dahulu untuk melakukan validasi.' }}">
+        <i class="fas fa-lock"></i> Validasi Data Bulan Ini
+    </button>
+
+    @if(request('unit_id'))
+    <button class="btn btn-outline-danger d-none" id="batalkanValidasiBtn">
+        ❌ Batalkan Validasi
+    </button>
+    @endif
+    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </button>
+    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
+        <i class="fas fa-plus"></i> Tambah Stok Obat
+        <button id="simpanRekapBtn" class="btn btn-primary ms-2"
+            @if(!request('unit_id') || !request('bulan') || !request('tahun')) disabled title="Pilih unit, bulan, dan tahun terlebih dahulu." @endif>
+            <i class="fas fa-save"></i> Simpan Rekapitulasi
+        </button>
+
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('obat.export') }}" method="GET" id="exportForm" target="_blank">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label">Tanggal Mulai</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->startOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}"
+                                required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label">Tanggal Selesai</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->endOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
+                                required>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="include_daily"
+                                    name="include_daily" value="1">
+                                <label class="form-check-label" for="include_daily">
+                                    Sertakan data harian (maksimal 31 hari)
+                                </label>
+                                <small class="form-text text-muted">
+                                    Data harian akan ditampilkan jika range tanggal kurang dari 32 hari
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Catatan:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>File akan didownload dalam format Excel (.xlsx)</li>
+                            <li>Data harian hanya akan disertakan jika range kurang dari 32 hari</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-download"></i> Download Excel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- SCRIPTS DIPINDAHKAN KE BAWAH AGAR PASTI TERLOAD -->
+<script>
+    // Deklarasi variabel global untuk bulan dan tahun
+    const CURRENT_BULAN = {
+        {
+            $bulan
+        }
+    };
+    const CURRENT_TAHUN = {
+        {
+            $tahun
+        }
+    };
+
+    // Update sisa stok secara dinamis saat input harian berubah
+    function updateSisaStok(obatId) {
+        const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
+        if (!row) return;
+
+        const stokAwalCell = row.querySelector('.stok-awal');
+        let stokAwal = 0;
+
+        if (stokAwalCell) {
+            stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+        }
+
+        let totalKeluar = 0;
+        let totalMasuk = 0;
+
+        row.querySelectorAll('td').forEach(cell => {
+            const input = cell.querySelector('.daily-input');
+            const masukLabel = cell.querySelector('small.text-success');
+
+            if (input) {
+                totalKeluar += parseInt(input.value) || 0;
             }
 
-            setLockedState(isLocked);
-
-            if (validasiBtn) {
-                validasiBtn.addEventListener('click', function() {
-                    if (confirm(
-                            'Setelah divalidasi, semua data bulan ini akan dikunci dan tidak dapat diubah. Lanjutkan?'
-                        )) {
-                        localStorage.setItem(lockKey, '1');
-                        setLockedState(true);
-                    }
-                });
+            if (masukLabel) {
+                const masukText = masukLabel.textContent.replace(/[^\d]/g, '');
+                totalMasuk += parseInt(masukText) || 0;
             }
         });
-        // --- SIMPAN REKAPITULASI (MANUAL SAVE, BULK) ---
-        document.getElementById('simpanRekapBtn').addEventListener('click', async function() {
-            const notif = document.getElementById('rekapNotif');
-            const saveBtn = this;
 
-            try {
-                // Disable button during save
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+        const sisaStok = stokAwal + totalMasuk - totalKeluar;
 
-                notif.classList.add('d-none');
-                notif.classList.remove('alert-success', 'alert-danger');
+        const sisaStokCell = row.querySelector('.sisa-stok');
+        if (sisaStokCell) {
+            sisaStokCell.textContent = sisaStok < 0 ? 0 : sisaStok;
+        }
+    }
 
-                // Kumpulkan data dari seluruh baris obat
-                const rows = document.querySelectorAll('tr[data-obat-row]');
-                const bulk = [];
 
-                for (const row of rows) {
-                    const obatId = row.getAttribute('data-obat-row');
-                    const harga = parseInt(row.getAttribute('data-harga')) || 0;
-                    const stokAwalCell = row.querySelector('.stok-awal');
-                    const stokAwal = parseInt(stokAwalCell?.textContent.replace(/[^\d]/g, '')) || 0;
+    // Update total biaya secara dinamis saat input harian berubah
+    function updateTotalBiaya(obatId) {
+        const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
+        if (!row) return;
+        const harga = parseInt(row.getAttribute('data-harga')) || 0;
+        let totalBiaya = 0;
+        row.querySelectorAll('.daily-input').forEach(input => {
+            const jumlahKeluar = parseInt(input.value) || 0;
+            totalBiaya += jumlahKeluar * harga;
+        });
+        const totalBiayaCell = row.querySelector('.total-biaya');
+        if (totalBiayaCell) {
+            totalBiayaCell.innerHTML = `<strong>Rp ${totalBiaya.toLocaleString('id-ID')}</strong>`;
+        }
+    }
 
-                    // Untuk setiap input harian
-                    const inputs = row.querySelectorAll('.daily-input');
-                    inputs.forEach((input) => {
-                        const tanggal = input.getAttribute('data-tanggal');
-                        const jumlahKeluar = parseInt(input.value) || 0;
+    // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filter form handling
+        const filterForm = document.getElementById('filterForm');
+        const bulanSelect = document.getElementById('bulanSelect');
+        const tahunSelect = document.getElementById('tahunSelect');
 
-                        if (tanggal) { // Pastikan tanggal ada
-                            // Hitung sisa stok hanya untuk tanggal ini
-                            let totalKeluar = 0;
-                            inputs.forEach((inp) => {
-                                if (inp.getAttribute('data-tanggal') <= tanggal) {
-                                    totalKeluar += parseInt(inp.value) || 0;
-                                }
-                            });
+        if (filterForm) {
+            bulanSelect.addEventListener('change', function() {
+                // Set semua input ke 0 sebelum submit form
+                document.querySelectorAll('.daily-input').forEach(input => {
+                    input.value = '0';
+                });
+                filterForm.submit();
+            });
 
-                            bulk.push({
-                                obat_id: obatId,
-                                tanggal: tanggal,
-                                bulan: CURRENT_BULAN,
-                                tahun: CURRENT_TAHUN,
-                                jumlah_keluar: jumlahKeluar,
-                                stok_awal: stokAwal,
-                                sisa_stok: Math.max(0, stokAwal - totalKeluar),
-                                total_biaya: jumlahKeluar * harga
-                            });
-                        }
-                    });
+            tahunSelect.addEventListener('change', function() {
+                // Set semua input ke 0 sebelum submit form
+                document.querySelectorAll('.daily-input').forEach(input => {
+                    input.value = '0';
+                });
+                filterForm.submit();
+            });
+        }
+
+        // Handle inputs for all rows
+        document.querySelectorAll('tr[data-obat-row]').forEach(row => {
+            const obatId = row.getAttribute('data-obat-row');
+            updateSisaStok(obatId);
+            updateTotalBiaya(obatId);
+
+            // Add event listeners to each input
+            row.querySelectorAll('.daily-input').forEach(input => {
+                // Set initial value to 0 if empty
+                if (!input.value || input.value.trim() === '') {
+                    input.value = '0';
                 }
 
-                // Kirim data ke backend
-                const response = await fetch('{{ route('admin.obat.rekapitulasi-obat.input-harian') }}', {
+                // Update calculations on input
+                input.addEventListener('input', function() {
+                    updateSisaStok(obatId);
+                    updateTotalBiaya(obatId);
+                });
+
+                // Handle focus
+                input.addEventListener('focus', function() {
+                    // Clear the input if it's 0
+                    if (this.value === '0') {
+                        this.value = '';
+                    }
+                });
+
+                // Handle blur (unfocus)
+                input.addEventListener('blur', function() {
+                    // Set to 0 if empty
+                    if (!this.value || this.value.trim() === '') {
+                        this.value = '0';
+                    }
+                    updateSisaStok(obatId);
+                    updateTotalBiaya(obatId);
+                });
+            });
+        });
+
+        // --- VALIDASI BULAN (LOCKING) ---
+        const bulan = CURRENT_BULAN;
+        const tahun = CURRENT_TAHUN;
+        const lockKey = `obat_validasi_${tahun}_${bulan}`;
+        const isLocked = localStorage.getItem(lockKey) === '1';
+        const validasiBtn = document.getElementById('validasiBulanBtn');
+        const validasiInfo = document.getElementById('validasiInfo');
+
+        function setLockedState(locked) {
+            // Set all daily inputs to readonly
+            document.querySelectorAll('.daily-input').forEach(input => {
+                input.readOnly = locked;
+            });
+            // Hide or show validasi button/info
+            if (locked) {
+                if (validasiBtn) validasiBtn.classList.add('d-none');
+                if (validasiInfo) validasiInfo.classList.remove('d-none');
+            } else {
+                if (validasiBtn) validasiBtn.classList.remove('d-none');
+                if (validasiInfo) validasiInfo.classList.add('d-none');
+            }
+        }
+
+        setLockedState(isLocked);
+
+        if (validasiBtn) {
+            validasiBtn.addEventListener('click', function() {
+                if (confirm('Setelah divalidasi, data bulan ini akan dikunci. Lanjutkan?')) {
+                    localStorage.setItem(lockKey, '1');
+                    setLockedState(true);
+                    location.reload();
+                }
+            });
+        }
+
+        const batalkanValidasiBtn = document.getElementById('batalkanValidasiBtn');
+
+        if (batalkanValidasiBtn) {
+            if (isLocked) {
+                batalkanValidasiBtn.classList.remove('d-none');
+            } else {
+                batalkanValidasiBtn.classList.add('d-none');
+            }
+
+            batalkanValidasiBtn.addEventListener('click', function() {
+                if (confirm('Batalkan validasi bulan ini? Anda bisa mengubah data kembali.')) {
+                    localStorage.removeItem(lockKey);
+                    setLockedState(false);
+                    batalkanValidasiBtn.classList.add('d-none');
+                }
+            });
+        }
+
+    });
+
+    // --- SIMPAN REKAPITULASI (MANUAL SAVE, BULK) ---
+    document.getElementById('simpanRekapBtn').addEventListener('click', async function() {
+        const notif = document.getElementById('rekapNotif');
+        const saveBtn = this;
+
+        try {
+            // Disable button during save
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+            notif.classList.add('d-none');
+            notif.classList.remove('alert-success', 'alert-danger');
+
+            // Kumpulkan data dari seluruh baris obat
+            const rows = document.querySelectorAll('tr[data-obat-row]');
+            const bulk = [];
+
+            for (const row of rows) {
+                const obatId = row.getAttribute('data-obat-row');
+                const harga = parseInt(row.getAttribute('data-harga')) || 0;
+                const stokAwalCell = row.querySelector('.stok-awal');
+                const stokAwal = parseInt(stokAwalCell?.textContent.replace(/[^\d]/g, '')) || 0;
+
+                // Untuk setiap input harian
+                const inputs = row.querySelectorAll('.daily-input');
+                inputs.forEach((input) => {
+                    const tanggal = input.getAttribute('data-tanggal');
+                    const jumlahKeluar = parseInt(input.value) || 0;
+
+                    if (tanggal && jumlahKeluar > 0) { // ✅ hanya simpan jika ada tanggal dan jumlah_keluar > 0
+                        // Hitung sisa stok hanya untuk tanggal ini
+                        let totalKeluar = 0;
+                        inputs.forEach((inp) => {
+                            if (inp.getAttribute('data-tanggal') <= tanggal) {
+                                totalKeluar += parseInt(inp.value) || 0;
+                            }
+                        });
+
+                        const selectedUnitId = document.getElementById('unitSelect').value || null;
+
+                        bulk.push({
+                            obat_id: obatId,
+                            tanggal: tanggal,
+                            bulan: CURRENT_BULAN,
+                            tahun: CURRENT_TAHUN,
+                            jumlah_keluar: jumlahKeluar,
+                            stok_awal: stokAwal,
+                            sisa_stok: Math.max(0, stokAwal - totalKeluar),
+                            total_biaya: jumlahKeluar * harga,
+                            unit_id: selectedUnitId
+                        });
+                    }
+                });
+            }
+
+            // Kirim data ke backend
+            const response = await fetch('{{ route('admin.obat.rekapitulasi-obat.input-harian') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -523,186 +622,263 @@
                     },
                     body: JSON.stringify({
                         bulk: bulk,
-                        unit_id: CURRENT_UNIT_ID, // <-- TAMBAHKAN BARIS INI
                         bulan: CURRENT_BULAN,
                         tahun: CURRENT_TAHUN
                     })
                 });
 
-                const result = await response.json();
+            const result = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(result.message || 'Terjadi kesalahan saat menyimpan data');
-                }
-
-                // Tampilkan notifikasi sukses
-                notif.textContent = '✅ Data rekapitulasi berhasil disimpan!';
-                notif.classList.remove('d-none', 'alert-danger');
-                notif.classList.add('alert-success');
-
-                // Refresh halaman setelah 1 detik
-                setTimeout(() => {
-                    // Bangun URL baru dengan semua parameter filter
-                    let newUrl = window.location.pathname +
-                        '?unit_id=' + CURRENT_UNIT_ID +
-                        '&bulan=' + CURRENT_BULAN +
-                        '&tahun=' + CURRENT_TAHUN;
-    
-                    // Arahkan ke URL yang baru
-                    window.location.href = newUrl;
-                }, 1000);
-
-            } catch (error) {
-                console.error('Error saving data:', error);
-                notif.textContent = '❌ ' + (error.message || 'Terjadi kesalahan saat menyimpan data');
-                notif.classList.remove('d-none', 'alert-success');
-                notif.classList.add('alert-danger', 'd-block');
-            } finally {
-                // Selalu reset tombol save
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Rekapitulasi';
-            }
-        });
-    </script>
-    <script>
-        // Validasi export modal
-        document.getElementById('start_date').addEventListener('change', function() {
-            const startDate = new Date(this.value);
-            const endDateInput = document.getElementById('end_date');
-            const endDate = new Date(endDateInput.value);
-
-            if (endDate < startDate) {
-                endDateInput.value = this.value;
+            if (!response.ok) {
+                throw new Error(result.message || 'Terjadi kesalahan saat menyimpan data');
             }
 
-            // Set minimum date untuk end date
-            endDateInput.min = this.value;
+            // Tampilkan notifikasi sukses
+            notif.textContent = '✅ Data rekapitulasi berhasil disimpan!';
+            notif.classList.remove('d-none', 'alert-danger');
+            notif.classList.add('alert-success');
 
-            // Set maksimum 3 bulan dari start date
-            const maxDate = new Date(startDate);
-            maxDate.setMonth(maxDate.getMonth() + 3);
-            endDateInput.max = maxDate.toISOString().split('T')[0];
-        });
+            // Refresh halaman setelah 1 detik
+            setTimeout(() => {
+                window.location.href = window.location.pathname +
+                    '?bulan=' + CURRENT_BULAN +
+                    '&tahun=' + CURRENT_TAHUN;
+            }, 1000);
 
-        document.getElementById('end_date').addEventListener('change', function() {
-            const endDate = new Date(this.value);
-            const startDate = new Date(document.getElementById('start_date').value);
+        } catch (error) {
+            console.error('Error saving data:', error);
+            notif.textContent = '❌ ' + (error.message || 'Terjadi kesalahan saat menyimpan data');
+            notif.classList.remove('d-none', 'alert-success');
+            notif.classList.add('alert-danger', 'd-block');
+        } finally {
+            // Selalu reset tombol save
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Simpan Rekapitulasi';
+        }
+    });
+</script>
 
-            // Check if range is more than 3 months
-            const diffTime = Math.abs(endDate - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const diffMonths = diffDays / 30;
 
-            if (diffMonths > 3) {
-                alert('Range tanggal maksimal 3 bulan!');
-                const maxDate = new Date(startDate);
-                maxDate.setMonth(maxDate.getMonth() + 3);
-                this.value = maxDate.toISOString().split('T')[0];
-            }
+<script>
+    // Validasi export modal
+    document.getElementById('start_date').addEventListener('change', function() {
+        const startDate = new Date(this.value);
+        const endDateInput = document.getElementById('end_date');
+        const endDate = new Date(endDateInput.value);
 
-            // Auto check/uncheck daily data based on range
-            const includeDailyCheckbox = document.getElementById('include_daily');
-            if (diffDays <= 31) {
-                includeDailyCheckbox.disabled = false;
-            } else {
-                includeDailyCheckbox.checked = false;
-                includeDailyCheckbox.disabled = true;
-            }
-        });
-
-        function searchObat() {
-            const searchInput = document.getElementById('searchObat');
-            const searchTerm = searchInput.value.toLowerCase();
-            const tableRows = document.querySelectorAll('#obatTableBody tr');
-
-            tableRows.forEach(row => {
-                const obatName = row.getAttribute('data-obat-name') || '';
-                const obatJenis = row.getAttribute('data-obat-jenis') || '';
-
-                if (obatName.includes(searchTerm) || obatJenis.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+        if (endDate < startDate) {
+            endDateInput.value = this.value;
         }
 
-        function updateTransaksi(input) {
-            const obatId = input.getAttribute('data-obat-id');
-            const tanggal = input.getAttribute('data-tanggal');
-            const jumlahKeluar = parseInt(input.value) || 0;
-            const row = input.closest('tr[data-obat-row]');
-            const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = 0;
-            if (stokAwalCell) {
-                stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+        // Set minimum date untuk end date
+        endDateInput.min = this.value;
+
+        // Set maksimum 3 bulan dari start date
+        const maxDate = new Date(startDate);
+        maxDate.setMonth(maxDate.getMonth() + 3);
+        endDateInput.max = maxDate.toISOString().split('T')[0];
+    });
+
+    document.getElementById('end_date').addEventListener('change', function() {
+        const endDate = new Date(this.value);
+        const startDate = new Date(document.getElementById('start_date').value);
+
+        // Check if range is more than 3 months
+        const diffTime = Math.abs(endDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffMonths = diffDays / 30;
+
+        if (diffMonths > 3) {
+            alert('Range tanggal maksimal 3 bulan!');
+            const maxDate = new Date(startDate);
+            maxDate.setMonth(maxDate.getMonth() + 3);
+            this.value = maxDate.toISOString().split('T')[0];
+        }
+
+        // Auto check/uncheck daily data based on range
+        const includeDailyCheckbox = document.getElementById('include_daily');
+        if (diffDays <= 31) {
+            includeDailyCheckbox.disabled = false;
+        } else {
+            includeDailyCheckbox.checked = false;
+            includeDailyCheckbox.disabled = true;
+        }
+    });
+
+    function searchObat() {
+        const searchInput = document.getElementById('searchObat');
+        const searchTerm = searchInput.value.toLowerCase();
+        const tableRows = document.querySelectorAll('#obatTableBody tr');
+
+        tableRows.forEach(row => {
+            const obatName = row.getAttribute('data-obat-name') || '';
+            const obatJenis = row.getAttribute('data-obat-jenis') || '';
+
+            if (obatName.includes(searchTerm) || obatJenis.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
             }
-            let totalKeluar = 0;
-            row.querySelectorAll('.daily-input').forEach(inp => {
-                totalKeluar += parseInt(inp.value) || 0;
+        });
+    }
+
+    function updateTransaksi(input) {
+        const obatId = input.getAttribute('data-obat-id');
+        const tanggal = input.getAttribute('data-tanggal');
+        const jumlahKeluar = parseInt(input.value) || 0;
+        const row = input.closest('tr[data-obat-row]');
+        const stokAwalCell = row.querySelector('.stok-awal');
+        let stokAwal = 0;
+        if (stokAwalCell) {
+            stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+        }
+        let totalKeluar = 0;
+        row.querySelectorAll('.daily-input').forEach(inp => {
+            totalKeluar += parseInt(inp.value) || 0;
+        });
+        if (totalKeluar > stokAwal) {
+            alert('Input melebihi kapasitas stok awal!');
+            return;
+        }
+        // Hitung sisa stok dan total biaya
+        const sisaStok = stokAwal - totalKeluar;
+        const harga = parseInt(row.getAttribute('data-harga')) || 0;
+        let totalBiaya = 0;
+        row.querySelectorAll('.daily-input').forEach(inp => {
+            totalBiaya += (parseInt(inp.value) || 0) * harga;
+        });
+        // Kirim data ke endpoint rekapitulasi
+        fetch('/obat/rekapitulasi-obat/input-harian', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({
+                    obat_id: obatId,
+                    tanggal: tanggal,
+                    jumlah_keluar: jumlahKeluar,
+                    stok_awal: stokAwal,
+                    sisa_stok: sisaStok < 0 ? 0 : sisaStok,
+                    total_biaya: totalBiaya,
+                    bulan: {
+                        {
+                            $bulan
+                        }
+                    },
+                    tahun: {
+                        {
+                            $tahun
+                        }
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Data tersimpan
+            })
+            .catch(error => {
+                // Error
             });
-            if (totalKeluar > stokAwal) {
-                alert('Input melebihi kapasitas stok awal!');
+    }
+
+    // Auto-save ketika user berhenti mengetik
+    let typingTimer;
+    const doneTypingInterval = 1000; // 1 detik
+
+    document.querySelectorAll('.daily-input').forEach(input => {
+        input.addEventListener('keyup', function() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                updateTransaksi(this);
+                // Update total biaya juga saat auto-save
+                const row = input.closest('tr[data-obat-row]');
+                if (row) {
+                    const obatId = row.getAttribute('data-obat-row');
+                    updateTotalBiaya(obatId);
+                }
+            }, doneTypingInterval);
+        });
+
+        input.addEventListener('keydown', function() {
+            clearTimeout(typingTimer);
+        });
+    });
+    // Hapus auto-save, hanya simpan manual lewat tombol
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnSimpan = document.getElementById('btnSimpanPenerimaan');
+        let isSubmitting = false;
+
+        // Prevent double binding
+        if (btnSimpan.dataset.bound === "true") return;
+        btnSimpan.dataset.bound = "true";
+
+        btnSimpan.addEventListener('click', function() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+
+            const obatId = document.getElementById('obat_id_penerimaan').value;
+            const jumlahMasuk = document.getElementById('jumlah_masuk').value;
+            const tanggalMasuk = document.getElementById('tanggal_masuk').value;
+            const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const route = document.querySelector('meta[name="route-penerimaan-obat-store"]')
+                .getAttribute('content');
+
+            if (!obatId || !jumlahMasuk || !tanggalMasuk) {
+                alert('❗ Semua kolom wajib diisi.');
+                isSubmitting = false;
                 return;
             }
-            // Hitung sisa stok dan total biaya
-            const sisaStok = stokAwal - totalKeluar;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
-            let totalBiaya = 0;
-            row.querySelectorAll('.daily-input').forEach(inp => {
-                totalBiaya += (parseInt(inp.value) || 0) * harga;
-            });
-            // Kirim data ke endpoint rekapitulasi
-            fetch('/obat/rekapitulasi-obat/input-harian', {
+
+            fetch(route, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        'X-CSRF-TOKEN': token
                     },
                     body: JSON.stringify({
                         obat_id: obatId,
-                        tanggal: tanggal,
-                        jumlah_keluar: jumlahKeluar,
-                        stok_awal: stokAwal,
-                        sisa_stok: sisaStok < 0 ? 0 : sisaStok,
-                        total_biaya: totalBiaya,
-                        bulan: {{ $bulan }},
-                        tahun: {{ $tahun }}
+                        jumlah_masuk: jumlahMasuk,
+                        tanggal_masuk: tanggalMasuk
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Data tersimpan
+                    isSubmitting = false;
+
+                    // Pastikan `data.success` benar boolean true
+                    if (data.success === true) {
+                        alert(data.message || '✅ Stok berhasil ditambahkan.');
+                        location.reload();
+                    } else {
+                        alert('❌ Gagal menambahkan stok: ' + (data.message ||
+                            'Terjadi kesalahan.'));
+                    }
                 })
                 .catch(error => {
-                    // Error
+                    isSubmitting = false;
+                    console.error('❌ Error:', error);
+                    alert('❌ Terjadi kesalahan saat mengirim data ke server.');
                 });
-        }
+        });
+    });
+</script>
 
-        // Auto-save ketika user berhenti mengetik
-        let typingTimer;
-        const doneTypingInterval = 1000; // 1 detik
-
-        document.querySelectorAll('.daily-input').forEach(input => {
-            input.addEventListener('keyup', function() {
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => {
-                    updateTransaksi(this);
-                    // Update total biaya juga saat auto-save
-                    const row = input.closest('tr[data-obat-row]');
-                    if (row) {
-                        const obatId = row.getAttribute('data-obat-row');
-                        updateTotalBiaya(obatId);
-                    }
-                }, doneTypingInterval);
-            });
-
-            input.addEventListener('keydown', function() {
-                clearTimeout(typingTimer);
+{{-- Mencegah nilai negaitf --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.daily-input').forEach(function(input) {
+            input.addEventListener('input', function() {
+                if (parseInt(this.value) < 0) {
+                    this.value = 0;
+                }
             });
         });
-        // Hapus auto-save, hanya simpan manual lewat tombol
-    </script>
+    });
+</script>
 
 
 @endsection

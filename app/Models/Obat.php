@@ -51,36 +51,61 @@ class Obat extends Model
     // Relationship dengan rekapitulasi obat
     public function rekapitulasiObat()
     {
+        return $this->hasMany(\App\Models\RekapitulasiObat::class);
         return $this->hasMany(RekapitulasiObat::class);
     }
 
     // Method untuk mendapatkan stok awal berdasarkan bulan dan tahun
     public function stokAwal($bulan = null, $tahun = null)
     {
-        $now = Carbon::now();
-        $bulan = $bulan ?? $now->subMonth()->month;
-        $tahun = $tahun ?? $now->subMonth()->year;
+        $bulan = $bulan ?? now()->month;
+        $tahun = $tahun ?? now()->year;
 
-        $rekapBulanSebelumnya = $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
-            ->latest('tanggal')
-            ->first();
+        $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
+        $tahunSebelumnya = $bulan == 1 ? $tahun - 1 : $tahun;
 
-        return $rekapBulanSebelumnya ? $rekapBulanSebelumnya->sisa_stok : $this->attributes['stok_awal'];
+        // Ambil tanggal akhir bulan sebelumnya
+        $tanggalAkhirBulanLalu = \Carbon\Carbon::createFromDate($tahunSebelumnya, $bulanSebelumnya, 1)->endOfMonth()->format('Y-m-d');
+
+        // Ambil semua penerimaan sampai akhir bulan lalu
+        $jumlahMasuk = \App\Models\PenerimaanObat::where('obat_id', $this->id)
+            ->where('unit_id', $this->unit_id)
+            ->whereDate('tanggal_masuk', '<=', $tanggalAkhirBulanLalu)
+            ->sum('jumlah_masuk');
+
+        // Ambil semua pengeluaran sampai akhir bulan lalu
+        $jumlahKeluar = \App\Models\RekapitulasiObat::where('obat_id', $this->id)
+            ->where('unit_id', $this->unit_id)
+            ->whereDate('tanggal', '<=', $tanggalAkhirBulanLalu)
+            ->sum('jumlah_keluar');
+
+        return $this->stok_awal + $jumlahMasuk - $jumlahKeluar;
     }
 
-
     // Method untuk mendapatkan sisa stok berdasarkan rekapitulasi terbaru
-    public function stokSisa()
+    public function stokSisa($bulan = null, $tahun = null)
     {
-        $rekapTerbaru = $this->rekapitulasiObat()
-            ->where('unit_id', Auth::user()->unit_id)
-            ->latest('tanggal')
-            ->first();
+        $bulan = $bulan ?? now()->month;
+        $tahun = $tahun ?? now()->year;
 
-        return $rekapTerbaru ? $rekapTerbaru->sisa_stok : $this->stokAwal();
+        // Ambil stok awal
+        $stokAwal = $this->stokAwal($bulan, $tahun);
+
+        // Jumlah masuk (dari penerimaan)
+        $jumlahMasuk = \App\Models\PenerimaanObat::where('obat_id', $this->id)
+            ->where('unit_id', $this->unit_id)
+            ->whereMonth('tanggal_masuk', $bulan)
+            ->whereYear('tanggal_masuk', $tahun)
+            ->sum('jumlah_masuk');
+
+        // Jumlah keluar (dari rekapitulasi)
+        $jumlahKeluar = \App\Models\RekapitulasiObat::where('obat_id', $this->id)
+            ->where('unit_id', $this->unit_id)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->sum('jumlah_keluar');
+
+        return $stokAwal + $jumlahMasuk - $jumlahKeluar;
     }
 
 

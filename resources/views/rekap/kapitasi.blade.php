@@ -51,30 +51,36 @@
                     <div class="col-md-6">
                         <div class="card border-primary">
                             <div class="card-body">
-                                <h5 class="card-title text-primary">Sisa Saldo Awal Tahun</h5>
-                                <p class="card-text h4">{{ number_format($saldoAwalTahun ?? 0, 0, ',', '.') }}</p>
-                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#editSaldoAwalModal">
-                                    Edit
-                                </button>
+                                <div class="card-title text-primary">Sisa Saldo Awal Tahun</div>
+                                <div class="saldo-info">
+                                    <p class="card-text h4">{{ number_format($saldoAwalTahun ?? 0, 0, ',', '.') }}</p>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#editSaldoAwalModal">
+                                        Edit
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+
 
                     {{-- CARD: Sisa Saldo Saat Ini --}}
                     <div class="col-md-6">
                         <div class="card border-success">
                             <div class="card-body">
-                                <h5 class="card-title text-success">Sisa Saldo Saat Ini</h5>
-                                <p class="card-text h4">{{ number_format($saldoSaatIni ?? 0, 0, ',', '.') }}</p>
-                                <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#rincianSaldoModal">
-                                    Lihat Rincian
-                                </button>
+                                <div class="card-title text-success">Sisa Saldo Saat Ini</div>
+                                <div class="saldo-info">
+                                    <p class="card-text h4">{{ number_format($saldoSaatIni ?? 0, 0, ',', '.') }}</p>
+                                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#rincianSaldoModal">
+                                        Lihat Rincian
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
 
                 <form method="POST" action="{{ route('rekap.kapitasi.store') }}" id="mainRekapForm">
                     @csrf
@@ -135,11 +141,11 @@
                         <thead>
                             <tr>
                                 <th rowspan="2" class="text-center align-middle">Bulan</th>
-                                <th rowspan="2" class="bg-info text-dark text-center align-middle">DANA MASUK</th>
+                                <th rowspan="2" class="bg-info fw-bold text-center align-middle">DANA MASUK</th>
                                 <th colspan="{{ $kategori->count() }}" class="group-header text-center">PEMBAYARAN</th>
-                                <th rowspan="2" class="bg-warning text-dark text-center align-middle">Total Pembayaran Menggunakan
+                                <th rowspan="2" class="bg-warning fw-bold text-center align-middle">Total Pembayaran Menggunakan
                                     Biaya Kapitasi</th>
-                                <th rowspan="2" class="bg-green text-dark text-center align-middle">VALIDASI</th>
+                                <th rowspan="2" class="bg-green fw-bold text-center align-middle">VALIDASI</th>
                                 <th rowspan="2" class="text-center align-middle">Aksi</th>
                             </tr>
                             <tr>
@@ -185,13 +191,13 @@
 
                             {{-- Baris: TOTAL 1 TAHUN --}}
                             <tr>
-                                <td class="fw-bold">TOTAL BIAYA</td>
+                                <td class="bg-warning fw-bold">TOTAL BIAYA</td>
                                 {{-- Total Dana Masuk --}}
-                                <td class="bg-info text-dark fw-bold text-end">
+                                <td class="bg-info fw-bold text-end">
                                     {{ number_format($annualTotals['total_dana_masuk'] ?? 0, 0, ',', '.') }}
                                 </td>
                                 @foreach ($kategori as $k)
-                                    <td class="fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
+                                    <td class="bg-warning fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
                                 @endforeach
                                 <td class="bg-warning fw-bold">
                                     {{ number_format($annualTotals['all_kategoris_total'] ?? 0, 0, ',', '.') }}
@@ -349,6 +355,77 @@
         @endif {{-- END: Kondisi selectedTahun --}}
     </div> {{-- Tutup div.container mt-4 --}}
 @endsection
+
+@push('styles')
+    <style>
+        /* Card dasar dengan warna netral lembut */
+        .card-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f0f4f8; /* abu muda */
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* Judul dalam card */
+        .card-title {
+            flex: 1;
+            font-size: 1.1rem;
+            margin-bottom: 0;
+        }
+
+        /* Angka dan tombol disusun sejajar */
+        .saldo-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .saldo-info p {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #0d47a1; /* biru tua */
+            margin: 0;
+        }
+
+        /* Jika card berwarna hijau (sisa saldo) */
+        .card.border-success .saldo-info p {
+            color: #1b5e20; /* hijau tua */
+        }
+
+        .btn-sm {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+        }
+
+        /* Card khusus untuk masing-masing warna (opsional dipakai) */
+        .card-blue {
+            background-color: #1E88E5;
+            color: white;
+        }
+
+        .card-yellow {
+            background-color: #FBC02D;
+            color: black;
+        }
+
+        .card-grey {
+            background-color: #757575;
+            color: white;
+        }
+
+        .card-teal {
+            background-color: #4DB6AC;
+            color: white;
+        }
+
+        .card-green {
+            background-color: #43A047;
+            color: white;
+        }
+    </style>
+@endpush
 
 
 @push('scripts')
