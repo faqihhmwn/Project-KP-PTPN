@@ -230,23 +230,7 @@
                 @endforelse
             </tbody>
         </table>
-        <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-            <button id="validasiBulanBtn" class="btn btn-success">
-                <i class="fas fa-lock"></i> Validasi Data Bulan Ini
-            </button>
-            <button class="btn btn-outline-danger d-none" id="batalkanValidasiBtn">
-                ❌ Batalkan Validasi
-            </button>
-            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="fas fa-file-excel"></i> Export Excel
-            </button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
-                <i class="fas fa-plus"></i> Tambah Stok Obat
-            </button>
-            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
-                <i class="fas fa-save"></i> Simpan Rekapitulasi
-            </button>
-        </div>
+        
 
         {{-- ✅ Tempatkan include modal di sini (di luar div tombol) --}}
         @include('obat.modal-penerimaan-obat')
@@ -257,6 +241,18 @@
         </div>
 
     </div>
+
+    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
+                <i class="fas fa-plus"></i> Tambah Stok Obat
+            </button>
+            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
+                <i class="fas fa-save"></i> Simpan Rekapitulasi
+            </button>
+        </div>
 
     <!-- Export Modal -->
     <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">

@@ -65,8 +65,11 @@ class RekapitulasiObatController extends Controller
                 $validated = $validator->validated();
 
                 try {
+                    $obat = Obat::find($validated['obat_id']);
+                    $unitId = $item['unit_id'] ?? ($obat->unit_id ?? null);
+
                     $penerimaan = \App\Models\PenerimaanObat::where('obat_id', $validated['obat_id'])
-                        ->where('unit_id', Auth::guard('admin')->user()->unit_id)
+                        ->where('unit_id', $unitId)
                         ->whereDate('tanggal_masuk', $validated['tanggal'])
                         ->sum('jumlah_masuk');
 
@@ -82,10 +85,10 @@ class RekapitulasiObatController extends Controller
                             'tanggal' => $validated['tanggal'],
                             'bulan' => $validated['bulan'],
                             'tahun' => $validated['tahun'],
-                            'unit_id' => Auth::guard('admin')->user()->unit_id,
+                            'unit_id' => $unitId,
                         ],
                         [
-                            'user_id' => Auth::guard('admin')->id(),
+                            'user_id' => User::where('unit_id', $unitId)->first()?->id,
                             'stok_awal' => $validated['stok_awal'],
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $sisaStok,
@@ -125,8 +128,11 @@ class RekapitulasiObatController extends Controller
                 'tahun' => 'required|integer|min:2000|max:' . (date('Y') + 1),
             ]);
 
+            $obat = Obat::find($validated['obat_id']);
+            $unitId = $request->input('unit_id') ?? ($obat->unit_id ?? null);
+
             $penerimaan = \App\Models\PenerimaanObat::where('obat_id', $validated['obat_id'])
-                ->where('unit_id', Auth::guard('admin')->user()->unit_id)
+                ->where('unit_id', $unitId)
                 ->whereDate('tanggal_masuk', $validated['tanggal'])
                 ->sum('jumlah_masuk');
 
@@ -145,7 +151,7 @@ class RekapitulasiObatController extends Controller
                     'unit_id' => Auth::guard('admin')->user()->unit_id,
                 ],
                 [
-                    'user_id' => Auth::guard('admin')->id(),
+                    'user_id' => User::where('unit_id', $obat->unit_id)->first()?->id,
                     'stok_awal' => $validated['stok_awal'],
                     'jumlah_keluar' => $validated['jumlah_keluar'],
                     'sisa_stok' => $sisaStok,

@@ -178,33 +178,35 @@ class ObatController extends Controller
 {
     $bulan = $request->get('bulan', Carbon::now()->month);
     $tahun = $request->get('tahun', Carbon::now()->year);
+    $unitFilter = $request->get('unit_id');
 
-    // Ambil user dari guard admin
     $user = Auth::guard('admin')->user();
-
     if (!$user) {
         return redirect()->route('admin.login')->with('error', 'Sesi login admin sudah habis. Silakan login kembali.');
     }
 
-    $userUnitId = $user->unit_id;
+    $units = Unit::all();
 
-    // Cek apakah export diminta
     if ($request->get('export') == '1') {
-        return $this->exportExcel($request); // pastikan method ini ada
+        return $this->exportExcel($request);
     }
 
+    // ✅ Ambil data obat dari unit yang dipilih
     $obats = Obat::query()
-        ->where('unit_id', $userUnitId)
-        ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
-            $query->whereMonth('tanggal', $bulan)
-                ->whereYear('tanggal', $tahun);
-        }])
+        ->when($unitFilter, function ($query, $unitFilter) {
+    return $query->where('unit_id', $unitFilter);
+})
+->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
+    $query->whereMonth('tanggal', $bulan)
+          ->whereYear('tanggal', $tahun);
+}, 'unit'])
         ->get();
 
     $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
 
-    // ✅ GUNAKAN VIEW UNTUK ADMIN
-    return view('admin.obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
+    return view('admin.obat.rekapitulasi', compact(
+        'obats', 'bulan', 'tahun', 'daysInMonth', 'units', 'unitFilter'
+    ));
 }
 
 public function dashboard(Request $request)

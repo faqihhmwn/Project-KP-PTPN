@@ -51,6 +51,7 @@ class Obat extends Model
     // Relationship dengan rekapitulasi obat
     public function rekapitulasiObat()
     {
+        return $this->hasMany(\App\Models\RekapitulasiObat::class);
         return $this->hasMany(RekapitulasiObat::class);
     }
 
