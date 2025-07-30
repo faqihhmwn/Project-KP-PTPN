@@ -235,13 +235,15 @@
         {{-- ✅ Tempatkan include modal di sini (di luar div tombol) --}}
         @include('obat.modal-penerimaan-obat')
 
-        <div id="validasiInfo" class="alert alert-success mt-3 d-none">
-            <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
-            dinonaktifkan untuk menjaga integritas laporan.
-        </div>
+        
 
     </div>
 
+    <div id="validasiInfo" class="alert alert-success mt-3 d-none">
+        <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
+            dinonaktifkan untuk menjaga integritas laporan.
+    </div>
+    
     <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
                 <i class="fas fa-file-excel"></i> Export Excel
