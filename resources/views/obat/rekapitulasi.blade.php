@@ -95,7 +95,18 @@
                         </button>
                     </form>
                 </div>
-
+            </div>
+            
+            <!-- Search Box -->
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="input-group">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Cari obat berdasarkan nama atau jenis...">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -322,6 +333,31 @@
         // Deklarasi variabel global untuk bulan dan tahun
         const CURRENT_BULAN = {{ $bulan }};
         const CURRENT_TAHUN = {{ $tahun }};
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#obatTableBody tr');
+            
+            rows.forEach(row => {
+                const obatName = row.getAttribute('data-obat-name');
+                const obatJenis = row.getAttribute('data-obat-jenis');
+                
+                if (!obatName && !obatJenis) return; // Skip if no data attributes
+                
+                const matchesSearch = obatName.includes(searchTerm) || 
+                                    obatJenis.includes(searchTerm);
+                
+                row.style.display = matchesSearch ? '' : 'none';
+            });
+        });
+
+        function clearSearch() {
+            searchInput.value = '';
+            const event = new Event('input');
+            searchInput.dispatchEvent(event);
+        }
 
         // Update sisa stok secara dinamis saat input harian berubah
         function updateSisaStok(obatId) {
