@@ -57,6 +57,11 @@ class ObatController extends Controller
 
     public function store(Request $request)
     {
+        $messages = [
+            'expired_date.after_or_equal' => 'Tanggal kadaluarsa harus sama dengan atau setelah hari ini.',
+            'expired_date.date' => 'Format tanggal kadaluarsa tidak valid.'
+        ];
+
         $validated = $request->validate([
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
@@ -161,6 +166,11 @@ class ObatController extends Controller
 
     public function update(Request $request, Obat $obat)
     {
+        $messages = [
+            'expired_date.after_or_equal' => 'Tanggal kadaluarsa harus sama dengan atau setelah hari ini.',
+            'expired_date.date' => 'Format tanggal kadaluarsa tidak valid.'
+        ];
+
         $validated = $request->validate([
             'nama_obat' => 'required|string|max:255',
             'jenis_obat' => 'nullable|string|max:255',
@@ -168,7 +178,7 @@ class ObatController extends Controller
             'satuan' => 'required|string|max:50',
             'keterangan' => 'nullable|string',
             'expired_date' => 'nullable|date|after_or_equal:today', // Validasi tanggal expired
-        ]);
+        ], $messages);
 
         $obat->update($validated);
         // $this->updateStokObat($obat);

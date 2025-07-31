@@ -39,7 +39,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     public function headings(): array
     {
         $row1 = [
-            'No', 'Nama Obat', 'Jenis', 'Harga Satuan', 'Satuan', 'Unit', 'Catatan', 'Stok Awal'
+            'No', 'Nama Obat', 'Jenis', 'Harga Satuan', 'Satuan', 'Unit', 'Tanggal Kadaluarsa', 'Catatan', 'Stok Awal'
         ];
         $row2 = array_fill(0, count($row1), '');
 
@@ -67,6 +67,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             $obat->harga_satuan,
             $obat->satuan,
             $obat->unit->nama ?? '-',
+            $obat->expired_date ? Carbon::parse($obat->expired_date)->format('d/m/Y') : '-',
             $obat->keterangan ?? '-',
         ];
 
