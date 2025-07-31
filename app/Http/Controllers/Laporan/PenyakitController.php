@@ -219,15 +219,12 @@ class PenyakitController extends Controller
         $tahun = $request->input('tahun');
         $subkategoriId = $request->input('subkategori_id');
 
-        // Jika yang login adalah user biasa (bukan admin),
-        // paksa filter unit_id menjadi unit milik user tersebut.
         if (Auth::guard('web')->check()) {
             $unitId = Auth::guard('web')->user()->unit_id;
         }
 
         $fileName = 'laporan_penyakit_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-        // Panggil class export yang baru dengan parameter filter
         return Excel::download(new LaporanPenyakitExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }

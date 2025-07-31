@@ -9,6 +9,8 @@ use App\Models\Unit;
 use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LaporanAbsensiDokterHonorExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AbsensiDokterHonorController extends Controller
 {
@@ -50,11 +52,11 @@ class AbsensiDokterHonorController extends Controller
         if ($tahun) $query->where('tahun', $tahun);
 
         $data = $query->orderBy('tahun', 'desc')
-                      ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-                      ->orderBy('subkategori_id', 'asc')
-                      ->paginate(10)
-                      ->appends($request->query());
-            
+            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
+            ->orderBy('subkategori_id', 'asc')
+            ->paginate(10)
+            ->appends($request->query());
+
         $approvals = LaporanApproval::where('kategori_id', self::KATEGORI_ID)->get()->keyBy(function ($item) {
             return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
         });
@@ -105,7 +107,7 @@ class AbsensiDokterHonorController extends Controller
         if ($isApproved && !$is_admin) {
             return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
         }
-        
+
         $existingData = LaporanBulanan::where('unit_id', $unitId)
             ->where('kategori_id', self::KATEGORI_ID)
             ->where('bulan', $request->bulan)
@@ -115,7 +117,7 @@ class AbsensiDokterHonorController extends Controller
         if ($existingData) {
             return back()->with('error', 'Data untuk periode ini sudah ada. Silahkan gunakan fitur "Edit" untuk mengubahnya.');
         }
-        
+
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
             LaporanBulanan::create([
                 'unit_id' => $unitId,
@@ -134,7 +136,7 @@ class AbsensiDokterHonorController extends Controller
     public function update(Request $request, $id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
-        
+
         $isApproved = LaporanApproval::where('unit_id', $laporan->unit_id)
             ->where('kategori_id', $laporan->kategori_id)
             ->where('bulan', $laporan->bulan)
@@ -147,20 +149,20 @@ class AbsensiDokterHonorController extends Controller
 
         $request->validate(['jumlah' => 'required|numeric|min:0']);
         $laporan->update($request->only(['jumlah']));
-        
+
         return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
     }
-    
+
     // public function destroy($id)
     // {
-        // if (!Auth::guard('admin')->check()) {
-        //     return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
-        // }
+    // if (!Auth::guard('admin')->check()) {
+    //     return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+    // }
 
-        // $laporan = LaporanBulanan::findOrFail($id);
-        // $laporan->delete();
+    // $laporan = LaporanBulanan::findOrFail($id);
+    // $laporan->delete();
 
-        // return back()->with('success', 'Data berhasil dihapus.');
+    // return back()->with('success', 'Data berhasil dihapus.');
     // }
 
     public function approve(Request $request)
@@ -208,5 +210,21 @@ class AbsensiDokterHonorController extends Controller
         }
 
         return back()->with('error', 'Data persetujuan tidak ditemukan.');
+    }
+
+    public function export(Request $request)
+    {
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id');
+
+        if (Auth::guard('web')->check()) {
+            $unitId = Auth::guard('web')->user()->unit_id;
+        }
+
+        $fileName = 'laporan_absensi_dokter_honor_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(new LaporanAbsensiDokterHonorExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }

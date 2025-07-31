@@ -1,32 +1,39 @@
 {{-- BAGIAN APPROVE/UNAPPROVE --}}
 @if($unitId && $bulan && $tahun)
-    @php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); @endphp
-    <div class="card mb-3">
-        <div class="card-body">
-            <p class="fw-bold">Persetujuan Periode</p>
-            @if(!$isApproved)
-                <form action="{{ route('laporan.kategori-khusus.approve') }}" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci semua entri pada periode ini?')">
-                    @csrf
-                    <input type="hidden" name="unit_id" value="{{ $unitId }}">
-                    <input type="hidden" name="bulan" value="{{ $bulan }}">
-                    <input type="hidden" name="tahun" value="{{ $tahun }}">
-                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
-                </form>
-            @else
-                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
-                    <span>Periode ini telah disetujui pada {{ $approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i') }}.</span>
-                    <form action="{{ route('laporan.kategori-khusus.unapprove') }}" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan untuk periode ini?')">
-                        @csrf
-                        <input type="hidden" name="unit_id" value="{{ $unitId }}">
-                        <input type="hidden" name="bulan" value="{{ $bulan }}">
-                        <input type="hidden" name="tahun" value="{{ $tahun }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
-                    </form>
-                </div>
-            @endif
+@php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); @endphp
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="fw-bold">Persetujuan Periode</p>
+        @if(!$isApproved)
+        <form action="{{ route('laporan.kategori-khusus.approve') }}" method="POST" onsubmit="return confirm('Yakin ingin menyetujui dan mengunci semua entri pada periode ini?')">
+            @csrf
+            <input type="hidden" name="unit_id" value="{{ $unitId }}">
+            <input type="hidden" name="bulan" value="{{ $bulan }}">
+            <input type="hidden" name="tahun" value="{{ $tahun }}">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve Periode Ini</button>
+        </form>
+        @else
+        <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+            <span>Periode ini telah disetujui pada {{ $approvals[$unitId . '-' . $bulan . '-' . $tahun]->approved_at->format('d M Y H:i') }}.</span>
+            <form action="{{ route('laporan.kategori-khusus.unapprove') }}" method="POST" onsubmit="return confirm('Yakin ingin MEMBATALKAN persetujuan untuk periode ini?')">
+                @csrf
+                <input type="hidden" name="unit_id" value="{{ $unitId }}">
+                <input type="hidden" name="bulan" value="{{ $bulan }}">
+                <input type="hidden" name="tahun" value="{{ $tahun }}">
+                <button type="submit" class="btn btn-danger btn-sm">Un-approve</button>
+            </form>
         </div>
+        @endif
     </div>
+</div>
 @endif
+
+{{-- TAMBAHKAN TOMBOL BARU DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.kategori-khusus.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
 
 {{-- BAGIAN TABEL DATA --}}
 <div class="card">
@@ -62,23 +69,25 @@
                     <td>{{ $item->tahun }}</td>
                     <td>
                         @if($isRowApproved)
-                            <span class="badge bg-success">Disetujui</span>
+                        <span class="badge bg-success">Disetujui</span>
                         @else
-                            <span class="badge bg-warning text-dark">Menunggu</span>
+                        <span class="badge bg-warning text-dark">Menunggu</span>
                         @endif
                     </td>
                     <td class="d-flex flex-wrap gap-2">
                         <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</a>
                         <!-- <form action="{{ route('laporan.kategori-khusus.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')"> -->
-                            <!-- @csrf -->
-                            <!-- @method('DELETE') -->
-                            <!-- <button type="submit" class="btn btn-sm btn-danger">Hapus</button> -->
+                        <!-- @csrf -->
+                        <!-- @method('DELETE') -->
+                        <!-- <button type="submit" class="btn btn-sm btn-danger">Hapus</button> -->
                         <!-- </form> -->
                     </td>
                 </tr>
                 @include('admin.laporan.modal.modal-kategori-khusus')
                 @empty
-                <tr><td colspan="11" class="text-center">Belum ada data.</td></tr>
+                <tr>
+                    <td colspan="11" class="text-center">Belum ada data.</td>
+                </tr>
                 @endforelse
             </tbody>
         </table>

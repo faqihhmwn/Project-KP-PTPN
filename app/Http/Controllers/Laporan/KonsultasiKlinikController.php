@@ -9,6 +9,8 @@ use App\Models\Unit;
 use App\Models\LaporanApproval;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LaporanKonsultasiKlinikExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KonsultasiKlinikController extends Controller
 {
@@ -208,5 +210,21 @@ class KonsultasiKlinikController extends Controller
         }
 
         return back()->with('error', 'Data persetujuan tidak ditemukan.');
+    }
+
+    public function export(Request $request)
+    {       
+        $unitId = $request->input('unit_id');
+        $bulan = $request->input('bulan');
+        $tahun = $request->input('tahun');
+        $subkategoriId = $request->input('subkategori_id');
+
+        if (Auth::guard('web')->check()) {
+            $unitId = Auth::guard('web')->user()->unit_id;
+        }
+
+        $fileName = 'laporan_konsultasi_klinik_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(new LaporanKonsultasiKlinikExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }
