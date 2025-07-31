@@ -30,7 +30,7 @@ class DashboardController extends Controller
         $tahun = $request->input('tahun');
         $unitId = $request->input('unit_id');
         $searchSubkategori = $request->input('search');
-        
+
         // Filter terpisah untuk Obat
         $unitIdObat = $request->input('unit_id_obat');
         $bulanObat = $request->input('bulan_obat');
@@ -48,13 +48,13 @@ class DashboardController extends Controller
                 // --- PERUBAHAN UTAMA DI SINI ---
                 if ($kategori->id == 21) { // Jika KATEGORI KHUSUS
                     $query = InputManual::query(); // Ambil dari tabel input_manual
-                    
+
                     // Terapkan filter yang sama
                     if ($is_admin && $unitId) $query->where('unit_id', $unitId);
                     if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
                     if ($bulan) $query->where('bulan', $bulan);
                     if ($tahun) $query->where('tahun', $tahun);
-                    
+
                     $laporan = $query->get();
 
                     // Hitung berdasarkan jumlah baris (count), bukan menjumlahkan kolom 'jumlah'
@@ -62,16 +62,15 @@ class DashboardController extends Controller
                         $jumlah = $laporan->where('subkategori_id', $sub->id)->count();
                         return ['nama' => $sub->nama, 'total' => $jumlah];
                     });
-
                 } else { // Untuk semua kategori lainnya
                     $query = LaporanBulanan::where('kategori_id', $kategori->id); // Ambil dari laporan_bulanan
-                    
+
                     // Terapkan filter
                     if ($is_admin && $unitId) $query->where('unit_id', $unitId);
                     if (!$is_admin) $query->where('unit_id', $authUser->unit_id);
                     if ($bulan) $query->where('bulan', $bulan);
                     if ($tahun) $query->where('tahun', $tahun);
-                    
+
                     $laporan = $query->get();
 
                     // Hitung dengan menjumlahkan kolom 'jumlah'
@@ -99,13 +98,25 @@ class DashboardController extends Controller
             if (!$is_admin) $obatQuery->where('unit_id', $authUser->unit_id);
             if ($searchNamaObat) $obatQuery->where('nama_obat', 'like', '%' . $searchNamaObat . '%');
             if ($searchJenisObat) $obatQuery->where('jenis_obat', 'like', '%' . $searchJenisObat . '%');
-            
+
             $obats = $obatQuery->get();
         }
 
         $viewData = compact(
-            'ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'searchSubkategori',
-            'tab', 'obats', 'unitIdObat', 'bulanObat', 'tahunObat', 'searchNamaObat'
+            'ringkasan',
+            'bulan',
+            'tahun',
+            'authUser',
+            'is_admin',
+            'units',
+            'unitId',
+            'searchSubkategori',
+            'tab',
+            'obats',
+            'unitIdObat',
+            'bulanObat',
+            'tahunObat',
+            'searchNamaObat'
         );
 
         return $is_admin ? view('admin-dashboard', $viewData) : view('dashboard', $viewData);
@@ -120,10 +131,12 @@ class DashboardController extends Controller
 
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
-        
+        $isAdmin = Auth::guard('admin')->check();
+        $unitId = $isAdmin ? null : Auth::guard('web')->user()->unit_id;
+
         $namaBulan = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->format('F');
         $fileName = 'REKAP_LAPORAN_KESEHATAN_' . strtoupper($namaBulan) . '_' . $tahun . '.xlsx';
 
-        return Excel::download(new LaporanKesehatanRekapExport($bulan, $tahun), $fileName);
+        return Excel::download(new \App\Exports\LaporanKesehatanRekapExport($bulan, $tahun, $unitId), $fileName);
     }
 }
