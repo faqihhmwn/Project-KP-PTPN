@@ -23,11 +23,11 @@ use App\Http\Controllers\ObatController;
 use App\Http\Controllers\RekapitulasiObatController;
 use App\Http\Controllers\RekapitulasiExportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AnalisisObatController;
 use App\Http\Controllers\Admin\ObatController as AdminObatController;
 use App\Http\Controllers\Admin\RekapitulasiObatController as AdminRekapitulasiObatController;
 use App\Http\Controllers\Admin\RekapitulasiExportController as AdminRekapitulasiExportController;
 use App\Http\Controllers\Admin\PenerimaanObatController as AdminPenerimaanObatController;
-
 use App\Http\Controllers\Rekap\RegionalController;
 use App\Http\Controllers\Rekap\KapitasiController;
 use App\Http\Controllers\Rekap\BpjsController;
@@ -274,6 +274,12 @@ Route::prefix('obat')->name('obat.')->group(function () {
 
     Route::middleware(['auth'])->group(function () {
         Route::post('/obat/penerimaan/store', [PenerimaanObatController::class, 'store'])->name('penerimaan.store');
+    });
+
+    //Analisis Obat
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/obat/analisis-obat', [AnalisisObatController::class, 'index'])->name('analisis.obat');
+        Route::get('/obat/analisis-obat/export', [AnalisisObatController::class, 'export'])->name('analisis.obat.export');
     });
 });
 
