@@ -63,7 +63,8 @@ class ObatController extends Controller
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
             'stok_awal' => 'required|integer|min:0',
-            'keterangan' => 'nullable|string'
+            'keterangan' => 'nullable|string',
+            'expired_date' => 'nullable|date|after_or_equal:today', // Validasi tanggal expired
         ]);
 
         // Format nama obat menjadi kapital semua
@@ -149,15 +150,7 @@ class ObatController extends Controller
             'lastUpdateBulanLalu'
         ));
 
-        // return view('obat.show', compact(
-        //     'obat',
-        //     'bulanIni',
-        //     'bulanLalu',
-        //     'totalPenggunaanBulanIni',
-        //     'totalBiayaBulanIni',
-        //     'totalPenggunaanBulanLalu',
-        //     'totalBiayaBulanLalu'
-        // ));
+
     }
 
     public function edit(Obat $obat)
@@ -173,7 +166,8 @@ class ObatController extends Controller
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string'
+            'keterangan' => 'nullable|string',
+            'expired_date' => 'nullable|date|after_or_equal:today', // Validasi tanggal expired
         ]);
 
         $obat->update($validated);
@@ -235,97 +229,6 @@ class ObatController extends Controller
 
         return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
     }
-
-    // public function addTransaksi(Request $request, Obat $obat)
-    // {
-    //     $validated = $request->validate([
-    //         'tanggal' => 'required|date',
-    //         'tipe_transaksi' => 'required|in:masuk,keluar',
-    //         'jumlah' => 'required|integer|min:1',
-    //         'keterangan' => 'nullable|string',
-    //         'petugas' => 'nullable|string'
-    //     ]);
-
-    //     $transaksi = new TransaksiObat([
-    //         'obat_id' => $obat->id,
-    //         'tanggal' => $validated['tanggal'],
-    //         'tipe_transaksi' => $validated['tipe_transaksi'],
-    //         'keterangan' => $validated['keterangan'],
-    //         'petugas' => $validated['petugas']
-    //     ]);
-
-    //     if ($validated['tipe_transaksi'] === 'masuk') {
-    //         $transaksi->jumlah_masuk = $validated['jumlah'];
-    //     } else {
-    //         // Check stok tersedia
-    //         if ($obat->stok_sisa < $validated['jumlah']) {
-    //             return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
-    //         }
-    //         $transaksi->jumlah_keluar = $validated['jumlah'];
-    //     }
-
-    //     $transaksi->save();
-    //     $this->updateStokObat($obat);
-
-    //     return back()->with('success', 'Transaksi berhasil ditambahkan.');
-    // }
-
-    // public function updateTransaksiHarian(Request $request, Obat $obat)
-    // {
-    //     $validated = $request->validate([
-    //         'tanggal' => 'required|date',
-    //         'jumlah_keluar' => 'required|integer|min:0'
-    //     ]);
-
-    //     if ($validated['jumlah_keluar'] > 0) {
-    //         if ($obat->stok_sisa < $validated['jumlah_keluar']) {
-    //             return response()->json(['error' => 'Stok tidak mencukupi'], 422);
-    //         }
-
-    //         TransaksiObat::updateOrCreate(
-    //             [
-    //                 'obat_id' => $obat->id,
-    //                 'tanggal' => $validated['tanggal'],
-    //                 'tipe_transaksi' => 'keluar'
-    //             ],
-    //             [
-    //                 'jumlah_keluar' => $validated['jumlah_keluar'],
-    //                 'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
-    //             ]
-    //         );
-
-    //         $this->updateStokObat($obat);
-    //     }
-
-    //     return response()->json(['success' => true]);
-    // }
-
-    // private function updateStokObat(Obat $obat)
-    // {
-    //     try {
-    //         // Check if transaksi_obats table exists and has the required columns
-    //         $totalMasuk = $obat->transaksiObats()
-    //             ->where('tipe_transaksi', 'masuk')
-    //             ->sum('jumlah_masuk') ?? 0;
-
-    //         $totalKeluar = $obat->transaksiObats()
-    //             ->where('tipe_transaksi', 'keluar')
-    //             ->sum('jumlah_keluar') ?? 0;
-
-    //         $obat->update([
-    //             'stok_masuk' => $totalMasuk,
-    //             'stok_keluar' => $totalKeluar,
-    //             'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         // If there's an error (like missing columns), just set stok_sisa = stok_awal
-    //         $obat->update([
-    //             'stok_masuk' => 0,
-    //             'stok_keluar' => 0,
-    //             'stok_sisa' => $obat->stok_awal
-    //         ]);
-    //     }
-    // }
 
     public function dashboard()
     {

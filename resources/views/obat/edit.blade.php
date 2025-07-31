@@ -69,6 +69,20 @@
                                 </div>
                             </div>
 
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="expired_date" class="form-label">Tanggal Expired</label>
+                                    <input type="date"
+                                        class="form-control @error('expired_date') is-invalid @enderror"
+                                        id="expired_date" name="expired_date"
+                                        value="{{ old('expired_date', optional($obat->expired_date)->format('Y-m-d')) }}">
+                                    @error('expired_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -196,13 +210,6 @@
             let value = this.value.replace(/[^\d]/g, '');
             this.value = value;
         });
-
-        // // Preview stok awal
-        // document.getElementById('stok_awal').addEventListener('input', function() {
-        //     if (this.value < 0) {
-        //         this.value = 0;
-        //     }
-        // });
     </script>
 
 @endsection

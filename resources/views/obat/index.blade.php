@@ -139,7 +139,8 @@
                                         <th class="text-center" style="width: 12%;">Unit</th>
                                         <th style="width: 15%; min-width: 130px;">Nama Obat</th>
                                         <th class="text-center" style="width: 15%; min-width: 120px;">Jenis</th>
-                                        <th class="text-center" style="width: 12%; min-width: 100px;">Harga Satuan</th>
+                                        <th class="text-center" style="width: 12%; min-width: 100px;">Expired Date</th>
+                                        <th class="text-center" style="width: 12%; min-width: 60px;">Harga Satuan</th>
                                         <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
@@ -153,8 +154,8 @@
                                             <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
                                             <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
                                             <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
-                                            <td class="text-center fw-medium">Rp
-                                                {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
+                                            <td class="text-center">{{ $obat->expired_date ? \Carbon\Carbon::parse($obat->expired_date)->format('d/m/Y') : '-' }}</td>
+                                            <td class="text-center fw-medium">Rp{{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
                                             <td class="text-center">{{ $obat->satuan }}</td>
                                             <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
                                             @php
