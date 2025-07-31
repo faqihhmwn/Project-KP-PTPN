@@ -72,252 +72,252 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
             // Subkategori data
             $kategoriTotal = array_fill(0, $this->units->count(), 0);
             foreach ($kategori->subkategori as $sub) {
-    $row = collect([$sub->nama]);
-    $total = 0;
-    foreach ($this->units as $i => $unit) {
-        $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
-        $row->push($jumlah);
-        $kategoriTotal[$i] += $jumlah;
-        $total += $jumlah;
-    }
-    $row->push($total ?: '-');
-    $collection->push($row);
-}
+                $row = collect([$sub->nama]);
+                $total = 0;
+                foreach ($this->units as $i => $unit) {
+                    $jumlah = $this->data->get($sub->id, collect())->get($unit->id, collect())->first()->jumlah ?? 0;
+                    $row->push($jumlah);
+                    $kategoriTotal[$i] += $jumlah;
+                    $total += $jumlah;
+                }
+                $row->push($total ?: '-');
+                $collection->push($row);
+            }
 
             // Baris TOTAL kategori
             $totalRow = collect(['TOTAL']);
-$totalSum = 0;
-foreach ($kategoriTotal as $jumlah) {
-    $value = $jumlah ?: '-';
-    $totalRow->push($value);
-    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
-}
-$totalRow->push($totalSum ?: '-');
-$collection->push($totalRow);
+            $totalSum = 0;
+            foreach ($kategoriTotal as $jumlah) {
+                $value = $jumlah ?: '-';
+                $totalRow->push($value);
+                $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+            }
+            $totalRow->push($totalSum ?: '-');
+            $collection->push($totalRow);
 
             // Baris kosong antar kategori
             $collection->push(collect(['']));
         }
 
         // === Tambahan: Tabel Pekerja Disabilitas ===
-$collection->push(collect([''])); // Spasi sebelum tabel disabilitas
-$collection->push(collect(['PEKERJA DISABILITAS']));
+        $collection->push(collect([''])); // Spasi sebelum tabel disabilitas
+        $collection->push(collect(['PEKERJA DISABILITAS']));
 
-// Header: NAMA + Unit + TOTAL
-$headerDisabilitas = collect(['NAMA']);
-foreach ($this->units as $unit) {
-    $headerDisabilitas->push($unit->nama);
-}
-$headerDisabilitas->push("TOTAL");
-$collection->push($headerDisabilitas);
-
-// Ambil data dari tabel input_manual
-$disabilitasData = \DB::table('input_manual')
-    ->where('subkategori_id', 82) // PEKERJA DISABILITAS
-    ->where('bulan', $this->bulan)
-    ->where('tahun', $this->tahun)
-    ->get();
-
-$index = 1;
-foreach ($disabilitasData as $row) {
-    $namaLengkap = $index . '. ' . $row->nama . ' (' . ($row->keterangan ?? '-') . ')';
-    $index++;
-    $dataRow = collect([$namaLengkap]);
-    $total = 0;
-    foreach ($this->units as $unit) {
-        $jumlah = ($row->unit_id == $unit->id) ? ($row->jumlah ?? 1) : '';
-        $dataRow->push($jumlah);
-        if (is_numeric($jumlah)) {
-            $total += $jumlah;
+        // Header: NAMA + Unit + TOTAL
+        $headerDisabilitas = collect(['NAMA']);
+        foreach ($this->units as $unit) {
+            $headerDisabilitas->push($unit->nama);
         }
-    }
-    $dataRow->push($total);
-    $collection->push($dataRow);
-}
+        $headerDisabilitas->push("TOTAL");
+        $collection->push($headerDisabilitas);
 
-// Baris total akhir
-$totalDisabilitas = array_fill(0, $this->units->count(), 0);
-foreach ($disabilitasData as $row) {
-    foreach ($this->units as $i => $unit) {
-        if ($row->unit_id == $unit->id) {
-            $totalDisabilitas[$i] += 1;
+        // Ambil data dari tabel input_manual
+        $disabilitasData = \DB::table('input_manual')
+            ->where('subkategori_id', 82) // PEKERJA DISABILITAS
+            ->where('bulan', $this->bulan)
+            ->where('tahun', $this->tahun)
+            ->get();
+
+        $index = 1;
+        foreach ($disabilitasData as $row) {
+            $namaLengkap = $index . '. ' . $row->nama . ' (' . ($row->keterangan ?? '-') . ')';
+            $index++;
+            $dataRow = collect([$namaLengkap]);
+            $total = 0;
+            foreach ($this->units as $unit) {
+                $jumlah = ($row->unit_id == $unit->id) ? ($row->jumlah ?? 1) : '';
+                $dataRow->push($jumlah);
+                if (is_numeric($jumlah)) {
+                    $total += $jumlah;
+                }
+            }
+            $dataRow->push($total);
+            $collection->push($dataRow);
         }
-    }
-}
-$totalRow = collect(['TOTAL']);
-$totalSum = 0;
-foreach ($totalDisabilitas as $jumlah) {
-    $totalRow->push($jumlah ?: '-');
-    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
-}
-$totalRow->push($totalSum);
-$collection->push($totalRow);
 
-// Tambahkan baris kosong sebelum CUTI HAMIL
-$collection->push(collect(['']));
-$collection->push(collect(['CUTI HAMIL']));
-
-// Header tabel CUTI HAMIL
-$headerCutiHamil = collect(['NAMA KARYAWAN/TI(STATUS)']);
-foreach ($this->units as $unit) {
-    $headerCutiHamil->push($unit->nama);
-}
-$headerCutiHamil->push('TOTAL');
-$collection->push($headerCutiHamil);
-
-// Ambil data CUTI HAMIL dari input_manual dengan subkategori_id = 83
-$cutiHamilData = \DB::table('input_manual')
-    ->where('bulan', $this->bulan)
-    ->where('tahun', $this->tahun)
-    ->where('subkategori_id', 83)
-    ->get();
-
-$index = 1;
-foreach ($cutiHamilData as $row) {
-    $namaStatus = $index . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
-    $index++;
-    $dataRow = collect([$namaStatus]);
-    $total = 0;
-    foreach ($this->units as $unit) {
-        $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
-        $dataRow->push($jumlah);
-        if ($jumlah === 1) {
-            $total += 1;
+        // Baris total akhir
+        $totalDisabilitas = array_fill(0, $this->units->count(), 0);
+        foreach ($disabilitasData as $row) {
+            foreach ($this->units as $i => $unit) {
+                if ($row->unit_id == $unit->id) {
+                    $totalDisabilitas[$i] += 1;
+                }
+            }
         }
-    }
-    $dataRow->push($total);
-    $collection->push($dataRow);
-}
-
-// Baris TOTAL CUTI HAMIL
-$totalCuti = array_fill(0, $this->units->count(), 0);
-foreach ($cutiHamilData as $row) {
-    foreach ($this->units as $i => $unit) {
-        if ($row->unit_id == $unit->id) {
-            $totalCuti[$i] += 1;
+        $totalRow = collect(['TOTAL']);
+        $totalSum = 0;
+        foreach ($totalDisabilitas as $jumlah) {
+            $totalRow->push($jumlah ?: '-');
+            $totalSum += is_numeric($jumlah) ? $jumlah : 0;
         }
-    }
-}
-$totalRow = collect(['TOTAL']);
-$totalSum = 0;
-foreach ($totalCuti as $jumlah) {
-    $jumlah = $jumlah ?: '-';
-    $totalRow->push($jumlah);
-    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
-}
-$totalRow->push($totalSum ?: '-');
-$collection->push($totalRow);
+        $totalRow->push($totalSum);
+        $collection->push($totalRow);
 
-// Tambahkan baris kosong sebelum CUTI MELAHIRKAN
-$collection->push(collect(['']));
-$collection->push(collect(['CUTI MELAHIRKAN']));
+        // Tambahkan baris kosong sebelum CUTI HAMIL
+        $collection->push(collect(['']));
+        $collection->push(collect(['CUTI HAMIL']));
 
-// Header tabel CUTI MELAHIRKAN
-$headerCutiMelahirkan = collect(['NAMA KARYAWAN/TI(STATUS)']);
-foreach ($this->units as $unit) {
-    $headerCutiMelahirkan->push($unit->nama);
-}
-$headerCutiMelahirkan->push('TOTAL');
-$collection->push($headerCutiMelahirkan);
-
-// Ambil data CUTI MELAHIRKAN dari input_manual dengan subkategori_id = 84
-$cutiMelahirkanData = \DB::table('input_manual')
-    ->where('bulan', $this->bulan)
-    ->where('tahun', $this->tahun)
-    ->where('subkategori_id', 84)
-    ->get();
-
-$filledRows = 0;
-foreach ($cutiMelahirkanData as $index => $row) {
-    $namaStatus = ($index + 1) . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
-    $dataRow = collect([$namaStatus]);
-    $total = 0;
-    foreach ($this->units as $unit) {
-        $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
-        $dataRow->push($jumlah);
-        if ($jumlah === 1) {
-            $total += 1;
+        // Header tabel CUTI HAMIL
+        $headerCutiHamil = collect(['NAMA KARYAWAN/TI(STATUS)']);
+        foreach ($this->units as $unit) {
+            $headerCutiHamil->push($unit->nama);
         }
-    }
-    $dataRow->push($total);
-    $collection->push($dataRow);
-    $filledRows++;
-}
+        $headerCutiHamil->push('TOTAL');
+        $collection->push($headerCutiHamil);
 
-// Baris TOTAL CUTI MELAHIRKAN
-$totalMelahirkan = array_fill(0, $this->units->count(), 0);
-foreach ($cutiMelahirkanData as $row) {
-    foreach ($this->units as $i => $unit) {
-        if ($row->unit_id == $unit->id) {
-            $totalMelahirkan[$i] += 1;
+        // Ambil data CUTI HAMIL dari input_manual dengan subkategori_id = 83
+        $cutiHamilData = \DB::table('input_manual')
+            ->where('bulan', $this->bulan)
+            ->where('tahun', $this->tahun)
+            ->where('subkategori_id', 83)
+            ->get();
+
+        $index = 1;
+        foreach ($cutiHamilData as $row) {
+            $namaStatus = $index . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
+            $index++;
+            $dataRow = collect([$namaStatus]);
+            $total = 0;
+            foreach ($this->units as $unit) {
+                $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
+                $dataRow->push($jumlah);
+                if ($jumlah === 1) {
+                    $total += 1;
+                }
+            }
+            $dataRow->push($total);
+            $collection->push($dataRow);
         }
-    }
-}
-$totalRow = collect(['TOTAL']);
-$totalSum = 0;
-foreach ($totalMelahirkan as $jumlah) {
-    $jumlah = $jumlah ?: '-';
-    $totalRow->push($jumlah);
-    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
-}
-$totalRow->push($totalSum ?: '-');
-$collection->push($totalRow);
 
-// Tambahkan baris kosong sebelum tabel CUTI KARYAWAN KARENA ISTRI MELAHIRKAN
-$collection->push(collect(['']));
-$collection->push(collect(['CUTI KARYAWAN KARENA ISTRI MELAHIRKAN']));
-
-// Header tabel
-$headerIstriMelahirkan = collect(['NAMA KARYAWAN/TI(STATUS)']);
-foreach ($this->units as $unit) {
-    $headerIstriMelahirkan->push($unit->nama);
-}
-$headerIstriMelahirkan->push('TOTAL');
-$collection->push($headerIstriMelahirkan);
-
-// Ambil data dari tabel input_manual dengan subkategori_id = 85
-$istriMelahirkanData = \DB::table('input_manual')
-    ->where('bulan', $this->bulan)
-    ->where('tahun', $this->tahun)
-    ->where('subkategori_id', 85)
-    ->get();
-
-// Tambahkan data yang ditemukan
-$filledRows = 0;
-foreach ($istriMelahirkanData as $index => $row) {
-    $namaStatus = ($index + 1) . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
-    $dataRow = collect([$namaStatus]);
-    $total = 0;
-    foreach ($this->units as $unit) {
-        $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
-        $dataRow->push($jumlah);
-        if ($jumlah === 1) {
-            $total += 1;
+        // Baris TOTAL CUTI HAMIL
+        $totalCuti = array_fill(0, $this->units->count(), 0);
+        foreach ($cutiHamilData as $row) {
+            foreach ($this->units as $i => $unit) {
+                if ($row->unit_id == $unit->id) {
+                    $totalCuti[$i] += 1;
+                }
+            }
         }
-    }
-    $dataRow->push($total);
-    $collection->push($dataRow);
-    $filledRows++;
-}
-
-// Baris TOTAL
-$totalIstriMelahirkan = array_fill(0, $this->units->count(), 0);
-foreach ($istriMelahirkanData as $row) {
-    foreach ($this->units as $i => $unit) {
-        if ($row->unit_id == $unit->id) {
-            $totalIstriMelahirkan[$i] += 1;
+        $totalRow = collect(['TOTAL']);
+        $totalSum = 0;
+        foreach ($totalCuti as $jumlah) {
+            $jumlah = $jumlah ?: '-';
+            $totalRow->push($jumlah);
+            $totalSum += is_numeric($jumlah) ? $jumlah : 0;
         }
-    }
-}
-$totalRow = collect(['TOTAL']);
-$totalSum = 0;
-foreach ($totalIstriMelahirkan as $jumlah) {
-    $jumlah = $jumlah ?: '-';
-    $totalRow->push($jumlah);
-    $totalSum += is_numeric($jumlah) ? $jumlah : 0;
-}
-$totalRow->push($totalSum ?: '-');
-$collection->push($totalRow);
+        $totalRow->push($totalSum ?: '-');
+        $collection->push($totalRow);
+
+        // Tambahkan baris kosong sebelum CUTI MELAHIRKAN
+        $collection->push(collect(['']));
+        $collection->push(collect(['CUTI MELAHIRKAN']));
+
+        // Header tabel CUTI MELAHIRKAN
+        $headerCutiMelahirkan = collect(['NAMA KARYAWAN/TI(STATUS)']);
+        foreach ($this->units as $unit) {
+            $headerCutiMelahirkan->push($unit->nama);
+        }
+        $headerCutiMelahirkan->push('TOTAL');
+        $collection->push($headerCutiMelahirkan);
+
+        // Ambil data CUTI MELAHIRKAN dari input_manual dengan subkategori_id = 84
+        $cutiMelahirkanData = \DB::table('input_manual')
+            ->where('bulan', $this->bulan)
+            ->where('tahun', $this->tahun)
+            ->where('subkategori_id', 84)
+            ->get();
+
+        $filledRows = 0;
+        foreach ($cutiMelahirkanData as $index => $row) {
+            $namaStatus = ($index + 1) . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
+            $dataRow = collect([$namaStatus]);
+            $total = 0;
+            foreach ($this->units as $unit) {
+                $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
+                $dataRow->push($jumlah);
+                if ($jumlah === 1) {
+                    $total += 1;
+                }
+            }
+            $dataRow->push($total);
+            $collection->push($dataRow);
+            $filledRows++;
+        }
+
+        // Baris TOTAL CUTI MELAHIRKAN
+        $totalMelahirkan = array_fill(0, $this->units->count(), 0);
+        foreach ($cutiMelahirkanData as $row) {
+            foreach ($this->units as $i => $unit) {
+                if ($row->unit_id == $unit->id) {
+                    $totalMelahirkan[$i] += 1;
+                }
+            }
+        }
+        $totalRow = collect(['TOTAL']);
+        $totalSum = 0;
+        foreach ($totalMelahirkan as $jumlah) {
+            $jumlah = $jumlah ?: '-';
+            $totalRow->push($jumlah);
+            $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+        }
+        $totalRow->push($totalSum ?: '-');
+        $collection->push($totalRow);
+
+        // Tambahkan baris kosong sebelum tabel CUTI KARYAWAN KARENA ISTRI MELAHIRKAN
+        $collection->push(collect(['']));
+        $collection->push(collect(['CUTI KARYAWAN KARENA ISTRI MELAHIRKAN']));
+
+        // Header tabel
+        $headerIstriMelahirkan = collect(['NAMA KARYAWAN/TI(STATUS)']);
+        foreach ($this->units as $unit) {
+            $headerIstriMelahirkan->push($unit->nama);
+        }
+        $headerIstriMelahirkan->push('TOTAL');
+        $collection->push($headerIstriMelahirkan);
+
+        // Ambil data dari tabel input_manual dengan subkategori_id = 85
+        $istriMelahirkanData = \DB::table('input_manual')
+            ->where('bulan', $this->bulan)
+            ->where('tahun', $this->tahun)
+            ->where('subkategori_id', 85)
+            ->get();
+
+        // Tambahkan data yang ditemukan
+        $filledRows = 0;
+        foreach ($istriMelahirkanData as $index => $row) {
+            $namaStatus = ($index + 1) . '. ' . $row->nama . ' (' . ($row->status ?? '-') . ')';
+            $dataRow = collect([$namaStatus]);
+            $total = 0;
+            foreach ($this->units as $unit) {
+                $jumlah = ($row->unit_id == $unit->id) ? 1 : '';
+                $dataRow->push($jumlah);
+                if ($jumlah === 1) {
+                    $total += 1;
+                }
+            }
+            $dataRow->push($total);
+            $collection->push($dataRow);
+            $filledRows++;
+        }
+
+        // Baris TOTAL
+        $totalIstriMelahirkan = array_fill(0, $this->units->count(), 0);
+        foreach ($istriMelahirkanData as $row) {
+            foreach ($this->units as $i => $unit) {
+                if ($row->unit_id == $unit->id) {
+                    $totalIstriMelahirkan[$i] += 1;
+                }
+            }
+        }
+        $totalRow = collect(['TOTAL']);
+        $totalSum = 0;
+        foreach ($totalIstriMelahirkan as $jumlah) {
+            $jumlah = $jumlah ?: '-';
+            $totalRow->push($jumlah);
+            $totalSum += is_numeric($jumlah) ? $jumlah : 0;
+        }
+        $totalRow->push($totalSum ?: '-');
+        $collection->push($totalRow);
 
         return $collection;
     }
@@ -338,7 +338,7 @@ $collection->push($totalRow);
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
                 $highestRow = $sheet->getHighestRow();
                 $highestColIndex = $this->units->count() + 2;
@@ -364,61 +364,61 @@ $collection->push($totalRow);
                     }
 
                     // Baris yang TIDAK BOLEH diberi border
-if (!$isEmptyRow) {
-    $range = 'A' . $row . ':' . $highestColLetter . $row;
-    $sheet->getStyle($range)->applyFromArray($borderStyle);
-}
+                    if (!$isEmptyRow) {
+                        $range = 'A' . $row . ':' . $highestColLetter . $row;
+                        $sheet->getStyle($range)->applyFromArray($borderStyle);
+                    }
                 }
 
                 // Header kategori diberi bold dan align center
                 for ($row = 3; $row <= $highestRow; $row++) {
-    $firstCell = $sheet->getCell("A{$row}");
-    $value = strtoupper(trim((string) $firstCell->getValue()));
-    $lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
-    $lastValue = trim((string) $lastCell->getValue());
+                    $firstCell = $sheet->getCell("A{$row}");
+                    $value = strtoupper(trim((string) $firstCell->getValue()));
+                    $lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
+                    $lastValue = trim((string) $lastCell->getValue());
 
-if ($lastValue !== '' && $value !== 'TOTAL' && !in_array($value, ['NAMA', 'NAMA KARYAWAN/TI(STATUS)'])) {
-    $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
-    $sheet->getStyle("{$lastColLetter}{$row}")->getFont()->setBold(true);
-}
-    // Cek apakah kolom TOTAL (kolom terakhir) berisi "-", dan ratakan ke kanan
-$lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
-if (trim((string)$lastCell->getValue()) === '-') {
-    $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
-    $sheet->getStyle("{$lastColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-}
-    $headersKhusus = [
-    'NAMA',
-    'NAMA KARYAWAN/TI(STATUS)',
-];
-if (in_array($value, $headersKhusus)) {
-    $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-}
+                    if ($lastValue !== '' && $value !== 'TOTAL' && !in_array($value, ['NAMA', 'NAMA KARYAWAN/TI(STATUS)'])) {
+                        $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+                        $sheet->getStyle("{$lastColLetter}{$row}")->getFont()->setBold(true);
+                    }
+                    // Cek apakah kolom TOTAL (kolom terakhir) berisi "-", dan ratakan ke kanan
+                    $lastCell = $sheet->getCellByColumnAndRow($highestColIndex, $row);
+                    if (trim((string)$lastCell->getValue()) === '-') {
+                        $lastColLetter = Coordinate::stringFromColumnIndex($highestColIndex);
+                        $sheet->getStyle("{$lastColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    }
+                    $headersKhusus = [
+                        'NAMA',
+                        'NAMA KARYAWAN/TI(STATUS)',
+                    ];
+                    if (in_array($value, $headersKhusus)) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                    }
 
-    if (stripos($value, 'KAT.') === 0) {
-        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    }
+                    if (stripos($value, 'KAT.') === 0) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    }
 
-if ($value === 'TOTAL') {
-    $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-    $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    if ($value === 'TOTAL') {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
-    // Buat simbol "-" di baris TOTAL jadi rata kanan
-    for ($col = 2; $col <= $highestColIndex; $col++) {
-        $cell = $sheet->getCellByColumnAndRow($col, $row);
-        if (trim((string)$cell->getValue()) === '-') {
-            $cellLetter = Coordinate::stringFromColumnIndex($col);
-            $sheet->getStyle("{$cellLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        }
-    }
-}
+                        // Buat simbol "-" di baris TOTAL jadi rata kanan
+                        for ($col = 2; $col <= $highestColIndex; $col++) {
+                            $cell = $sheet->getCellByColumnAndRow($col, $row);
+                            if (trim((string)$cell->getValue()) === '-') {
+                                $cellLetter = Coordinate::stringFromColumnIndex($col);
+                                $sheet->getStyle("{$cellLetter}{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                            }
+                        }
+                    }
 
-    // Tambahkan pengecekan bold untuk judul tabel tambahan
-    if (in_array($value, ['PEKERJA DISABILITAS', 'CUTI HAMIL', 'CUTI MELAHIRKAN', 'CUTI KARYAWAN KARENA ISTRI MELAHIRKAN'])) {
-        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
-    }
-}
+                    // Tambahkan pengecekan bold untuk judul tabel tambahan
+                    if (in_array($value, ['PEKERJA DISABILITAS', 'CUTI HAMIL', 'CUTI MELAHIRKAN', 'CUTI KARYAWAN KARENA ISTRI MELAHIRKAN'])) {
+                        $sheet->getStyle("A{$row}:{$highestColLetter}{$row}")->getFont()->setBold(true);
+                    }
+                }
             },
         ];
     }

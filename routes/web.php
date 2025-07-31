@@ -111,6 +111,8 @@ Route::prefix('laporan/penyakit-kronis')->middleware('auth:web,admin')->name('la
     Route::delete('/destroy/{id}', [PenyakitKronisController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [PenyakitKronisController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [PenyakitKronisController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [PenyakitKronisController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/konsultasi-klinik')->middleware('auth:web,admin')->name('laporan.konsultasi-klinik.')->group(function () {
@@ -120,6 +122,8 @@ Route::prefix('laporan/konsultasi-klinik')->middleware('auth:web,admin')->name('
     Route::delete('/destroy/{id}', [KonsultasiKlinikController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KonsultasiKlinikController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KonsultasiKlinikController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KonsultasiKlinikController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/cuti-sakit')->middleware('auth:web,admin')->name('laporan.cuti-sakit.')->group(function () {
@@ -129,6 +133,8 @@ Route::prefix('laporan/cuti-sakit')->middleware('auth:web,admin')->name('laporan
     Route::delete('/destroy/{id}', [CutiSakitController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [CutiSakitController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [CutiSakitController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [CutiSakitController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/peserta-kb')->middleware('auth:web,admin')->name('laporan.peserta-kb.')->group(function () {
@@ -138,6 +144,8 @@ Route::prefix('laporan/peserta-kb')->middleware('auth:web,admin')->name('laporan
     Route::delete('/destroy/{id}', [PesertaKbController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [PesertaKbController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [PesertaKbController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [PesertaKbController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/metode-kb')->middleware('auth:web,admin')->name('laporan.metode-kb.')->group(function () {
@@ -147,6 +155,8 @@ Route::prefix('laporan/metode-kb')->middleware('auth:web,admin')->name('laporan.
     Route::delete('/destroy/{id}', [MetodeKbController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [MetodeKbController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [MetodeKbController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [MetodeKbController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/kehamilan')->middleware('auth:web,admin')->name('laporan.kehamilan.')->group(function () {
@@ -156,6 +166,8 @@ Route::prefix('laporan/kehamilan')->middleware('auth:web,admin')->name('laporan.
     Route::delete('/destroy/{id}', [KehamilanController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KehamilanController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KehamilanController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KehamilanController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/imunisasi')->middleware('auth:web,admin')->name('laporan.imunisasi.')->group(function () {
@@ -165,6 +177,8 @@ Route::prefix('laporan/imunisasi')->middleware('auth:web,admin')->name('laporan.
     Route::delete('/destroy/{id}', [ImunisasiController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [ImunisasiController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [ImunisasiController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [ImunisasiController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/kematian')->middleware('auth:web,admin')->name('laporan.kematian.')->group(function () {
@@ -174,6 +188,8 @@ Route::prefix('laporan/kematian')->middleware('auth:web,admin')->name('laporan.k
     Route::delete('/destroy/{id}', [KematianController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KematianController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KematianController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KematianController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/klaim-asuransi')->middleware('auth:web,admin')->name('laporan.klaim-asuransi.')->group(function () {
@@ -183,6 +199,8 @@ Route::prefix('laporan/klaim-asuransi')->middleware('auth:web,admin')->name('lap
     Route::delete('/destroy/{id}', [KlaimAsuransiController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KlaimAsuransiController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KlaimAsuransiController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KlaimAsuransiController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/kecelakaan-kerja')->middleware('auth:web,admin')->name('laporan.kecelakaan-kerja.')->group(function () {
@@ -192,6 +210,8 @@ Route::prefix('laporan/kecelakaan-kerja')->middleware('auth:web,admin')->name('l
     Route::delete('/destroy/{id}', [KecelakaanKerjaController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [KecelakaanKerjaController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [KecelakaanKerjaController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KecelakaanKerjaController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/sakit-berkepanjangan')->middleware('auth:web,admin')->name('laporan.sakit-berkepanjangan.')->group(function () {
@@ -201,6 +221,8 @@ Route::prefix('laporan/sakit-berkepanjangan')->middleware('auth:web,admin')->nam
     Route::delete('/destroy/{id}', [SakitBerkepanjanganController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [SakitBerkepanjanganController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [SakitBerkepanjanganController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [SakitBerkepanjanganController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/absensi-dokter-honorer')->middleware('auth:web,admin')->name('laporan.absensi-dokter-honorer.')->group(function () {
@@ -210,6 +232,8 @@ Route::prefix('laporan/absensi-dokter-honorer')->middleware('auth:web,admin')->n
     Route::delete('/destroy/{id}', [AbsensiDokterHonorController::class, 'destroy'])->name('destroy');
     Route::post('/approve', [AbsensiDokterHonorController::class, 'approve'])->name('approve');
     Route::post('/unapprove', [AbsensiDokterHonorController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [AbsensiDokterHonorController::class, 'export'])->name('export');
 });
 
 Route::prefix('laporan/kategori-khusus')->middleware('auth:web,admin')->name('laporan.kategori-khusus.')->group(function () {
@@ -219,6 +243,8 @@ Route::prefix('laporan/kategori-khusus')->middleware('auth:web,admin')->name('la
     Route::delete('/destroy/{id}', [KategoriKhususController::class, 'destroy'])->name('destroy');
     Route::post('/approve/', [KategoriKhususController::class, 'approve'])->name('approve');
     Route::post('/unapprove/', [KategoriKhususController::class, 'unapprove'])->name('unapprove');
+
+    Route::get('/export', [KategoriKhususController::class, 'export'])->name('export');
 });
 
 
