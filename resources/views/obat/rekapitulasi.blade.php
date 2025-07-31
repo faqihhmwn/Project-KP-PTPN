@@ -296,14 +296,14 @@
                         <div class="row mt-3">
                             <div class="col-12">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="include_daily"
-                                        name="include_daily" value="1">
-                                    <label class="form-check-label" for="include_daily">
+                                    <!-- <input class="form-check-input" type="checkbox" id="include_daily"
+                                        name="include_daily" value="1"> -->
+                                    <!-- <label class="form-check-label" for="include_daily">
                                         Sertakan data harian (maksimal 31 hari)
-                                    </label>
-                                    <small class="form-text text-muted">
+                                    </label> -->
+                                    <!-- <small class="form-text text-muted">
                                         Data harian akan ditampilkan jika range tanggal kurang dari 32 hari
-                                    </small>
+                                    </small> -->
                                 </div>
                             </div>
                         </div>
@@ -312,7 +312,7 @@
                             <strong>Catatan:</strong>
                             <ul class="mb-0 mt-2">
                                 <li>File akan didownload dalam format Excel (.xlsx)</li>
-                                <li>Data harian hanya akan disertakan jika range kurang dari 32 hari</li>
+                                <li>Data akan ditampilkan dalam bentuk rekap perbulan</li>
                             </ul>
                         </div>
                     </div>

@@ -168,10 +168,10 @@
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
+                                                    <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
                                                         <i class="fas fa-eye"></i>
-                                                    </a>
+                                                    </a> -->
                                                     <a href="{{ route('obat.edit', $obat) }}"
                                                         class="btn btn-warning btn-sm" title="Edit">
                                                         <i class="fas fa-edit"></i>
