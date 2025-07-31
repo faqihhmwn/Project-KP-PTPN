@@ -8,7 +8,6 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AnalisisObatExport;
 
-
 class AnalisisObatController extends Controller
 {
     public function index(Request $request)
@@ -33,25 +32,16 @@ class AnalisisObatController extends Controller
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $start = Carbon::parse($request->start_date)->startOfDay();
             $end = Carbon::parse($request->end_date)->endOfDay();
-
             $query->whereBetween('tanggal', [$start, $end]);
         }
 
-        $data = $query->orderBy('tanggal', 'desc')->get();
+        $data = $query->orderBy('tanggal', 'asc')->get();
 
         return view('obat.analisis-obat', [
             'data' => $data,
             'request' => $request
         ]);
     }
-
-    // public function export(Request $request)
-    // {
-    //     // Bisa diisi nanti saat fitur export siap
-    //     return response()->json([
-    //         'message' => '🔧 Fitur export masih dalam pengembangan.'
-    //     ]);
-    // }
 
     public function export(Request $request)
     {

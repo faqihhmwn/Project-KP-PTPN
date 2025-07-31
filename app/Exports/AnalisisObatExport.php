@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Exports;
+
 use App\Models\RekapitulasiObat;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Concerns\FromQuery;
@@ -28,7 +29,7 @@ class AnalisisObatExport implements FromQuery, WithHeadings, WithMapping, WithSt
 
     public function query()
     {
-        $query = RekapitulasiObat::with(['obat', 'unit']);
+        $query = RekapitulasiObat::query(); // Hapus ->with()
 
         if ($this->request->filled('obat')) {
             $query->whereHas('obat', function ($q) {
@@ -42,14 +43,13 @@ class AnalisisObatExport implements FromQuery, WithHeadings, WithMapping, WithSt
             });
         }
 
-        if ($this->request->filled('tanggal_mulai') && $this->request->filled('tanggal_selesai')) {
-            $query->whereBetween('tanggal', [
-                $this->request->tanggal_mulai,
-                $this->request->tanggal_selesai
-            ]);
+        if ($this->request->filled('start_date') && $this->request->filled('end_date')) {
+            $start = Carbon::parse($this->request->start_date)->startOfDay();
+            $end = Carbon::parse($this->request->end_date)->endOfDay();
+            $query->whereBetween('tanggal', [$start, $end]);
         }
 
-        return $query->orderBy('tanggal', 'desc');
+        return $query->orderBy('tanggal', 'asc');
     }
 
     public function headings(): array
@@ -68,6 +68,8 @@ class AnalisisObatExport implements FromQuery, WithHeadings, WithMapping, WithSt
 
     public function map($item): array
     {
+        $item->loadMissing(['obat', 'unit']); 
+
         return [
             Carbon::parse($item->tanggal)->format('d-m-Y'),
             $item->obat->nama_obat ?? '-',
@@ -76,7 +78,7 @@ class AnalisisObatExport implements FromQuery, WithHeadings, WithMapping, WithSt
             $item->jumlah_masuk,
             $item->jumlah_keluar,
             $item->sisa_stok,
-            $item->unit->nama ?? '-', // Pastikan kolom relasi benar
+            $item->unit->nama ?? '-',
         ];
     }
 

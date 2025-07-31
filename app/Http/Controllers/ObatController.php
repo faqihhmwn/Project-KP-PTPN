@@ -177,7 +177,7 @@ class ObatController extends Controller
         ]);
 
         $obat->update($validated);
-        $this->updateStokObat($obat);
+        // $this->updateStokObat($obat);
 
         return redirect()->to($request->query('return_url', route('obat.index')))
             ->with('success', 'Obat berhasil diperbarui');

@@ -3,7 +3,7 @@
   <div class="sidebar-brand">
     <a href="/" class="brand-link">
       <img src="{{ asset('assets/img/sidebar/logo-ptpn.png') }}" class="brand-image opacity-75 shadow" />
-      <span class="brand-text fw-light">Puskemas PTPN</span>
+      <span class="brand-text fw-light">Simpelkes PTPN 7</span>
     </a>
   </div>
   <!--end::Sidebar Brand-->

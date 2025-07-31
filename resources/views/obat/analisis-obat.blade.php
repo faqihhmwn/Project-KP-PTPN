@@ -36,8 +36,8 @@
         <form action="{{ route('obat.analisis.obat.export') }}" method="GET" class="d-inline">
             <input type="hidden" name="obat" value="{{ request('obat') }}">
             <input type="hidden" name="jenis" value="{{ request('jenis') }}">
-            <input type="hidden" name="tanggal_mulai" value="{{ request('tanggal_mulai') }}">
-            <input type="hidden" name="tanggal_selesai" value="{{ request('tanggal_selesai') }}">
+            <input type="hidden" name="start_date" value="{{ request('start_date') }}">
+            <input type="hidden" name="end_date" value="{{ request('end_date') }}">
             <button type="submit" class="btn btn-success mb-3">
                 <i class="bi bi-file-earmark-excel"></i> Export Excel
             </button>
