@@ -44,7 +44,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->name('dashboard');
 
 Route::get('/dashboard/export-rekap', [App\Http\Controllers\DashboardController::class, 'exportRekap'])
-    ->middleware('auth:admin')
+    ->middleware('auth:web,admin')
     ->name('dashboard.export-rekap');
 
 // Route untuk export obat

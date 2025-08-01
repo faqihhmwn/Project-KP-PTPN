@@ -27,15 +27,24 @@ class LaporanKesehatanRekapExport implements FromCollection, WithHeadings, WithS
     protected $sheetData = [];
     protected $mergeTitleCells = [];
 
-    public function __construct($bulan, $tahun)
+    protected $unitId;
+
+    public function __construct($bulan, $tahun, $unitId = null)
     {
         $this->bulan = $bulan;
         $this->tahun = $tahun;
-        $this->units = Unit::orderBy('id')->get();
+        $this->unitId = $unitId;
+        $this->units = $unitId
+            ? Unit::where('id', $unitId)->get()
+            : Unit::orderBy('id')->get();
+
         $this->kategori = Kategori::with('subkategori')->orderBy('id')->get();
 
-        $this->data = LaporanBulanan::where('bulan', $this->bulan)
-            ->where('tahun', $this->tahun)
+        $this->data = LaporanBulanan::where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->when($unitId, function ($q) use ($unitId) {
+                $q->where('unit_id', $unitId);
+            })
             ->get()
             ->groupBy(['subkategori_id', 'unit_id']);
     }
