@@ -12,6 +12,7 @@ use App\Models\Kategori; // Tambahkan ini
 use App\Exports\LaporanKesehatanRekapExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
+use App\Models\LaporanApproval;
 
 class DashboardController extends Controller
 {
@@ -138,5 +139,42 @@ class DashboardController extends Controller
         $fileName = 'REKAP_LAPORAN_KESEHATAN_' . strtoupper($namaBulan) . '_' . $tahun . '.xlsx';
 
         return Excel::download(new \App\Exports\LaporanKesehatanRekapExport($bulan, $tahun, $unitId), $fileName);
+    }
+
+    public function validatePeriod(Request $request)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Hanya admin yang dapat melakukan validasi.');
+        }
+
+        $request->validate([
+            'bulan' => 'required|numeric|between:1,12',
+            'tahun' => 'required|numeric|min:2020',
+        ]);
+
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $unitsToValidate = Unit::all();
+        $kategoris = Kategori::all();
+
+        // Validasi semua laporan untuk semua unit pada periode yang dipilih
+        foreach ($unitsToValidate as $unit) {
+            foreach ($kategoris as $kategori) {
+                LaporanApproval::updateOrCreate(
+                    [
+                        'unit_id' => $unit->id,
+                        'kategori_id' => $kategori->id,
+                        'bulan' => $bulan,
+                        'tahun' => $tahun,
+                    ],
+                    [
+                        'approved_by' => Auth::guard('admin')->id(),
+                        'approved_at' => now(),
+                    ]
+                );
+            }
+        }
+
+        return back()->with('success', 'Semua laporan untuk semua unit pada periode yang dipilih berhasil divalidasi.');
     }
 }

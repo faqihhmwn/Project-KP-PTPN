@@ -43,6 +43,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware('auth:web,admin')
     ->name('dashboard');
 
+Route::post('/dashboard/validate-period', [DashboardController::class, 'validatePeriod'])
+    ->middleware('auth:admin')
+    ->name('dashboard.validate');
+
 Route::get('/dashboard/export-rekap', [App\Http\Controllers\DashboardController::class, 'exportRekap'])
     ->middleware('auth:web,admin')
     ->name('dashboard.export-rekap');
