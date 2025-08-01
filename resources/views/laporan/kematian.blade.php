@@ -19,10 +19,10 @@
                         <label class="form-label">Unit</label>
                         <input type="text" class="form-control" value="{{ $authUser->unit->nama }}" disabled>
                     </div>
-                    <div class="col-md-3"><label for="bulan" class="form-label">Bulan</label><select name="bulan" id="bulan" class="form-select" required>
+                    <div class="col-md-3"><label for="bulan" class="form-label">Bulan <span class="text-danger">*</span></label><select name="bulan" id="bulan" class="form-select" required>
                             <option value="">-- Pilih Bulan --</option>@foreach (range(1, 12) as $b)<option value="{{ $b }}">{{ DateTime::createFromFormat('!m', $b)->format('F') }}</option>@endforeach
                         </select></div>
-                    <div class="col-md-3"><label for="tahun" class="form-label">Tahun</label><select name="tahun" id="tahun" class="form-select" required>
+                    <div class="col-md-3"><label for="tahun" class="form-label">Tahun <span class="text-danger">*</span></label><select name="tahun" id="tahun" class="form-select" required>
                             <option value="">-- Pilih Tahun --</option>@for ($t = date('Y'); $t >= 2020; $t--)<option value="{{ $t }}">{{ $t }}</option>@endfor
                         </select></div>
                 </div>

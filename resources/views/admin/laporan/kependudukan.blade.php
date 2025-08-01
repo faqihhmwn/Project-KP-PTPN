@@ -54,7 +54,7 @@
                     <tbody>
                         @foreach ($subkategori as $sub)
                         <tr>
-                            <td>{{ $sub->nama }}</td>
+                            <td>{{ $sub->nama }} <span class="text-danger">*</span></td>
                             <td>
                                 {{-- ==== PERUBAHAN INPUT FIELD JUMLAH ==== --}}
                                 <input type="number" name="jumlah[{{ $sub->id }}]" class="form-control" min="0" value="" placeholder="Masukkan jumlah..." required>
