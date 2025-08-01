@@ -181,11 +181,11 @@
                                                         class="d-inline">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                        <!-- <button type="submit" class="btn btn-danger btn-sm"
                                                             onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
                                                             title="Hapus Permanen">
                                                             <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        </button> -->
                                                     </form>
                                                 </div>
                                             </td>

@@ -7,6 +7,8 @@
         .table-container {
             background-color: white;
             padding: 20px;
+                $hargaSatuan = $rekapitulasi->harga_satuan ?? $obat->harga_satuan;
+                $totalBiaya += $jumlahKeluar * $hargaSatuan;     
             border-radius: 10px;
             overflow-x: auto;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -149,7 +151,16 @@
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
-                        <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
+                        <td>
+                            @php
+                                $rekapHargaSatuan = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                                    ->where('unit_id', Auth::user()->unit_id)
+                                    ->where('bulan', $bulan)
+                                    ->where('tahun', $tahun)
+                                    ->value('harga_satuan') ?? $obat->harga_satuan;
+                            @endphp
+                            Rp {{ number_format($rekapHargaSatuan, 0, ',', '.') }}
+                        </td>
                         @php
                             // Ambil sisa stok dari bulan sebelumnya
                             $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
@@ -198,7 +209,8 @@
                                 <div style="display: flex; flex-direction: column;">
                                     <input type="number" class="daily-input" inputmode="numeric" min="0"
                                         value="{{ $jumlahKeluar }}" data-obat-id="{{ $obat->id }}"
-                                        data-tanggal="{{ $tanggal }}">
+                                        data-tanggal="{{ $tanggal }}"
+                                        data-harga-satuan="{{ $hargaSatuan }}">
 
                                     @if ($jumlahMasuk > 0)
                                         <small class="text-success fw-bold">+{{ $jumlahMasuk }}</small>
@@ -404,11 +416,11 @@
         function updateTotalBiaya(obatId) {
             const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
             if (!row) return;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
             let totalBiaya = 0;
             row.querySelectorAll('.daily-input').forEach(input => {
                 const jumlahKeluar = parseInt(input.value) || 0;
-                totalBiaya += jumlahKeluar * harga;
+                const hargaSatuan = parseInt(input.getAttribute('data-harga-satuan')) || 0;
+                totalBiaya += jumlahKeluar * hargaSatuan;
             });
             const totalBiayaCell = row.querySelector('.total-biaya');
             if (totalBiayaCell) {
