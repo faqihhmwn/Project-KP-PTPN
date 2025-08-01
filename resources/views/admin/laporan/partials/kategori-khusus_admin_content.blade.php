@@ -1,3 +1,4 @@
+<!--
 {{-- BAGIAN APPROVE/UNAPPROVE --}}
 @if($unitId && $bulan && $tahun)
 @php $isApproved = isset($approvals[$unitId . '-' . $bulan . '-' . $tahun]); @endphp
@@ -27,6 +28,7 @@
     </div>
 </div>
 @endif
+-->
 
 {{-- TAMBAHKAN TOMBOL BARU DI SINI --}}
 <div class="d-flex justify-content-end mb-3">
