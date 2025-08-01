@@ -13,7 +13,7 @@
                         <label class="form-label">Unit</label>
                         <select name="unit_id" class="form-select" required>
                             @foreach($units as $unit)
-                                <option value="{{ $unit->id }}" {{ $item->unit_id == $unit->id ? 'selected' : '' }}>{{ $unit->nama }}</option>
+                            <option value="{{ $unit->id }}" {{ $item->unit_id == $unit->id ? 'selected' : '' }}>{{ $unit->nama }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -21,7 +21,7 @@
                         <label class="form-label">Bulan</label>
                         <select name="bulan" class="form-select" required>
                             @foreach(range(1,12) as $b)
-                                <option value="{{$b}}" {{$item->bulan == $b ? 'selected' : ''}}>{{date('F',mktime(0,0,0,$b,1))}}</option>
+                            <option value="{{$b}}" {{$item->bulan == $b ? 'selected' : ''}}>{{date('F',mktime(0,0,0,$b,1))}}</option>
                             @endforeach
                         </select>
                     </div>
@@ -29,7 +29,7 @@
                         <label class="form-label">Tahun</label>
                         <select name="tahun" class="form-select" required>
                             @for($t=date('Y');$t>=2020;$t--)
-                                <option value="{{$t}}" {{$item->tahun == $t ? 'selected' : ''}}>{{$t}}</option>
+                            <option value="{{$t}}" {{$item->tahun == $t ? 'selected' : ''}}>{{$t}}</option>
                             @endfor
                         </select>
                     </div>
@@ -37,7 +37,7 @@
                         <label class="form-label">Subkategori</label>
                         <select name="subkategori_id" class="form-select edit-subkategori" data-id="{{ $item->id }}" required>
                             @foreach($subkategoris as $sub)
-                                <option value="{{ $sub->id }}" {{ $item->subkategori_id == $sub->id ? 'selected' : '' }}>{{ $sub->nama }}</option>
+                            <option value="{{ $sub->id }}" {{ $item->subkategori_id == $sub->id ? 'selected' : '' }}>{{ $sub->nama }}</option>
                             @endforeach
                         </select>
                     </div>

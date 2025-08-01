@@ -17,7 +17,7 @@
                 {{-- ... (Dropdown Unit, Bulan, Tahun tidak berubah) ... --}}
                 <div class="row mb-3">
                     <div class="col-md-3">
-                        <label for="unit_id_input" class="form-label">Unit</label>
+                        <label for="unit_id_input" class="form-label">Unit <span class="text-danger">*</span></label>
                         <select name="unit_id" id="unit_id_input" class="form-select" required>
                             <option value="">-- Pilih Unit --</option>
                             @foreach ($units as $unit)
@@ -26,7 +26,7 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="bulan_input" class="form-label">Bulan</label>
+                        <label for="bulan_input" class="form-label">Bulan <span class="text-danger">*</span></label>
                         <select name="bulan" id="bulan_input" class="form-select" required>
                             <option value="">-- Pilih Bulan --</option>
                             @foreach (range(1, 12) as $b)
@@ -35,7 +35,7 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="tahun_input" class="form-label">Tahun</label>
+                        <label for="tahun_input" class="form-label">Tahun <span class="text-danger">*</span></label>
                         <select name="tahun" id="tahun_input" class="form-select" required>
                             <option value="">-- Pilih Tahun --</option>
                             @for ($t = date('Y'); $t >= 2020; $t--)
