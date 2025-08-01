@@ -41,6 +41,14 @@ class DashboardController extends Controller
 
         $ringkasan = [];
 
+        $validationStatus = null;
+        if ($is_admin && $bulan && $tahun) {
+            $validationStatus = LaporanApproval::where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->where('kategori_id', 1) // Cek salah satu kategori saja sebagai sampel
+                ->first();
+        }
+
         if ($tab === 'laporan') {
             foreach ($kategoriList as $kategori) {
                 $subkategoriData = $kategori->subkategori;
@@ -120,7 +128,8 @@ class DashboardController extends Controller
             'searchNamaObat'
         );
 
-        return $is_admin ? view('admin-dashboard', $viewData) : view('dashboard', $viewData);
+        $view = $is_admin ? 'admin-dashboard' : 'dashboard';
+        return view($view, compact('ringkasan', 'bulan', 'tahun', 'authUser', 'is_admin', 'units', 'unitId', 'tab', 'obats', 'unitIdObat', 'searchNamaObat', 'searchJenisObat', 'searchSubkategori', 'validationStatus'));
     }
 
     public function exportRekap(Request $request)
@@ -176,5 +185,23 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Semua laporan untuk semua unit pada periode yang dipilih berhasil divalidasi.');
+    }
+
+    public function unvalidatePeriod(Request $request)
+    {
+        if (!Auth::guard('admin')->check()) {
+            return back()->with('error', 'Hanya admin yang dapat membatalkan validasi.');
+        }
+
+        $request->validate([
+            'bulan' => 'required|numeric|between:1,12',
+            'tahun' => 'required|numeric|min:2020',
+        ]);
+
+        LaporanApproval::where('bulan', $request->bulan)
+            ->where('tahun', $request->tahun)
+            ->delete();
+
+        return back()->with('success', 'Validasi untuk periode yang dipilih berhasil dibatalkan.');
     }
 }

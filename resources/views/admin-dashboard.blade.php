@@ -74,25 +74,40 @@
             </form>
 
             {{-- Fitur Validasi & Export --}}
+            @if ($is_admin)
             <div class="card my-4">
                 <div class="card-body">
                     <h5 class="card-title">Validasi & Export</h5>
-                    <p class="card-text text-muted small">Pilih Bulan dan Tahun pada filter di atas untuk mengaktifkan tombol validasi dan export.</p>
-                    <div class="d-flex gap-2">
-                        <form method="POST" action="{{ route('dashboard.validate') }}" class="w-100">
+                    <p class="card-text text-muted small">Pilih Bulan dan Tahun untuk mengaktifkan tombol validasi dan export.</p>
+
+                    @if($validationStatus)
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <span>Periode ini divalidasi pada {{ $validationStatus->approved_at->format('d M Y, H:i') }}</span>
+                        <form method="POST" action="{{ route('dashboard.unvalidate') }}" onsubmit="return confirm('Anda yakin ingin membatalkan validasi untuk periode ini?')">
                             @csrf
-                            <input type="hidden" name="bulan" value="{{ $bulan }}" id="bulan_hidden">
-                            <input type="hidden" name="tahun" value="{{ $tahun }}" id="tahun_hidden">
-                            <button type="submit" id="validate_button" class="btn btn-info w-100" disabled>
-                                <i class="bi bi-check-circle-fill"></i> Validasi Periode
-                            </button>
+                            <input type="hidden" name="bulan" value="{{ $bulan }}">
+                            <input type="hidden" name="tahun" value="{{ $tahun }}">
+                            <button type="submit" class="btn btn-danger btn-sm">Batalkan Validasi</button>
                         </form>
-                        <a href="{{ route('dashboard.export-rekap', ['bulan' => $bulan, 'tahun' => $tahun, 'unit_id' => $unitId]) }}" class="btn btn-outline-success w-100 @if(!$bulan || !$tahun) disabled @endif" target="_blank">
-                            <i class="fas fa-file-excel"></i> Export Rekap Laporan
-                        </a>
                     </div>
+                    @else
+                    <form method="POST" action="{{ route('dashboard.validate') }}" class="w-100">
+                        @csrf
+                        <input type="hidden" name="bulan" value="{{ $bulan }}" id="bulan_hidden">
+                        <input type="hidden" name="tahun" value="{{ $tahun }}" id="tahun_hidden">
+                        <button type="submit" id="validate_button" class="btn btn-info w-100" disabled>
+                            <i class="bi bi-check-circle-fill"></i> Validasi Periode
+                        </button>
+                    </form>
+
+                    @endif
+
+                    <a href="{{ route('dashboard.export-rekap', ['bulan' => $bulan, 'tahun' => $tahun, 'unit_id' => $unitId]) }}" class="btn btn-outline-success w-100 mt-2 @if(!$bulan || !$tahun) disabled @endif" target="_blank">
+                        <i class="fas fa-file-excel"></i> Export Rekap Laporan
+                    </a>
                 </div>
             </div>
+            @endif
 
             {{-- Konten Laporan --}}
             <div class="row g-4">
@@ -242,16 +257,22 @@
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false }
+                legend: {
+                    display: false
+                }
             },
             scales: {
-                y: { beginAtZero: true }
+                y: {
+                    beginAtZero: true
+                }
             }
         }
     });
+</script>
 
-    // Script tombol validasi
-    document.addEventListener('DOMContentLoaded', function () {
+@if (!$validationStatus)
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
         const validateButton = document.getElementById('validate_button');
         const bulanFilter = document.getElementById('bulan');
         const tahunFilter = document.getElementById('tahun');
@@ -262,11 +283,8 @@
             const bulan = bulanFilter.value;
             const tahun = tahunFilter.value;
 
-            // update hidden values
-            if (bulanHidden && tahunHidden) {
-                bulanHidden.value = bulan;
-                tahunHidden.value = tahun;
-            }
+            if (bulanHidden) bulanHidden.value = bulan;
+            if (tahunHidden) tahunHidden.value = tahun;
 
             if (validateButton && bulan && tahun) {
                 validateButton.disabled = false;
@@ -284,4 +302,6 @@
     });
 </script>
 @endif
+@endif
+
 @endsection

@@ -47,6 +47,10 @@ Route::post('/dashboard/validate-period', [DashboardController::class, 'validate
     ->middleware('auth:admin')
     ->name('dashboard.validate');
 
+Route::post('/dashboard/unvalidate-period', [DashboardController::class, 'unvalidatePeriod'])
+    ->middleware('auth:admin')
+    ->name('dashboard.unvalidate');
+
 Route::get('/dashboard/export-rekap', [App\Http\Controllers\DashboardController::class, 'exportRekap'])
     ->middleware('auth:web,admin')
     ->name('dashboard.export-rekap');
