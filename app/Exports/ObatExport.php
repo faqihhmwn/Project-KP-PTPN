@@ -99,10 +99,25 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
             $totalKeluar += $keluar;
             $totalMasuk += $masuk;
+
+            // Menggunakan harga dari rekapitulasi jika ada
+            if ($rekap && $rekap->harga_satuan) {
+                $hargaPerTanggal = $rekap->harga_satuan;
+            } else {
+                $hargaPerTanggal = $obat->harga_satuan;
+            }
         }
 
         $sisaStok = $stokAwalValue + $totalMasuk - $totalKeluar;
-        $totalBiaya = $totalKeluar * $obat->harga_satuan;
+        
+        // Hitung total biaya menggunakan harga historis dari rekapitulasi
+        $rekapitulasiList = RekapitulasiObat::where('obat_id', $obat->id)
+            ->whereBetween('tanggal', [$this->startDate->format('Y-m-d'), $this->endDate->format('Y-m-d')])
+            ->get();
+            
+        $totalBiaya = $rekapitulasiList->sum(function($rekap) {
+            return $rekap->jumlah_keluar * ($rekap->harga_satuan ?? $rekap->obat->harga_satuan);
+        });
 
         $row[] = $totalKeluar;
         $row[] = $totalMasuk;

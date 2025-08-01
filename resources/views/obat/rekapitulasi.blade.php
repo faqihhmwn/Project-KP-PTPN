@@ -188,7 +188,10 @@
                                     ->where('tanggal_masuk', $tanggal)
                                     ->sum('jumlah_masuk');
 
-                                $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                                //$totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                                 $hargaSatuan = $rekapitulasi->harga_satuan ?? ($obat->harga_satuan ?? 0);
+                                    $totalBiaya += $jumlahKeluar * $hargaSatuan;
+
                             @endphp
 
                             <td>
