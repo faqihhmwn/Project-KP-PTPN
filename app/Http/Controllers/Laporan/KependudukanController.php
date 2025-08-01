@@ -53,11 +53,11 @@ class KependudukanController extends Controller
         if ($tahun) $query->where('tahun', $tahun);
 
         $data = $query->orderBy('tahun', 'desc')
-                      ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
-                      ->orderBy('subkategori_id', 'asc')
-                      ->paginate(10)
-                      ->appends($request->query());
-            
+            ->orderByRaw("CAST(bulan AS UNSIGNED) DESC")
+            ->orderBy('subkategori_id', 'asc')
+            ->paginate(10)
+            ->appends($request->query());
+
         $approvals = LaporanApproval::where('kategori_id', self::KATEGORI_ID)->get()->keyBy(function ($item) {
             return $item->unit_id . '-' . $item->bulan . '-' . $item->tahun;
         });
@@ -109,7 +109,7 @@ class KependudukanController extends Controller
         if ($isApproved && !$is_admin) {
             return back()->with('error', 'Data untuk periode ini sudah disetujui dan tidak dapat diubah.');
         }
-        
+
         $existingData = LaporanBulanan::where('unit_id', $unitId)
             ->where('kategori_id', self::KATEGORI_ID)
             ->where('bulan', $request->bulan)
@@ -120,7 +120,7 @@ class KependudukanController extends Controller
             // ==== PERUBAHAN PADA PESAN ERROR ====
             return back()->with('error', 'Data untuk periode ini sudah ada. Silahkan gunakan fitur "Edit" untuk mengubahnya.');
         }
-        
+
         foreach ($request->input('jumlah') as $subkategori_id => $jumlah) {
             LaporanBulanan::create([
                 'unit_id' => $unitId,
@@ -139,7 +139,7 @@ class KependudukanController extends Controller
     public function update(Request $request, $id)
     {
         $laporan = LaporanBulanan::findOrFail($id);
-        
+
         $isApproved = LaporanApproval::where('unit_id', $laporan->unit_id)
             ->where('kategori_id', $laporan->kategori_id)
             ->where('bulan', $laporan->bulan)
@@ -152,14 +152,14 @@ class KependudukanController extends Controller
 
         $request->validate(['jumlah' => 'required|numeric|min:0']);
         $laporan->update($request->only(['jumlah']));
-        
+
         return redirect()->back()->with('success', 'Laporan berhasil diperbarui.');
     }
-    
+
     public function destroy($id)
     {
         if (!Auth::guard('admin')->check()) {
-           return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
+            return back()->with('error', 'Anda tidak memiliki izin untuk menghapus data.');
         }
 
         $laporan = LaporanBulanan::findOrFail($id);
@@ -227,16 +227,16 @@ class KependudukanController extends Controller
             ->where('bulan', $request->query('bulan'))
             ->where('tahun', $request->query('tahun'))
             ->exists();
-            
+
         return response()->json(['exists' => $existingData]);
     }
 
     public function export(Request $request)
-    {       
+    {
         $unitId = $request->input('unit_id');
         $bulan = $request->input('bulan');
         $tahun = $request->input('tahun');
-        $subkategoriId = $request->input('subkategori_id'); // Ambil filter subkategori
+        $subkategoriId = $request->input('subkategori_id');
 
         if (Auth::guard('web')->check()) {
             $unitId = Auth::guard('web')->user()->unit_id;
@@ -244,7 +244,6 @@ class KependudukanController extends Controller
 
         $fileName = 'laporan_kependudukan_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-        // Langsung panggil class export dengan parameter filter
         return Excel::download(new LaporanKependudukanExport($unitId, $bulan, $tahun, $subkategoriId), $fileName);
     }
 }

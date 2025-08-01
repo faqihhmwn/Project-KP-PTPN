@@ -16,15 +16,23 @@ class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil unit_id user yang sedang login
-        $userUnitId = Auth::user()->unit_id;
+        // 1. Secara eksplisit gunakan guard 'web' untuk mendapatkan user
+        $user = Auth::guard('web')->user();
+
+        // 2. Lakukan pengecekan jika user tidak ditemukan (pengaman tambahan)
+        if (!$user) {
+            // Arahkan ke halaman login jika tidak ada user yang terotentikasi
+            return redirect()->route('login');
+        }
+
+        // 3. Ambil unit_id dari user yang sudah dipastikan ada
+        $userUnitId = $user->unit_id;
 
         // Load data obat milik unit tersebut
-        $query = Obat::with(['rekapitulasiObat' => function ($query) {
+        $query = \App\Models\Obat::with(['rekapitulasiObat' => function ($query) {
             // Urutkan berdasarkan tanggal terbaru
             $query->orderBy('tanggal', 'desc');
-        }])
-            ->where('unit_id', $userUnitId); // 🔒 filter berdasarkan unit user
+        }])->where('unit_id', $userUnitId); // Filter berdasarkan unit user
 
         // Fitur pencarian
         if ($request->filled('search')) {
@@ -34,16 +42,11 @@ class ObatController extends Controller
             });
         }
 
-        // Ambil data obat dan urutkan
-        $obats = $query->orderBy('nama_obat')->paginate(10);
+        $obats = $query->latest()->paginate(10);
+        $bulan = now()->month;
+        $tahun = now()->year;
 
-        // Jika permintaan AJAX (dari Livewire atau JavaScript), kirim partial
-        if ($request->ajax()) {
-            return view('partials.obat-table', compact('obats'))->render();
-        }
-
-        // Return ke view utama
-        return view('obat.index', compact('obats'));
+        return view('obat.index', compact('obats', 'bulan', 'tahun'));
     }
 
 
@@ -67,7 +70,10 @@ class ObatController extends Controller
         $validated['nama_obat'] = strtoupper($validated['nama_obat']);
 
         // Cek apakah nama obat sudah ada (case-insensitive)
-        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])->exists();
+        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
+            ->where('unit_id', Auth::user()->unit_id)
+            ->exists();
+
         if ($obatExists) {
             return back()
                 ->withInput()
@@ -89,6 +95,7 @@ class ObatController extends Controller
 
     public function show(Obat $obat)
     {
+        $obat->load('unit');
         // Load relasi rekapitulasiObat
         $obat->load('rekapitulasiObat');
 
@@ -142,19 +149,20 @@ class ObatController extends Controller
             'lastUpdateBulanLalu'
         ));
 
-        return view('obat.show', compact(
-            'obat',
-            'bulanIni',
-            'bulanLalu',
-            'totalPenggunaanBulanIni',
-            'totalBiayaBulanIni',
-            'totalPenggunaanBulanLalu',
-            'totalBiayaBulanLalu'
-        ));
+        // return view('obat.show', compact(
+        //     'obat',
+        //     'bulanIni',
+        //     'bulanLalu',
+        //     'totalPenggunaanBulanIni',
+        //     'totalBiayaBulanIni',
+        //     'totalPenggunaanBulanLalu',
+        //     'totalBiayaBulanLalu'
+        // ));
     }
 
     public function edit(Obat $obat)
     {
+        $obat->load('unit'); // Memuat relasi unit
         return view('obat.edit', compact('obat'));
     }
 
@@ -165,16 +173,16 @@ class ObatController extends Controller
             'jenis_obat' => 'nullable|string|max:255',
             'harga_satuan' => 'required|numeric|min:0',
             'satuan' => 'required|string|max:50',
-            'stok_awal' => 'required|integer|min:0',
             'keterangan' => 'nullable|string'
         ]);
 
         $obat->update($validated);
-        $this->updateStokObat($obat);
+        // $this->updateStokObat($obat);
 
-        return redirect()->route('obat.index')
-            ->with('success', 'Obat berhasil diperbarui.');
+        return redirect()->to($request->query('return_url', route('obat.index')))
+            ->with('success', 'Obat berhasil diperbarui');
     }
+
 
     public function destroy(Obat $obat)
     {
@@ -199,6 +207,15 @@ class ObatController extends Controller
         $tahun = $request->get('tahun', Carbon::now()->year);
 
         // Check if export is requested
+        $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
+        }
+
+        $userUnitId = $user->unit_id;
+
+
         if ($request->get('export') == '1') {
             return $this->exportExcel($request);
         }
@@ -206,7 +223,7 @@ class ObatController extends Controller
         $userUnitId = Auth::user()->unit_id;
 
         $obats = Obat::query()
-            ->where('unit_id', $userUnitId) 
+            ->where('unit_id', $userUnitId)
             ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
                 $query->whereMonth('tanggal', $bulan)
                     ->whereYear('tanggal', $tahun);
@@ -219,96 +236,96 @@ class ObatController extends Controller
         return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
     }
 
-    public function addTransaksi(Request $request, Obat $obat)
-    {
-        $validated = $request->validate([
-            'tanggal' => 'required|date',
-            'tipe_transaksi' => 'required|in:masuk,keluar',
-            'jumlah' => 'required|integer|min:1',
-            'keterangan' => 'nullable|string',
-            'petugas' => 'nullable|string'
-        ]);
+    // public function addTransaksi(Request $request, Obat $obat)
+    // {
+    //     $validated = $request->validate([
+    //         'tanggal' => 'required|date',
+    //         'tipe_transaksi' => 'required|in:masuk,keluar',
+    //         'jumlah' => 'required|integer|min:1',
+    //         'keterangan' => 'nullable|string',
+    //         'petugas' => 'nullable|string'
+    //     ]);
 
-        $transaksi = new TransaksiObat([
-            'obat_id' => $obat->id,
-            'tanggal' => $validated['tanggal'],
-            'tipe_transaksi' => $validated['tipe_transaksi'],
-            'keterangan' => $validated['keterangan'],
-            'petugas' => $validated['petugas']
-        ]);
+    //     $transaksi = new TransaksiObat([
+    //         'obat_id' => $obat->id,
+    //         'tanggal' => $validated['tanggal'],
+    //         'tipe_transaksi' => $validated['tipe_transaksi'],
+    //         'keterangan' => $validated['keterangan'],
+    //         'petugas' => $validated['petugas']
+    //     ]);
 
-        if ($validated['tipe_transaksi'] === 'masuk') {
-            $transaksi->jumlah_masuk = $validated['jumlah'];
-        } else {
-            // Check stok tersedia
-            if ($obat->stok_sisa < $validated['jumlah']) {
-                return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
-            }
-            $transaksi->jumlah_keluar = $validated['jumlah'];
-        }
+    //     if ($validated['tipe_transaksi'] === 'masuk') {
+    //         $transaksi->jumlah_masuk = $validated['jumlah'];
+    //     } else {
+    //         // Check stok tersedia
+    //         if ($obat->stok_sisa < $validated['jumlah']) {
+    //             return back()->withErrors(['jumlah' => 'Stok tidak mencukupi.']);
+    //         }
+    //         $transaksi->jumlah_keluar = $validated['jumlah'];
+    //     }
 
-        $transaksi->save();
-        $this->updateStokObat($obat);
+    //     $transaksi->save();
+    //     $this->updateStokObat($obat);
 
-        return back()->with('success', 'Transaksi berhasil ditambahkan.');
-    }
+    //     return back()->with('success', 'Transaksi berhasil ditambahkan.');
+    // }
 
-    public function updateTransaksiHarian(Request $request, Obat $obat)
-    {
-        $validated = $request->validate([
-            'tanggal' => 'required|date',
-            'jumlah_keluar' => 'required|integer|min:0'
-        ]);
+    // public function updateTransaksiHarian(Request $request, Obat $obat)
+    // {
+    //     $validated = $request->validate([
+    //         'tanggal' => 'required|date',
+    //         'jumlah_keluar' => 'required|integer|min:0'
+    //     ]);
 
-        if ($validated['jumlah_keluar'] > 0) {
-            if ($obat->stok_sisa < $validated['jumlah_keluar']) {
-                return response()->json(['error' => 'Stok tidak mencukupi'], 422);
-            }
+    //     if ($validated['jumlah_keluar'] > 0) {
+    //         if ($obat->stok_sisa < $validated['jumlah_keluar']) {
+    //             return response()->json(['error' => 'Stok tidak mencukupi'], 422);
+    //         }
 
-            TransaksiObat::updateOrCreate(
-                [
-                    'obat_id' => $obat->id,
-                    'tanggal' => $validated['tanggal'],
-                    'tipe_transaksi' => 'keluar'
-                ],
-                [
-                    'jumlah_keluar' => $validated['jumlah_keluar'],
-                    'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
-                ]
-            );
+    //         TransaksiObat::updateOrCreate(
+    //             [
+    //                 'obat_id' => $obat->id,
+    //                 'tanggal' => $validated['tanggal'],
+    //                 'tipe_transaksi' => 'keluar'
+    //             ],
+    //             [
+    //                 'jumlah_keluar' => $validated['jumlah_keluar'],
+    //                 'total_biaya' => $validated['jumlah_keluar'] * $obat->harga_satuan
+    //             ]
+    //         );
 
-            $this->updateStokObat($obat);
-        }
+    //         $this->updateStokObat($obat);
+    //     }
 
-        return response()->json(['success' => true]);
-    }
+    //     return response()->json(['success' => true]);
+    // }
 
-    private function updateStokObat(Obat $obat)
-    {
-        try {
-            // Check if transaksi_obats table exists and has the required columns
-            $totalMasuk = $obat->transaksiObats()
-                ->where('tipe_transaksi', 'masuk')
-                ->sum('jumlah_masuk') ?? 0;
+    // private function updateStokObat(Obat $obat)
+    // {
+    //     try {
+    //         // Check if transaksi_obats table exists and has the required columns
+    //         $totalMasuk = $obat->transaksiObats()
+    //             ->where('tipe_transaksi', 'masuk')
+    //             ->sum('jumlah_masuk') ?? 0;
 
-            $totalKeluar = $obat->transaksiObats()
-                ->where('tipe_transaksi', 'keluar')
-                ->sum('jumlah_keluar') ?? 0;
+    //         $totalKeluar = $obat->transaksiObats()
+    //             ->where('tipe_transaksi', 'keluar')
+    //             ->sum('jumlah_keluar') ?? 0;
 
-            $obat->update([
-                'stok_masuk' => $totalMasuk,
-                'stok_keluar' => $totalKeluar,
-                'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
-            ]);
-        } catch (\Exception $e) {
-            // If there's an error (like missing columns), just set stok_sisa = stok_awal
-            $obat->update([
-                'stok_masuk' => 0,
-                'stok_keluar' => 0,
-                'stok_sisa' => $obat->stok_awal
-            ]);
-        }
-    }
+    //         $obat->update([
+    //             'stok_masuk' => $totalMasuk,
+    //             'stok_keluar' => $totalKeluar,
+    //             'stok_sisa' => $obat->stok_awal + $totalMasuk - $totalKeluar
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         // If there's an error (like missing columns), just set stok_sisa = stok_awal
+    //         $obat->update([
+    //             'stok_masuk' => 0,
+    //             'stok_keluar' => 0,
+    //             'stok_sisa' => $obat->stok_awal
+    //         ]);
+    //     }
+    // }
 
     public function dashboard()
     {
@@ -333,18 +350,6 @@ class ObatController extends Controller
             'transaksiHariIni'
         ));
     }
-
-
-    // public function import(Request $request)
-    // {
-    //     $request->validate([
-    //         'file' => 'required|mimes:xlsx,xls,csv',
-    //     ]);
-
-    //     Excel::import(new ObatImport, $request->file('file'));
-
-    //     return redirect()->back()->with('success', 'Data obat berhasil diimpor.');
-    // }
 
     public function exportExcel(Request $request)
     {

@@ -1,7 +1,7 @@
 @extends('layout.app')
 @section('content')
 <div class="container mt-4">
-    <h3 class="mb-4">Rekapitulasi Biaya Kesehatan - PTPN I Regional</h3>
+    <h3 class="mb-4">Rekapitulasi Biaya Kesehatan - PTPN Regional 7</h3>
 
     @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -93,8 +93,8 @@
             <table class="table table-striped table-bordered text-nowrap">
                 <thead>
                     <tr>
-                        <th rowspan="2" class="text-center align-middle">Rekap Bulan</th>
-                        <th colspan="{{ $kategori->count() }}" class="group-header text-center">DETAIL BIAYA</th>
+                        <th rowspan="2" class="text-center align-middle">REKAP PER BULAN</th>
+                        <th colspan="{{ $kategori->count() }}" class="group-header text-center">REAL BIAYA</th>
                         <th rowspan="2" class="bg-warning fw-bold text-center align-middle">TOTAL BIAYA KESEHATAN</th>
                         <th rowspan="2" class="bg-green fw-bold text-center align-middle">VALIDASI</th>
                         <th rowspan="2" class="text-center align-middle">Aksi</th>
@@ -141,7 +141,7 @@
 
                     {{-- Baris: TOTAL 1 TAHUN --}}
                     <tr>
-                        <td class="bg-warning fw-bold">TOTAL 1 TAHUN</td>
+                        <td class="bg-warning fw-bold">TOTAL</td>
                         @foreach ($kategori as $k)
                             <td class="bg-warning fw-bold">{{ number_format($annualTotals[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
@@ -152,7 +152,7 @@
 
                     {{-- Baris: BIAYA TERSEDIA --}}
                     <tr>
-                        <td class="bg-info fw-bold">BIAYA TERSEDIA</td>
+                        <td class="bg-info fw-bold">JUMLAH ANGGARAN</td>
                         @foreach ($kategori as $k)
                             <td class="bg-info fw-bold">{{ number_format($biayaTersedia[$k->id] ?? 0, 0, ',', '.') }}</td>
                         @endforeach
@@ -169,7 +169,7 @@
 
                     {{-- Baris: PERSENTASE --}}
                     <tr>
-                        <td class="bg-success fw-bold">PERSENTASE</td>
+                        <td class="bg-success fw-bold">REKAP 1 TAHUN</td>
                         @foreach ($kategori as $k)
                             <td class="bg-success fw-bold">
                                 @php
@@ -262,11 +262,11 @@
                             @csrf
                             <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
                             <div class="modal-header">
-                                <h5 class="modal-title" id="editBiayaTersediaModalLabel">Edit Biaya Tersedia - Tahun {{ $selectedTahun }}</h5>
+                                <h5 class="modal-title" id="editBiayaTersediaModalLabel">Edit Jumlah Anggaran - Tahun {{ $selectedTahun }}</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <p>Masukkan nilai anggaran biaya yang tersedia untuk masing-masing kategori di tahun {{ $selectedTahun }}.</p>
+                                <p>Masukkan nilai jumlah anggaran yang tersedia untuk masing-masing kategori di tahun {{ $selectedTahun }}.</p>
                                 @foreach ($kategori as $k)
                                     <div class="mb-3">
                                         <label class="form-label">{{ $k->nama }}</label>

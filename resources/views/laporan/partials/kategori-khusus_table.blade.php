@@ -1,3 +1,10 @@
+{{-- TAMBAHKAN TOMBOL BARU DI SINI --}}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ route('laporan.kategori-khusus.export', request()->query()) }}" class="btn btn-outline-success" target="_blank">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </a>
+</div>
+
 <div class="card">
     <div class="card-body">
         <table class="table table-striped">
@@ -19,7 +26,7 @@
             <tbody>
                 @forelse ($data as $i => $item)
                 @php
-                    $isApproved = isset($approvals[$item->unit_id . '-' . $item->bulan . '-' . $item->tahun]);
+                $isApproved = isset($approvals[$item->unit_id . '-' . $item->bulan . '-' . $item->tahun]);
                 @endphp
                 <tr>
                     <td>{{ $data->firstItem() + $i }}</td>
@@ -33,24 +40,26 @@
                     <td>{{ $item->tahun }}</td>
                     <td>
                         @if($isApproved)
-                            <span class="badge bg-success">Disetujui</span>
+                        <span class="badge bg-success">Disetujui</span>
                         @else
-                            <span class="badge bg-warning text-dark">Menunggu</span>
+                        <span class="badge bg-warning text-dark">Menunggu</span>
                         @endif
                     </td>
                     <td>
                         @if(!$isApproved)
-                            <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</a>
+                        <a href="#" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</a>
                         @else
-                            <button class="btn btn-sm btn-secondary" disabled>Edit</button>
+                        <button class="btn btn-sm btn-secondary" disabled>Edit</button>
                         @endif
                     </td>
                 </tr>
                 @if(!$isApproved)
-                    @include('laporan.modal.modal-kategori-khusus')
+                @include('laporan.modal.modal-kategori-khusus')
                 @endif
                 @empty
-                <tr><td colspan="11" class="text-center">Belum ada data.</td></tr>
+                <tr>
+                    <td colspan="11" class="text-center">Belum ada data.</td>
+                </tr>
                 @endforelse
             </tbody>
         </table>

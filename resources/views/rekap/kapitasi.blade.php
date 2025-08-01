@@ -117,8 +117,7 @@
                                 <tr>
                                     <td>{{ $k->nama }}</td>
                                     <td>
-                                        <input type="text" name="total_biaya_kapitasi[{{ $k->id }}]" class="form-control rupiah-input"
-                                            min="0" required>
+                                        <input type="text" name="total_biaya_kapitasi[{{ $k->id }}]" class="form-control rupiah-input" required>
                                     </td>
                                 </tr>
                             @endforeach
@@ -239,7 +238,7 @@
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ $k->nama }}</label>
                                                     <input type="text" name="total_biaya_kapitasi[{{ $k->id }}]"
-                                                        class="form-control rupiah-input" min="0"
+                                                        class="form-control rupiah-input"
                                                         value="{{ $row['kategori'][$k->id] ?? 0 }}" required>
                                                 </div>
                                             @endforeach
@@ -453,14 +452,21 @@
                 });
             }
 
-            // Helper fungsi rupiah
+                // Helper fungsi rupiah
             function formatRupiah(angka) {
-                angka = angka.toString().replace(/[^0-9]/g, '');
-                return angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                angka = angka.toString().replace(/[^0-9\-]/g, '');
+
+                let isNegative = angka.startsWith('-');
+                let numeric = angka.replace('-', '');
+
+                let formatted = numeric.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+                return isNegative ? '-' + formatted : formatted;
             }
 
             function parseRupiah(rupiah) {
-                return parseInt(rupiah.replace(/[^0-9]/g, '')) || 0;
+                rupiah = rupiah.toString().replace(/\./g, '');
+                return parseInt(rupiah.replace(/[^0-9\-]/g, '')) || 0;
             }
         });
 
@@ -470,7 +476,7 @@
         // Format saat mengetik
         rupiahInputs.forEach(input => {
             input.addEventListener('input', function () {
-                let value = this.value.replace(/[^\d]/g, '');
+                let value = this.value.replace(/[^\d\-]/g, '');
                 this.value = formatRupiah(value);
             });
         });

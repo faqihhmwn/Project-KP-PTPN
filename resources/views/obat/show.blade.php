@@ -35,6 +35,10 @@
                                 <div class="card-body">
                                     <table class="table table-borderless">
                                         <tr>
+                                            <td><strong>Unit:</strong></td>
+                                            <td>{{ $obat->unit->nama ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
                                             <td width="40%"><strong>Nama Obat:</strong></td>
                                             <td>{{ $obat->nama_obat }}</td>
                                         </tr>

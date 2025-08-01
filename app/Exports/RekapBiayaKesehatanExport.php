@@ -27,9 +27,9 @@ class RekapBiayaKesehatanExport implements FromArray, WithTitle, WithStyles, Wit
         $kategoriNonReal = KategoriBiaya::whereIn('id', [10, 11])->get();
 
         // 3. Susun header 3 baris
-        $header1 = array_merge(['REKAP BULAN'], array_fill(0, 9, 'REAL BIAYA'), [''], [''], ['TOTAL BIAYA KESEHATAN']);
+        $header1 = array_merge(['REKAP PER BULAN'], array_fill(0, 9, 'REAL BIAYA'), [''], [''], ['TOTAL BIAYA KESEHATAN']);
         $header2 = array_merge([''], $kategoriReal->pluck('nama')->toArray(), $kategoriNonReal->pluck('nama')->toArray(), ['']);
-        $header3 = array_merge(['TOTAL 1 TAHUN'], $this->getTotalPerKategoriPerBulan($kategoriReal, $bulans), $this->getTotalPerKategori($kategoriNonReal), [$this->getTotalAkhir()]);
+        $header3 = array_merge(['TOTAL'], $this->getTotalPerKategoriPerBulan($kategoriReal, $bulans), $this->getTotalPerKategori($kategoriNonReal), [$this->getTotalAkhir()]);
 
         // 4. Baris BIAYA TERSEDIA
         $biayaTersedia = $this->getBiayaTersedia($kategoriReal, $kategoriNonReal);
@@ -73,7 +73,7 @@ class RekapBiayaKesehatanExport implements FromArray, WithTitle, WithStyles, Wit
             $rows[] = $row;
         }
         // Tambah baris summary ke bawah
-        $rows[] = array_merge(['TOTAL 1 TAHUN'], $this->getTotalPerKategoriPerBulan($kategoriReal, $bulans), $this->getTotalPerKategori($kategoriNonReal), [$this->getTotalAkhir()]);
+        $rows[] = array_merge(['TOTAL'], $this->getTotalPerKategoriPerBulan($kategoriReal, $bulans), $this->getTotalPerKategori($kategoriNonReal), [$this->getTotalAkhir()]);
         $rows[] = $this->getBiayaTersedia($kategoriReal, $kategoriNonReal);
         $rows[] = $this->getPersentaseBaris($kategoriReal, $kategoriNonReal);
 
@@ -128,7 +128,7 @@ class RekapBiayaKesehatanExport implements FromArray, WithTitle, WithStyles, Wit
 
     protected function getBiayaTersedia($kategoriReal, $kategoriNonReal)
     {
-        $row = ['BIAYA TERSEDIA'];
+        $row = ['JUMLAH'];
         $total = 0;
 
         foreach ($kategoriReal->merge($kategoriNonReal) as $kategori) {
@@ -145,7 +145,7 @@ class RekapBiayaKesehatanExport implements FromArray, WithTitle, WithStyles, Wit
 
     protected function getPersentaseBaris($kategoriReal, $kategoriNonReal)
     {
-        $row = ['PERSENTASE'];
+        $row = ['REKAP 1 TAHUN'];
         $totalRealisasi = 0;
         $totalTersedia = 0;
 
