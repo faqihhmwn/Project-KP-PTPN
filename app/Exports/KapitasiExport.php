@@ -25,10 +25,14 @@ class KapitasiExport implements FromArray, WithTitle, WithStyles, WithColumnForm
         // 2. Ambil kategori biaya, kita kelompokkan:
         $kategori = KategoriKapitasi::whereIn('id', range(1, 9))->orderBy('id')->get();
 
+        $sisaSaldoAwal = SisaSaldoKapitasi::where('tahun', $this->tahun)->value('saldo_awal_tahun') ?? 0;
+        $currentSaldo = $sisaSaldoAwal;
+
+
         // 3. Susun header 3 baris
-        $header1 = array_merge(['BULAN'], ['DANA MASUK'], array_fill(0, 9, 'PEMBAYARAN'), ['Total Pembayaran Menggunakan Kapitasi'], ['SISA SALDO KAPITASI']);
+        $header1 = array_merge(['BULAN'], ['DANA MASUK'], array_fill(0, 9, 'PEMBAYARAN'), ['Total Pembayaran Menggunakan Biaya Kapitasi'], ['SISA SALDO KAPITASI']);
         $header2 = array_merge([''], [''], $kategori->pluck('nama')->toArray(), [''], ['']);
-        $header3 = array_merge(['TOTAL 1 TAHUN'], [$this->getTotalDanaMasukTahunan()], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
+        $header3 = array_merge(['TOTAL BIAYA'], [$this->getTotalDanaMasukTahunan()], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()], [$currentSaldo]);
 
         // Gabungkan semua baris ke array
         $rows = [
@@ -77,7 +81,7 @@ class KapitasiExport implements FromArray, WithTitle, WithStyles, WithColumnForm
             $rows[] = $row;
         }
         // Tambah baris summary ke bawah
-        $rows[] = array_merge(['TOTAL 1 TAHUN'], [$this->getTotalDanaMasukTahunan()], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
+        $rows[] = array_merge(['TOTAL BIAYA'], [$this->getTotalDanaMasukTahunan()], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()], [$currentSaldo]);
 
         return $rows;
     }

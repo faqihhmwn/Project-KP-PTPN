@@ -26,9 +26,9 @@ class BpjsExport implements FromArray, WithTitle, WithStyles, WithColumnFormatti
         $kategori = KategoriIuran::whereIn('id', range(1, 6))->get();
 
         // 3. Susun header 3 baris
-        $header1 = array_merge(['REKAP BULAN'], array_fill(0, 6, 'JUMLAH PEMBAYARAN'), ['JUMLAH TOTAL']);
+        $header1 = array_merge(['Bulan'], array_fill(0, 6, 'Jumlah Pembayaran'), ['Jumlah Total']);
         $header2 = array_merge([''], $kategori->pluck('nama')->toArray());
-        $header3 = array_merge(['TOTAL 1 TAHUN'], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
+        $header3 = array_merge(['Jumlah'], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
 
         // Gabungkan semua baris ke array
         $rows = [
@@ -57,7 +57,7 @@ class BpjsExport implements FromArray, WithTitle, WithStyles, WithColumnFormatti
             $rows[] = $row;
         }
         // Tambah baris summary ke bawah
-        $rows[] = array_merge(['TOTAL 1 TAHUN'], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
+        $rows[] = array_merge(['Jumlah'], $this->getTotalPerKategoriPerBulan($kategori, $bulans), [$this->getTotalAkhir()]);
 
         return $rows;
     }
@@ -71,7 +71,7 @@ class BpjsExport implements FromArray, WithTitle, WithStyles, WithColumnFormatti
     {
         $totals = [];
         foreach ($kategori as $k) {
-            $sum = RekapBpjsIuran::where('kategori_IURAN_id', $k->id)
+            $sum = RekapBpjsIuran::where('kategori_iuran_id', $k->id)
                 ->where('tahun', $this->tahun)
                 ->sum('total_iuran_bpjs');
             $totals[] = $sum;

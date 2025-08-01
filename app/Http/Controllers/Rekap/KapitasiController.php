@@ -115,9 +115,9 @@ class KapitasiController extends Controller
     {
         $request->validate([
             'bulan_id' => 'required|exists:bulans,id',
-            'tahun' => 'required|integer|min:2000|max:' . date('Y'),
+            'tahun' => 'required|integer|min:2025|max:' . date('Y'),
             'total_biaya_kapitasi' => 'required|array',
-            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
+            'total_biaya_kapitasi.*' => 'required|numeric',
             'total_dana_masuk' => 'required|numeric|min:0', // Tambahan validasi
 
         ]);
@@ -191,7 +191,7 @@ class KapitasiController extends Controller
     {
         $request->validate([
             'total_biaya_kapitasi' => 'required|array',
-            'total_biaya_kapitasi.*' => 'required|numeric|min:0',
+            'total_biaya_kapitasi.*' => 'required|numeric',
         ]);
 
         $totalRecord = RekapDanaKapitasi::where('tahun', $tahun)
