@@ -48,36 +48,8 @@ class RekapitulasiExportController extends Controller
             // Ambil data obat untuk unit tersebut
             $obats = Obat::where('unit_id', $userUnitId)->get();
             
-            // Pastikan setiap obat memiliki rekapitulasi dengan harga yang benar
-            // foreach ($obats as $obat) {
-            //     $rekap = RekapitulasiObat::firstOrCreate(
-            //         [
-            //             'obat_id' => $obat->id,
-            //             'tanggal' => now()->format('Y-m-d'),
-            //             'unit_id' => $userUnitId
-            //         ],
-            //         [
-            //             'harga_satuan' => $obat->harga_satuan,
-            //             'user_id' => $user->id
-            //         ]
-            //     );
-            // }
-            // ...
-                foreach ($obats as $obat) {
-                    $rekap = RekapitulasiObat::firstOrCreate(
-                        [
-                            'obat_id' => $obat->id,
-                            'tanggal' => now()->format('Y-m-d'),
-                            'unit_id' => $userUnitId
-                        ],
-                        [
-                            'harga_satuan' => $obat->harga_satuan,
-                            'user_id' => $user->id,
-                            'bulan' => now()->month, // <-- Tambahkan baris ini
-                            'tahun' => now()->year // <-- Tambahkan baris ini
-                        ]
-                    );
-                }
+            // Tidak perlu update harga_satuan dari Obat, biarkan harga_satuan diambil dari RekapitulasiObat pada proses export
+            // Pastikan data rekap sudah ada jika memang dibutuhkan, tapi tidak perlu set harga_satuan dari Obat lagi
 // ...
 
             $filename = 'rekapitulasi-obat-' . 

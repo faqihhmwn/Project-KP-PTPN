@@ -58,13 +58,22 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function map($obat): array
     {
+
         $this->rowNumber++;
+
+        // Ambil harga_satuan dari rekapitulasi_obats pada tanggal awal periode export
+        $rekapHarga = RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('tanggal', '>=', $this->startDate->format('Y-m-d'))
+            ->where('tanggal', '<=', $this->endDate->format('Y-m-d'))
+            ->orderBy('tanggal', 'asc')
+            ->first();
+        $hargaSatuanExport = $rekapHarga ? $rekapHarga->harga_satuan : $obat->harga_satuan;
 
         $row = [
             $this->rowNumber,
             $obat->nama_obat,
             $obat->jenis_obat ?? '-',
-            $obat->harga_satuan,
+            $hargaSatuanExport,
             $obat->satuan,
             $obat->unit->nama ?? '-',
             $obat->expired_date ? Carbon::parse($obat->expired_date)->format('d/m/Y') : '-',
