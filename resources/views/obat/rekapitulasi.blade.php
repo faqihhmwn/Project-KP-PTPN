@@ -60,6 +60,7 @@
     </style>
 
 
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
         <a href="/obat/dashboard" class="btn btn-secondary btn-sm">
@@ -256,7 +257,8 @@
                 @endforelse
             </tbody>
         </table>
-        
+        {{ $obats->links('pagination::bootstrap-5') }}
+
 
         {{-- ✅ Tempatkan include modal di sini (di luar div tombol) --}}
         @include('obat.modal-penerimaan-obat')

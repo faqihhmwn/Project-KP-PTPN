@@ -224,12 +224,20 @@ class ObatController extends Controller
         }
 
         // Ambil semua data master obat
+        // $obats = Obat::query()
+        //     ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
+        //         $query->whereMonth('tanggal', $bulan)
+        //             ->whereYear('tanggal', $tahun);
+        //     }])
+        //     ->get();
         $obats = Obat::query()
-            ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
-                $query->whereMonth('tanggal', $bulan)
-                    ->whereYear('tanggal', $tahun);
-            }])
-            ->get();
+        ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
+            $query->whereMonth('tanggal', $bulan)
+                ->whereYear('tanggal', $tahun);
+        }])
+        ->orderBy('nama_obat')
+        ->paginate(25); // ← ini penting!
+
 
         // Ambil stok awal/sisa dari rekapitulasi_obats untuk unit user, bulan, tahun
         $rekapStok = \App\Models\RekapitulasiObat::where('unit_id', $user->unit_id)
