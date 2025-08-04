@@ -93,6 +93,7 @@ class RekapitulasiObatController extends Controller
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $sisaStok,
                             'total_biaya' => $totalBiaya,
+                            'harga_satuan' => $hargaSatuan, // Menambahkan harga satuan saat transaksi
                         ]
                     );
                     $saved++;

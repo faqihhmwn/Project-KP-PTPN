@@ -7,6 +7,8 @@
         .table-container {
             background-color: white;
             padding: 20px;
+                $hargaSatuan = $rekapitulasi->harga_satuan ?? $obat->harga_satuan;
+                $totalBiaya += $jumlahKeluar * $hargaSatuan;     
             border-radius: 10px;
             overflow-x: auto;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -149,7 +151,16 @@
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
-                        <td>Rp {{ number_format($obat->harga_satuan ?? 0, 0, ',', '.') }}</td>
+                        <td>
+                            @php
+                                $rekapHargaSatuan = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+                                    ->where('unit_id', Auth::user()->unit_id)
+                                    ->where('bulan', $bulan)
+                                    ->where('tahun', $tahun)
+                                    ->value('harga_satuan') ?? $obat->harga_satuan;
+                            @endphp
+                            Rp {{ number_format($rekapHargaSatuan, 0, ',', '.') }}
+                        </td>
                         @php
                             // Ambil sisa stok dari bulan sebelumnya
                             $bulanSebelumnya = $bulan == 1 ? 12 : $bulan - 1;
@@ -188,14 +199,18 @@
                                     ->where('tanggal_masuk', $tanggal)
                                     ->sum('jumlah_masuk');
 
-                                $totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                                //$totalBiaya += $jumlahKeluar * ($obat->harga_satuan ?? 0);
+                                 $hargaSatuan = $rekapitulasi->harga_satuan ?? ($obat->harga_satuan ?? 0);
+                                    $totalBiaya += $jumlahKeluar * $hargaSatuan;
+
                             @endphp
 
                             <td>
                                 <div style="display: flex; flex-direction: column;">
                                     <input type="number" class="daily-input" inputmode="numeric" min="0"
                                         value="{{ $jumlahKeluar }}" data-obat-id="{{ $obat->id }}"
-                                        data-tanggal="{{ $tanggal }}">
+                                        data-tanggal="{{ $tanggal }}"
+                                        data-harga-satuan="{{ $hargaSatuan }}">
 
                                     @if ($jumlahMasuk > 0)
                                         <small class="text-success fw-bold">+{{ $jumlahMasuk }}</small>
@@ -215,7 +230,7 @@
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
 
-                                {{-- <a href="{{ route('obat.edit', $obat->id) }}?return_url={{ route('obat.index') }}"
+                                <!-- {{-- <a href="{{ route('obat.edit', $obat->id) }}?return_url={{ route('obat.index') }}"
                                     class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Edit
                                 </a> --}}
@@ -226,7 +241,7 @@
                                         onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
                                         title="Hapus Permanen">
                                         <i class="fas fa-trash"></i>
-                                    </button>
+                                    </button> -->
                                 </form>
                             </div>
                         </td>
@@ -296,14 +311,14 @@
                         <div class="row mt-3">
                             <div class="col-12">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="include_daily"
-                                        name="include_daily" value="1">
-                                    <label class="form-check-label" for="include_daily">
+                                    <!-- <input class="form-check-input" type="checkbox" id="include_daily"
+                                        name="include_daily" value="1"> -->
+                                    <!-- <label class="form-check-label" for="include_daily">
                                         Sertakan data harian (maksimal 31 hari)
-                                    </label>
-                                    <small class="form-text text-muted">
+                                    </label> -->
+                                    <!-- <small class="form-text text-muted">
                                         Data harian akan ditampilkan jika range tanggal kurang dari 32 hari
-                                    </small>
+                                    </small> -->
                                 </div>
                             </div>
                         </div>
@@ -312,7 +327,7 @@
                             <strong>Catatan:</strong>
                             <ul class="mb-0 mt-2">
                                 <li>File akan didownload dalam format Excel (.xlsx)</li>
-                                <li>Data harian hanya akan disertakan jika range kurang dari 32 hari</li>
+                                <li>Data akan ditampilkan dalam bentuk rekap perbulan</li>
                             </ul>
                         </div>
                     </div>
@@ -401,11 +416,11 @@
         function updateTotalBiaya(obatId) {
             const row = document.querySelector(`tr[data-obat-row='${obatId}']`);
             if (!row) return;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
             let totalBiaya = 0;
             row.querySelectorAll('.daily-input').forEach(input => {
                 const jumlahKeluar = parseInt(input.value) || 0;
-                totalBiaya += jumlahKeluar * harga;
+                const hargaSatuan = parseInt(input.getAttribute('data-harga-satuan')) || 0;
+                totalBiaya += jumlahKeluar * hargaSatuan;
             });
             const totalBiayaCell = row.querySelector('.total-biaya');
             if (totalBiayaCell) {
@@ -415,13 +430,28 @@
 
         // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
         document.addEventListener('DOMContentLoaded', function() {
+        const filterForm = document.getElementById('filterForm');
+        const bulanSelect = document.getElementById('bulanSelect');
+        const tahunSelect = document.getElementById('tahunSelect');
+
+        if (filterForm) {
+            function resetDailyInputs() {
+                document.querySelectorAll('.daily-input').forEach(input => {
+                    input.value = '0';
+                });
+            }
+
+            bulanSelect.addEventListener('change', resetDailyInputs);
+            tahunSelect.addEventListener('change', resetDailyInputs);
+        }
+
             // Filter form handling
-            const filterForm = document.getElementById('filterForm');
+            /*const filterForm = document.getElementById('filterForm');
             const bulanSelect = document.getElementById('bulanSelect');
             const tahunSelect = document.getElementById('tahunSelect');
 
-            if (filterForm) {
-                bulanSelect.addEventListener('change', function() {
+            if (filterForm) {*/
+                /*bulanSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
                     document.querySelectorAll('.daily-input').forEach(input => {
                         input.value = '0';
@@ -435,7 +465,7 @@
                         input.value = '0';
                     });
                     filterForm.submit();
-                });
+                }); */
             }
 
             // Handle inputs for all rows

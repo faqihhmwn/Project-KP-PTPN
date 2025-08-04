@@ -93,9 +93,9 @@
                             <a href="{{ route('obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
                                 <i class="fas fa-chart-bar"></i> Rekapitulasi
                             </a>
-                            <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
+                            <!-- <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus"></i> Tambah Obat
-                            </a>
+                            </a> -->
                         </div>
                     </div>
 
@@ -139,11 +139,12 @@
                                         <th class="text-center" style="width: 12%;">Unit</th>
                                         <th style="width: 15%; min-width: 130px;">Nama Obat</th>
                                         <th class="text-center" style="width: 15%; min-width: 120px;">Jenis</th>
-                                        <th class="text-center" style="width: 12%; min-width: 100px;">Harga Satuan</th>
+                                        <th class="text-center" style="width: 12%; min-width: 100px;">Expired Date</th>
+                                        <th class="text-center" style="width: 12%; min-width: 60px;">Harga Satuan</th>
                                         <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
-                                        <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th>
+                                        <!-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> -->
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
@@ -153,8 +154,8 @@
                                             <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
                                             <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
                                             <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
-                                            <td class="text-center fw-medium">Rp
-                                                {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
+                                            <td class="text-center">{{ $obat->expired_date ? \Carbon\Carbon::parse($obat->expired_date)->format('d/m/Y') : '-' }}</td>
+                                            <td class="text-center fw-medium">Rp{{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
                                             <td class="text-center">{{ $obat->satuan }}</td>
                                             <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
                                             @php
@@ -168,23 +169,23 @@
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
+                                                    <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
                                                         <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{{ route('obat.edit', $obat) }}"
+                                                    </a> -->
+                                                    <!-- <a href="{{ route('obat.edit', $obat) }}"
                                                         class="btn btn-warning btn-sm" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                     <form action="{{ route('obat.destroy', $obat) }}" method="POST"
-                                                        class="d-inline">
+                                                        class="d-inline"> -->
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                        <!-- <button type="submit" class="btn btn-danger btn-sm"
                                                             onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
                                                             title="Hapus Permanen">
                                                             <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        </button> -->
                                                     </form>
                                                 </div>
                                             </td>
@@ -195,9 +196,9 @@
                                                 <div class="text-muted">
                                                     <i class="fas fa-pills fa-3x mb-3"></i>
                                                     <p>Belum ada data obat.</p>
-                                                    <a href="{{ route('obat.create') }}" class="btn btn-primary">
+                                                    <!-- <a href="{{ route('obat.create') }}" class="btn btn-primary">
                                                         <i class="fas fa-plus"></i> Tambah Obat Pertama
-                                                    </a>
+                                                    </a> -->
                                                 </div>
                                             </td>
                                         </tr>

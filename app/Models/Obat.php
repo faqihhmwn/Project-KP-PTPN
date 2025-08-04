@@ -21,6 +21,7 @@ class Obat extends Model
         'stok_sisa',
         'keterangan',
         'unit_id',
+        'expired_date',
     ];
 
     protected $casts = [

@@ -39,7 +39,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
     public function headings(): array
     {
         $row1 = [
-            'No', 'Nama Obat', 'Jenis', 'Harga Satuan', 'Satuan', 'Unit', 'Catatan', 'Stok Awal'
+            'No', 'Nama Obat', 'Jenis', 'Harga Satuan', 'Satuan', 'Unit', 'Tanggal Kadaluarsa', 'Catatan', 'Stok Awal'
         ];
         $row2 = array_fill(0, count($row1), '');
 
@@ -58,15 +58,25 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function map($obat): array
     {
+
         $this->rowNumber++;
+
+        // Ambil harga_satuan dari rekapitulasi_obats pada tanggal awal periode export
+        $rekapHarga = RekapitulasiObat::where('obat_id', $obat->id)
+            ->where('tanggal', '>=', $this->startDate->format('Y-m-d'))
+            ->where('tanggal', '<=', $this->endDate->format('Y-m-d'))
+            ->orderBy('tanggal', 'asc')
+            ->first();
+        $hargaSatuanExport = $rekapHarga ? $rekapHarga->harga_satuan : $obat->harga_satuan;
 
         $row = [
             $this->rowNumber,
             $obat->nama_obat,
             $obat->jenis_obat ?? '-',
-            $obat->harga_satuan,
+            $hargaSatuanExport,
             $obat->satuan,
             $obat->unit->nama ?? '-',
+            $obat->expired_date ? Carbon::parse($obat->expired_date)->format('d/m/Y') : '-',
             $obat->keterangan ?? '-',
         ];
 
@@ -98,10 +108,25 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
             $totalKeluar += $keluar;
             $totalMasuk += $masuk;
+
+            // Menggunakan harga dari rekapitulasi jika ada
+            if ($rekap && $rekap->harga_satuan) {
+                $hargaPerTanggal = $rekap->harga_satuan;
+            } else {
+                $hargaPerTanggal = $obat->harga_satuan;
+            }
         }
 
         $sisaStok = $stokAwalValue + $totalMasuk - $totalKeluar;
-        $totalBiaya = $totalKeluar * $obat->harga_satuan;
+        
+        // Hitung total biaya menggunakan harga historis dari rekapitulasi
+        $rekapitulasiList = RekapitulasiObat::where('obat_id', $obat->id)
+            ->whereBetween('tanggal', [$this->startDate->format('Y-m-d'), $this->endDate->format('Y-m-d')])
+            ->get();
+            
+        $totalBiaya = $rekapitulasiList->sum(function($rekap) {
+            return $rekap->jumlah_keluar * ($rekap->harga_satuan ?? $rekap->obat->harga_satuan);
+        });
 
         $row[] = $totalKeluar;
         $row[] = $totalMasuk;
