@@ -126,7 +126,7 @@
                                 </form>
                             </div>
                             <div class="col-md-6 text-end">
-                                <span class="text-muted">Total: {{ $obats->total() }} obat</span>
+                                <span class="text-muted">Total: {{ $obats->count() }} obat</span>
                             </div>
                         </div>
 
@@ -150,7 +150,7 @@
                                 <tbody class="table-group-divider">
                                     @forelse($obats as $index => $obat)
                                         <tr>
-                                            <td class="text-center fw-medium">{{ $obats->firstItem() + $index }}</td>
+                                            <td class="text-center fw-medium">{{ $loop->iteration }}</td>
                                             <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
                                             <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
                                             <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
@@ -179,14 +179,14 @@
                                                     </a>
                                                     <form action="{{ route('obat.destroy', $obat) }}" method="POST"
                                                         class="d-inline"> -->
-                                                        @csrf
-                                                        @method('DELETE')
+                                                        <!-- @csrf
+                                                        @method('DELETE') -->
                                                         <!-- <button type="submit" class="btn btn-danger btn-sm"
                                                             onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
                                                             title="Hapus Permanen">
                                                             <i class="fas fa-trash"></i>
                                                         </button> -->
-                                                    </form>
+                                                    <!-- </form> -->
                                                 </div>
                                             </td>
                                         </tr>
@@ -207,18 +207,20 @@
                             </table>
                         </div>
 
-                        <!-- Pagination -->
-                        @if ($obats->hasPages())
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div>
-                                    Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}
-                                    dari {{ $obats->total() }} data
+                       @if ($obats->hasPages())
+                            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+                                <div class="mb-2">
+                                    Menampilkan {{ $obats->firstItem() }} - {{ $obats->lastItem() }} dari {{ $obats->total() }} data
                                 </div>
-                                <div>
-                                    {{ $obats->appends(request()->query())->links() }}
+                                <div class="mb-2">
+                                    <nav>
+                                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                                            {{ $obats->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                                        </ul>
+                                    </nav>
                                 </div>
                             </div>
-                        @endif
+                        @endif                 
                     </div>
                 </div>
             </div>

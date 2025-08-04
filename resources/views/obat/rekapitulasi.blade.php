@@ -442,8 +442,7 @@
             }
 
             bulanSelect.addEventListener('change', resetDailyInputs);
-            tahunSelect.addEventListener('change', resetDailyInputs);
-        }
+            tahunSelect.addEventListener('change', resetDailyInputs);}
 
             // Filter form handling
             /*const filterForm = document.getElementById('filterForm');

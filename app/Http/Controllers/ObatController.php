@@ -25,14 +25,16 @@ class ObatController extends Controller
             return redirect()->route('login');
         }
 
-        // 3. Ambil unit_id dari user yang sudah dipastikan ada
-        $userUnitId = $user->unit_id;
 
-        // Load data obat milik unit tersebut
+        // Ambil semua data master obat (tanpa filter unit_id)
         $query = \App\Models\Obat::with(['rekapitulasiObat' => function ($query) {
-            // Urutkan berdasarkan tanggal terbaru
             $query->orderBy('tanggal', 'desc');
-        }])->where('unit_id', $userUnitId); // Filter berdasarkan unit user
+        }]);
+
+        // Ambil stok awal/sisa dari rekapitulasi_obats untuk unit user
+        $rekapStok = \App\Models\RekapitulasiObat::where('unit_id', $user->unit_id)
+            ->get()
+            ->keyBy('obat_id');
 
         // Fitur pencarian
         if ($request->filled('search')) {
@@ -42,11 +44,11 @@ class ObatController extends Controller
             });
         }
 
-        $obats = $query->latest()->paginate(10);
+        $obats = $query->latest()->paginate(100); 
         $bulan = now()->month;
         $tahun = now()->year;
 
-        return view('obat.index', compact('obats', 'bulan', 'tahun'));
+        return view('obat.index', compact('obats', 'bulan', 'tahun', 'rekapStok'));
     }
 
 
@@ -217,27 +219,29 @@ class ObatController extends Controller
             return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
         }
 
-        $userUnitId = $user->unit_id;
-
-
         if ($request->get('export') == '1') {
             return $this->exportExcel($request);
         }
 
-        $userUnitId = Auth::user()->unit_id;
-
+        // Ambil semua data master obat
         $obats = Obat::query()
-            ->where('unit_id', $userUnitId)
             ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
                 $query->whereMonth('tanggal', $bulan)
                     ->whereYear('tanggal', $tahun);
             }])
             ->get();
 
+        // Ambil stok awal/sisa dari rekapitulasi_obats untuk unit user, bulan, tahun
+        $rekapStok = \App\Models\RekapitulasiObat::where('unit_id', $user->unit_id)
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->get()
+            ->keyBy('obat_id');
+
         // Generate data untuk setiap hari dalam bulan
         $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
 
-        return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
+        return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth', 'rekapStok'));
     }
 
     public function dashboard()
