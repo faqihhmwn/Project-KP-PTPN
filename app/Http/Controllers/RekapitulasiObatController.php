@@ -98,6 +98,7 @@ class RekapitulasiObatController extends Controller
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $sisaStok,
                             'total_biaya' => $totalBiaya,
+                            'harga_satuan' => $hargaSatuan, // Menambahkan harga satuan saat transaksi
                         ]
                     );
                     $saved++;
@@ -159,8 +160,17 @@ class RekapitulasiObatController extends Controller
                     'jumlah_keluar' => $validated['jumlah_keluar'],
                     'sisa_stok' => $sisaStok,
                     'total_biaya' => $totalBiaya,
+                    'harga_satuan' => $hargaSatuan, // Menambahkan harga satuan saat transaksi
                 ]
             );
+
+            // Log untuk debugging
+            Log::info('Menyimpan rekapitulasi dengan data:', [
+                'obat_id' => $validated['obat_id'],
+                'tanggal' => $validated['tanggal'],
+                'harga_satuan' => $hargaSatuan,
+                'rekap_id' => $rekap->id
+            ]);
 
             return response()->json(['success' => true, 'rekap' => $rekap, 'message' => 'Data rekapitulasi harian berhasil disimpan/diperbarui.']);
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -19,6 +19,7 @@ class RekapitulasiObat extends Model
         'tahun',
         'unit_id',
         'user_id',
+        'harga_satuan',
     ];
     public $timestamps = true;
 
