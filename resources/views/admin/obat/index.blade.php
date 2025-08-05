@@ -23,12 +23,14 @@
 
         .table td:nth-child(2),
         .table th:nth-child(2) {
+            /* Nama Obat - allow wrapping */
             white-space: normal;
             max-width: 200px;
         }
 
         .table td:nth-child(3),
         .table th:nth-child(3) {
+            /* Jenis - allow wrapping */
             white-space: normal;
             max-width: 150px;
         }
@@ -61,6 +63,7 @@
         }
 
         @media (max-width: 768px) {
+
             .table th,
             .table td {
                 padding: 8px 4px;
@@ -77,149 +80,151 @@
         }
     </style>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3>Daftar Obat</h3>
-                    <div class="d-flex gap-2">
-                        <a href="{{ route('admin.obat.dashboard') }}" class="btn btn-info btn-sm">
-                            <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
-                        </a>
-                        <a href="{{ route('admin.obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-chart-bar"></i> Rekapitulasi
-                        </a>
-                        <a href="{{ route('admin.obat.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> Tambah Obat
-                        </a>
-                    </div>
-                </div>
-
-                <div class="card-body">
-                    @if (session('success'))
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            {{ session('success') }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3>Daftar Obat</h3>
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('admin.obat.dashboard') }}" class="btn btn-info btn-sm">
+                                <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
+                            </a>
+                            <a href="{{ route('admin.obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-chart-bar"></i> Rekapitulasi
+                            </a>
+                            <a href="{{ route('admin.obat.create') }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Tambah Obat
+                            </a>
                         </div>
-                    @endif
+                    </div>
 
-                    <!-- Filter & Search -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <form method="GET" action="{{ route('admin.obat.index') }}">
-                                <div class="input-group">
-                                    <input type="text" name="search" class="form-control"
-                                           placeholder="Cari nama obat atau jenis obat..." value="{{ request('search') }}">
-                                    <select name="unit_id" class="form-select">
-                                        <option value="">Semua Unit</option>
-                                        @foreach($units as $unit)
-                                            <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
-                                                {{ $unit->nama }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <button class="btn btn-outline-secondary" type="submit">
-                                        <i class="fas fa-search"></i> Cari
-                                    </button>
-                                    @if (request('search') || request('unit_id'))
-                                        <a href="{{ route('admin.obat.index') }}" class="btn btn-outline-danger">
-                                            <i class="fas fa-times"></i>
-                                        </a>
-                                    @endif
+                    <div class="card-body">
+                        @if (session('success'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                {{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
+
+                        <!-- Search -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <form method="GET" action="{{ route('admin.obat.index') }}">
+                                    <div class="input-group">
+                                        <input type="text" name="search" class="form-control"
+                                            placeholder="Cari nama obat atau jenis admin.obat..." value="{{ request('search') }}">
+                                        <button class="btn btn-outline-secondary" type="submit">
+                                            <i class="fas fa-search"></i> Cari
+                                        </button>
+                                        @if (request('search'))
+                                            <a href="{{ route('admin.obat.index') }}" class="btn btn-outline-danger">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        @endif
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="text-muted">Total: {{ $obats->total() }} obat</span>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center" style="width: 5%; min-width: 50px;">No</th>
+                                        <th class="text-center" style="width: 12%;">Unit</th>
+                                        <th style="width: 15%; min-width: 130px;">Nama Obat</th>
+                                        <th class="text-center" style="width: 15%; min-width: 120px;">Jenis</th>
+                                        <th class="text-center" style="width: 12%; min-width: 100px;">Expired Date</th>
+                                        <th class="text-center" style="width: 12%; min-width: 60px;">Harga Satuan</th>
+                                        <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
+                                        <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
+                                        <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
+                                        <!-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> -->
+                                    </tr>
+                                </thead>
+                                <tbody class="table-group-divider">
+                                    @forelse($obats as $index => $obat)
+                                        <tr>
+                                            <td class="text-center fw-medium">{{ $obats->firstItem() + $index }}</td>
+                                            <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
+                                            <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
+                                            <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
+                                            <td class="text-center">{{ $obat->expired_date ? \Carbon\Carbon::parse($obat->expired_date)->format('d/m/Y') : '-' }}</td>
+                                            <td class="text-center fw-medium">Rp{{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
+                                            <td class="text-center">{{ $obat->satuan }}</td>
+                                            <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
+                                            @php
+                                                $sisaStok = $obat->stokSisa($bulan, $tahun);
+                                            @endphp
+                                            <td class="text-center">
+                                                <span
+                                                    class="badge {{ $sisaStok <= 10 ? 'bg-danger' : ($sisaStok <= 50 ? 'bg-warning text-dark' : 'bg-success') }}">
+                                                    {{ number_format($sisaStok) }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{{ route('admin.obat.show', $obat) }}" class="btn btn-info btn-sm"
+                                                        title="Detail">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{{ route('admin.obat.edit', $obat) }}"
+                                                        class="btn btn-warning btn-sm" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form action="{{ route('admin.obat.destroy', $obat) }}" method="POST"
+                                                        class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-danger btn-sm"
+                                                            onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
+                                                            title="Hapus Permanen">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4">
+                                                <div class="text-muted">
+                                                    <i class="fas fa-pills fa-3x mb-3"></i>
+                                                    <p>Belum ada data obat.</p>
+                                                    <a href="{{ route('admin.obat.create') }}" class="btn btn-primary">
+                                                        <i class="fas fa-plus"></i> Tambah Obat Pertama
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if ($obats->hasPages())
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}
+                                    dari {{ $obats->total() }} data
                                 </div>
-                            </form>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <span class="text-muted">Total: {{ $obats->total() }} obat</span>
-                        </div>
-                    </div>
-
-                    <!-- Tabel Obat -->
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th class="text-center" style="width: 5%;">No</th>
-                                    <th class="text-center" style="width: 12%;">Unit</th>
-                                    <th style="width: 15%;">Nama Obat</th>
-                                    <th class="text-center" style="width: 15%;">Jenis</th>
-                                    <th class="text-center" style="width: 12%;">Harga Satuan</th>
-                                    <th class="text-center" style="width: 8%;">Satuan</th>
-                                    <th class="text-center" style="width: 5%;">Stok Awal</th>
-                                    <th class="text-center" style="width: 5%;">Stok Sisa</th>
-                                    <th class="text-center" style="width: 10%;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                                @forelse($obats as $index => $obat)
-                                    <tr>
-                                        <td class="text-center fw-medium">{{ $obats->firstItem() + $index }}</td>
-                                        <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
-                                        <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
-                                        <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
-                                        <td class="text-center fw-medium">Rp {{ number_format($obat->harga_satuan, 0, ',', '.') }}</td>
-                                        <td class="text-center">{{ $obat->satuan }}</td>
-                                        <td class="text-center">{{ number_format($obat->stok_awal) }}</td>
-                                        @php
-                                            $sisaStok = $obat->stokSisa($bulan, $tahun);
-                                        @endphp
-                                        <td class="text-center">
-                                            <span class="badge {{ $sisaStok <= 10 ? 'bg-danger' : ($sisaStok <= 50 ? 'bg-warning text-dark' : 'bg-success') }}">
-                                                {{ number_format($sisaStok) }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.obat.show', $obat) }}" class="btn btn-info btn-sm" title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('admin.obat.edit', $obat) }}" class="btn btn-warning btn-sm" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <form action="{{ route('admin.obat.destroy', $obat) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm"
-                                                        onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
-                                                        title="Hapus Permanen">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="9" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fas fa-pills fa-3x mb-3"></i>
-                                                <p>Belum ada data obat.</p>
-                                                <a href="{{ route('admin.obat.create') }}" class="btn btn-primary">
-                                                    <i class="fas fa-plus"></i> Tambah Obat Pertama
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @if ($obats->hasPages())
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }} dari {{ $obats->total() }} data
+                                <div>
+                                    {{ $obats->appends(request()->query())->links() }}
+                                </div>
                             </div>
-                            <div>
-                                {{ $obats->appends(request()->query())->links() }}
-                            </div>
-                        </div>
-                    @endif
-
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+
+
 @endsection

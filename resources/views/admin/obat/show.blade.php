@@ -8,6 +8,9 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Detail Obat: {{ $obat->nama_obat }}</h3>
                     <div class="btn-group">
+                        <!-- <a href="{{ route('obat.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Kembali
+                        </a> -->
                          <a href="{{ request()->get('return_url', route('admin.obat.index')) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali Ke {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
                         </a>
@@ -145,4 +148,7 @@
         </div>
     </div>
 </div>
+
+
+
 @endsection

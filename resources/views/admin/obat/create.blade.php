@@ -9,7 +9,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4>Tambah Obat Baru</h4>
-                    <a href="/admin/obat/dashboard" class="btn btn-secondary">
+                    <a href="{{ route('admin.obat.dashboard') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
                     </a>
                 </div>
@@ -27,24 +27,6 @@
 
                     <form action="{{ route('admin.obat.store') }}" method="POST">
                         @csrf
-
-                        <!-- ✅ FIELD UNIT -->
-                        <div class="mb-3">
-                            <label for="unit_id" class="form-label">Unit Tujuan <span class="text-danger">*</span></label>
-                            <select class="form-select @error('unit_id') is-invalid @enderror" id="unit_id" name="unit_id" required>
-                                <option value="" disabled selected>-- Pilih Unit --</option>
-                                @foreach($units as $unit)
-                                    <option value="{{ $unit->id }}" {{ old('unit_id') == $unit->id ? 'selected' : '' }}>
-                                        {{ $unit->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('unit_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <!-- END FIELD UNIT -->
-
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -148,11 +130,13 @@
 </div>
 
 <script>
+// Format input harga saat user mengetik
 document.getElementById('harga_satuan').addEventListener('input', function() {
     let value = this.value.replace(/[^\d]/g, '');
     this.value = value;
 });
 
+// Preview stok awal
 document.getElementById('stok_awal').addEventListener('input', function() {
     if (this.value < 0) {
         this.value = 0;
