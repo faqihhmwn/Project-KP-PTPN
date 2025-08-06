@@ -144,7 +144,7 @@
                                         <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
-                                        <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th>
+                                        {{-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
@@ -167,7 +167,7 @@
                                                     {{ number_format($sisaStok) }}
                                                 </span>
                                             </td>
-                                            <td class="text-center">
+                                            {{-- <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
@@ -188,7 +188,7 @@
                                                         </button> -->
                                                     </form>
                                                 </div>
-                                            </td>
+                                            </td> --}}
                                         </tr>
                                     @empty
                                         <tr>
