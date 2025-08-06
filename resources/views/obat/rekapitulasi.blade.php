@@ -230,7 +230,7 @@
                                     <i class="fas fa-chart-bar"></i>
                                 </a>
 
-                                <!-- {{-- <a href="{{ route('obat.edit', $obat->id) }}?return_url={{ route('obat.index') }}"
+                                {{-- <a href="{{ route('obat.edit', $obat->id) }}?return_url={{ route('obat.index') }}"
                                     class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Edit
                                 </a> --}}
@@ -241,7 +241,7 @@
                                         onclick="return confirm('⚠️ PERINGATAN!\n\nApakah Anda yakin ingin MENGHAPUS PERMANEN obat ini?\n\n📌 {{ $obat->nama_obat }}\n\n❌ Semua data transaksi terkait juga akan dihapus!\n✅ Tindakan ini TIDAK BISA dibatalkan!\n\nKetik OK jika yakin:')"
                                         title="Hapus Permanen">
                                         <i class="fas fa-trash"></i>
-                                    </button> -->
+                                    </button>
                                 </form>
                             </div>
                         </td>
@@ -430,28 +430,13 @@
 
         // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
         document.addEventListener('DOMContentLoaded', function() {
-        const filterForm = document.getElementById('filterForm');
-        const bulanSelect = document.getElementById('bulanSelect');
-        const tahunSelect = document.getElementById('tahunSelect');
-
-        if (filterForm) {
-            function resetDailyInputs() {
-                document.querySelectorAll('.daily-input').forEach(input => {
-                    input.value = '0';
-                });
-            }
-
-            bulanSelect.addEventListener('change', resetDailyInputs);
-            tahunSelect.addEventListener('change', resetDailyInputs);
-        }
-
             // Filter form handling
-            /*const filterForm = document.getElementById('filterForm');
+            const filterForm = document.getElementById('filterForm');
             const bulanSelect = document.getElementById('bulanSelect');
             const tahunSelect = document.getElementById('tahunSelect');
 
-            if (filterForm) {*/
-                /*bulanSelect.addEventListener('change', function() {
+            if (filterForm) {
+                bulanSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
                     document.querySelectorAll('.daily-input').forEach(input => {
                         input.value = '0';
@@ -465,7 +450,7 @@
                         input.value = '0';
                     });
                     filterForm.submit();
-                }); */
+                });
             }
 
             // Handle inputs for all rows

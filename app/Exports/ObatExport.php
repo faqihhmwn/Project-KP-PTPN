@@ -2,9 +2,9 @@
 
 namespace App\Exports;
 
-use App\Models\Obat;
 use App\Models\RekapitulasiObat;
 use App\Models\PenerimaanObat;
+use App\Models\Obat;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -21,19 +21,31 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 {
     protected $startDate;
     protected $endDate;
+    protected $unitId;
     protected $daysInMonth;
     protected $rowNumber = 0;
+    protected $rekapData;
 
-    public function __construct($startDate, $endDate)
+    public function __construct($startDate, $endDate, $unitId)
     {
         $this->startDate = Carbon::parse($startDate);
         $this->endDate = Carbon::parse($endDate);
+        $this->unitId = $unitId;
         $this->daysInMonth = $this->startDate->daysInMonth;
+
+        // Preload all rekap data for efficiency
+        $this->rekapData = RekapitulasiObat::with('obat.unit')
+            ->where('unit_id', $this->unitId)
+            ->whereBetween('tanggal', [$this->startDate->startOfMonth()->toDateString(), $this->endDate->endOfMonth()->toDateString()])
+            ->get()
+            ->groupBy('obat_id');
     }
 
     public function collection()
     {
-        return Obat::with(['unit'])->get();
+        // Ambil semua obat yang memiliki data rekap dalam rentang waktu ini
+        $obatIds = $this->rekapData->keys();
+        return Obat::with('unit')->whereIn('id', $obatIds)->get();
     }
 
     public function headings(): array
@@ -58,49 +70,46 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function map($obat): array
     {
-
         $this->rowNumber++;
 
-        // Ambil harga_satuan dari rekapitulasi_obats pada tanggal awal periode export
-        $rekapHarga = RekapitulasiObat::where('obat_id', $obat->id)
-            ->where('tanggal', '>=', $this->startDate->format('Y-m-d'))
-            ->where('tanggal', '<=', $this->endDate->format('Y-m-d'))
-            ->orderBy('tanggal', 'asc')
-            ->first();
-        $hargaSatuanExport = $rekapHarga ? $rekapHarga->harga_satuan : $obat->harga_satuan;
+        $rekapList = $this->rekapData[$obat->id] ?? collect();
+
+        $hargaSatuan = $rekapList->first()?->harga_satuan ?? $obat->harga_satuan;
 
         $row = [
             $this->rowNumber,
             $obat->nama_obat,
             $obat->jenis_obat ?? '-',
-            $hargaSatuanExport,
+            $hargaSatuan,
             $obat->satuan,
             $obat->unit->nama ?? '-',
             $obat->expired_date ? Carbon::parse($obat->expired_date)->format('d/m/Y') : '-',
             $obat->keterangan ?? '-',
         ];
 
-        // Hitung stok awal
-        $stokAwal = RekapitulasiObat::where('obat_id', $obat->id)
-            ->where('tanggal', '<', $this->startDate->format('Y-m-d'))
-            ->orderBy('tanggal', 'desc')
-            ->first();
-        $stokAwalValue = $stokAwal ? $stokAwal->sisa_stok : $obat->stok_awal;
-        $row[] = $stokAwalValue;
+        // ✅ Ambil stok_awal dari tanggal awal bulan dari rekapitulasi_obats
+        $rekapAwal = $rekapList->firstWhere(function ($rekap) {
+            return Carbon::parse($rekap->tanggal)->isSameDay($this->startDate->copy()->startOfMonth());
+        });
 
+        $stokAwalValue = $rekapAwal ? $rekapAwal->stok_awal : 0;
+        $row[] = $stokAwalValue;
         $totalKeluar = 0;
         $totalMasuk = 0;
 
         for ($day = 1; $day <= $this->daysInMonth; $day++) {
             $tanggal = Carbon::create($this->startDate->year, $this->startDate->month, $day)->format('Y-m-d');
 
-            $rekap = RekapitulasiObat::where('obat_id', $obat->id)
-                ->where('tanggal', $tanggal)
-                ->first();
+            // ✅ Ambil data rekap dari list yang sudah dikelompokkan
+            $rekap = $rekapList->first(function ($item) use ($tanggal) {
+                return Carbon::parse($item->tanggal)->format('Y-m-d') === $tanggal;
+            });
             $keluar = $rekap ? $rekap->jumlah_keluar : 0;
 
+            // ✅ Ambil jumlah_masuk dari penerimaan_obats
             $masuk = PenerimaanObat::where('obat_id', $obat->id)
-                ->where('tanggal_masuk', $tanggal)
+                ->where('unit_id', $this->unitId)
+                ->whereDate('tanggal_masuk', $tanggal)
                 ->sum('jumlah_masuk');
 
             $row[] = $keluar;
@@ -108,25 +117,17 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
 
             $totalKeluar += $keluar;
             $totalMasuk += $masuk;
-
-            // Menggunakan harga dari rekapitulasi jika ada
-            if ($rekap && $rekap->harga_satuan) {
-                $hargaPerTanggal = $rekap->harga_satuan;
-            } else {
-                $hargaPerTanggal = $obat->harga_satuan;
-            }
         }
 
+            // ✅ Ambil sisa_stok dari rekap terakhir di bulan ini
+            $sisaStok = $stokAwalValue + $totalMasuk - $totalKeluar;
+
+            // ✅ Total biaya berdasarkan jumlah_keluar * harga_satuan (dari rekap)
+            $totalBiaya = $rekapList->sum(function ($rekap) {
+                return $rekap->jumlah_keluar * ($rekap->harga_satuan ?? 0);
+            });
+
         $sisaStok = $stokAwalValue + $totalMasuk - $totalKeluar;
-        
-        // Hitung total biaya menggunakan harga historis dari rekapitulasi
-        $rekapitulasiList = RekapitulasiObat::where('obat_id', $obat->id)
-            ->whereBetween('tanggal', [$this->startDate->format('Y-m-d'), $this->endDate->format('Y-m-d')])
-            ->get();
-            
-        $totalBiaya = $rekapitulasiList->sum(function($rekap) {
-            return $rekap->jumlah_keluar * ($rekap->harga_satuan ?? $rekap->obat->harga_satuan);
-        });
 
         $row[] = $totalKeluar;
         $row[] = $totalMasuk;
@@ -141,7 +142,6 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $lastColumn = $sheet->getHighestColumn();
         $lastRow = $sheet->getHighestRow();
 
-        // Merge header atas
         for ($col = 1; $col <= 8; $col++) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
             $sheet->mergeCells("{$colLetter}1:{$colLetter}2");
@@ -160,7 +160,6 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             $sheet->mergeCells("{$col}1:{$col}2");
         }
 
-        // Styling
         $sheet->getStyle("A1:{$lastColumn}{$lastRow}")->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -185,7 +184,7 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
             ]
         ]);
 
-        $sheet->freezePane('I3'); // Setelah kolom ke-8
+        $sheet->freezePane('I3');
     }
 
     public function title(): string

@@ -93,9 +93,9 @@
                             <a href="{{ route('obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
                                 <i class="fas fa-chart-bar"></i> Rekapitulasi
                             </a>
-                            <!-- <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
+                            {{-- <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus"></i> Tambah Obat
-                            </a> -->
+                            </a> --}}
                         </div>
                     </div>
 
@@ -144,7 +144,7 @@
                                         <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
-                                        <!-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> -->
+                                        {{-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
@@ -167,18 +167,18 @@
                                                     {{ number_format($sisaStok) }}
                                                 </span>
                                             </td>
-                                            <td class="text-center">
+                                            {{-- <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </a> -->
-                                                    <!-- <a href="{{ route('obat.edit', $obat) }}"
+                                                    <a href="{{ route('obat.edit', $obat) }}"
                                                         class="btn btn-warning btn-sm" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                     <form action="{{ route('obat.destroy', $obat) }}" method="POST"
-                                                        class="d-inline"> -->
+                                                        class="d-inline">
                                                         @csrf
                                                         @method('DELETE')
                                                         <!-- <button type="submit" class="btn btn-danger btn-sm"
@@ -188,7 +188,7 @@
                                                         </button> -->
                                                     </form>
                                                 </div>
-                                            </td>
+                                            </td> --}}
                                         </tr>
                                     @empty
                                         <tr>
@@ -196,9 +196,9 @@
                                                 <div class="text-muted">
                                                     <i class="fas fa-pills fa-3x mb-3"></i>
                                                     <p>Belum ada data obat.</p>
-                                                    <!-- <a href="{{ route('obat.create') }}" class="btn btn-primary">
+                                                    <a href="{{ route('obat.create') }}" class="btn btn-primary">
                                                         <i class="fas fa-plus"></i> Tambah Obat Pertama
-                                                    </a> -->
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>
