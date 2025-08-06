@@ -116,7 +116,8 @@ class AdminObatController extends Controller
         ]);
     }
 
-    return redirect()->route('admin.obat.dashboard')->with('success', 'Obat berhasil ditambahkan ke semua unit dan admin.');
+    return redirect()->route('admin.obat.index', ['unit_id' => $obat->unit_id])
+    ->with('success', 'Obat berhasil ditambahkan ke semua unit.');
 }
 
 
