@@ -167,7 +167,7 @@
                                                     {{ number_format($sisaStok) }}
                                                 </span>
                                             </td>
-                                            <td class="text-center">
+                                            <!-- <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
                                                     <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
@@ -187,8 +187,8 @@
                                                             <i class="fas fa-trash"></i>
                                                         </button> -->
                                                     <!-- </form> -->
-                                                </div>
-                                            </td>
+                                                <!-- </div> -->
+                                            <!-- </td> --> -->
                                         </tr>
                                     @empty
                                         <tr>
