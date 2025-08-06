@@ -145,11 +145,14 @@
 
             </thead>
             <tbody id="obatTableBody">
+                @php
+                    $globalIndex = ($obats->currentPage() - 1) * $obats->perPage();
+                @endphp
                 @forelse($obats as $index => $obat)
                     <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
-                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $globalIndex + $index + 1 }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>
@@ -432,27 +435,27 @@
 
         // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
         document.addEventListener('DOMContentLoaded', function() {
-        const filterForm = document.getElementById('filterForm');
-        const bulanSelect = document.getElementById('bulanSelect');
-        const tahunSelect = document.getElementById('tahunSelect');
+        // const filterForm = document.getElementById('filterForm');
+        // const bulanSelect = document.getElementById('bulanSelect');
+        // const tahunSelect = document.getElementById('tahunSelect');
 
-        if (filterForm) {
-            function resetDailyInputs() {
-                document.querySelectorAll('.daily-input').forEach(input => {
-                    input.value = '0';
-                });
-            }
+        // if (filterForm) {
+        //     function resetDailyInputs() {
+        //         document.querySelectorAll('.daily-input').forEach(input => {
+        //             input.value = '0';
+        //         });
+        //     }
 
-            bulanSelect.addEventListener('change', resetDailyInputs);
-            tahunSelect.addEventListener('change', resetDailyInputs);}
+        //     bulanSelect.addEventListener('change', resetDailyInputs);
+        //     tahunSelect.addEventListener('change', resetDailyInputs);}
 
-            // Filter form handling
-            /*const filterForm = document.getElementById('filterForm');
-            const bulanSelect = document.getElementById('bulanSelect');
-            const tahunSelect = document.getElementById('tahunSelect');
+        //     // Filter form handling
+        //     const filterForm = document.getElementById('filterForm');
+        //     const bulanSelect = document.getElementById('bulanSelect');
+        //     const tahunSelect = document.getElementById('tahunSelect');
 
-            if (filterForm) {*/
-                /*bulanSelect.addEventListener('change', function() {
+            if (filterForm) {
+                bulanSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
                     document.querySelectorAll('.daily-input').forEach(input => {
                         input.value = '0';
@@ -466,7 +469,7 @@
                         input.value = '0';
                     });
                     filterForm.submit();
-                }); */
+                });
             }
 
             // Handle inputs for all rows
@@ -508,84 +511,84 @@
                 });
             });
 
-            // --- VALIDASI BULAN (LOCKING) ---
-            const bulan = CURRENT_BULAN;
-            const tahun = CURRENT_TAHUN;
-            const lockKey = `obat_validasi_${tahun}_${bulan}`;
-            const isLocked = localStorage.getItem(lockKey) === '1';
-            const validasiBtn = document.getElementById('validasiBulanBtn');
-            const unvalidasiBtn = document.getElementById('unvalidasiBulanBtn');
-            const unvalidasiBtnInAlert = document.getElementById('unvalidasiBtnInAlert');
-            const validasiInfo = document.getElementById('validasiInfo');
+            // // --- VALIDASI BULAN (LOCKING) ---
+            // const bulan = CURRENT_BULAN;
+            // const tahun = CURRENT_TAHUN;
+            // const lockKey = `obat_validasi_${tahun}_${bulan}`;
+            // const isLocked = localStorage.getItem(lockKey) === '1';
+            // const validasiBtn = document.getElementById('validasiBulanBtn');
+            // const unvalidasiBtn = document.getElementById('unvalidasiBulanBtn');
+            // const unvalidasiBtnInAlert = document.getElementById('unvalidasiBtnInAlert');
+            // const validasiInfo = document.getElementById('validasiInfo');
 
-            function setLockedState(locked) {
-                // Set all daily inputs to readonly
-                document.querySelectorAll('.daily-input').forEach(input => {
-                    input.readOnly = locked;
-                });
-                // Disable edit & delete buttons
-                document.querySelectorAll('a.btn-warning, form .btn-danger').forEach(btn => {
-                    btn.disabled = locked;
-                    if (locked) {
-                        btn.classList.add('disabled');
-                        btn.setAttribute('tabindex', '-1');
-                        btn.setAttribute('aria-disabled', 'true');
-                    } else {
-                        btn.classList.remove('disabled');
-                        btn.removeAttribute('tabindex');
-                        btn.removeAttribute('aria-disabled');
-                    }
-                });
-                // Hide or show validasi/unvalidasi buttons and info
-                if (locked) {
-                    if (validasiBtn) validasiBtn.classList.add('d-none');
-                    if (unvalidasiBtn) unvalidasiBtn.classList.remove('d-none');
-                    if (validasiInfo) validasiInfo.classList.remove('d-none');
-                } else {
-                    if (validasiBtn) validasiBtn.classList.remove('d-none');
-                    if (unvalidasiBtn) unvalidasiBtn.classList.add('d-none');
-                    if (validasiInfo) validasiInfo.classList.add('d-none');
-                }
-            }
+            // function setLockedState(locked) {
+            //     // Set all daily inputs to readonly
+            //     document.querySelectorAll('.daily-input').forEach(input => {
+            //         input.readOnly = locked;
+            //     });
+            //     // Disable edit & delete buttons
+            //     document.querySelectorAll('a.btn-warning, form .btn-danger').forEach(btn => {
+            //         btn.disabled = locked;
+            //         if (locked) {
+            //             btn.classList.add('disabled');
+            //             btn.setAttribute('tabindex', '-1');
+            //             btn.setAttribute('aria-disabled', 'true');
+            //         } else {
+            //             btn.classList.remove('disabled');
+            //             btn.removeAttribute('tabindex');
+            //             btn.removeAttribute('aria-disabled');
+            //         }
+            //     });
+            //     // Hide or show validasi/unvalidasi buttons and info
+            //     if (locked) {
+            //         if (validasiBtn) validasiBtn.classList.add('d-none');
+            //         if (unvalidasiBtn) unvalidasiBtn.classList.remove('d-none');
+            //         if (validasiInfo) validasiInfo.classList.remove('d-none');
+            //     } else {
+            //         if (validasiBtn) validasiBtn.classList.remove('d-none');
+            //         if (unvalidasiBtn) unvalidasiBtn.classList.add('d-none');
+            //         if (validasiInfo) validasiInfo.classList.add('d-none');
+            //     }
+            // }
 
-            setLockedState(isLocked);
+            // setLockedState(isLocked);
 
-            function handleUnvalidasi() {
-                if (confirm('Anda yakin ingin membatalkan validasi? Semua data akan dapat diubah kembali.')) {
-                    localStorage.removeItem(lockKey);
-                    setLockedState(false);
-                }
-            }
+        //     function handleUnvalidasi() {
+        //         if (confirm('Anda yakin ingin membatalkan validasi? Semua data akan dapat diubah kembali.')) {
+        //             localStorage.removeItem(lockKey);
+        //             setLockedState(false);
+        //         }
+        //     }
 
-            if (validasiBtn) {
-                validasiBtn.addEventListener('click', function() {
-                    if (confirm('Setelah divalidasi, data bulan ini akan dikunci. Lanjutkan?')) {
-                        localStorage.setItem(lockKey, '1');
-                        setLockedState(true);
-                        location.reload();
-                    }
-                });
-            }
+        //     if (validasiBtn) {
+        //         validasiBtn.addEventListener('click', function() {
+        //             if (confirm('Setelah divalidasi, data bulan ini akan dikunci. Lanjutkan?')) {
+        //                 localStorage.setItem(lockKey, '1');
+        //                 setLockedState(true);
+        //                 location.reload();
+        //             }
+        //         });
+        //     }
 
-            const batalkanValidasiBtn = document.getElementById('batalkanValidasiBtn');
+        //     const batalkanValidasiBtn = document.getElementById('batalkanValidasiBtn');
 
-            if (batalkanValidasiBtn) {
-                if (isLocked) {
-                    batalkanValidasiBtn.classList.remove('d-none');
-                } else {
-                    batalkanValidasiBtn.classList.add('d-none');
-                }
+        //     if (batalkanValidasiBtn) {
+        //         if (isLocked) {
+        //             batalkanValidasiBtn.classList.remove('d-none');
+        //         } else {
+        //             batalkanValidasiBtn.classList.add('d-none');
+        //         }
 
-                batalkanValidasiBtn.addEventListener('click', function() {
-                    if (confirm('Batalkan validasi bulan ini? Anda bisa mengubah data kembali.')) {
-                        localStorage.removeItem(lockKey);
-                        setLockedState(false);
-                        batalkanValidasiBtn.classList.add('d-none');
-                    }
-                });
-            }
+        //         batalkanValidasiBtn.addEventListener('click', function() {
+        //             if (confirm('Batalkan validasi bulan ini? Anda bisa mengubah data kembali.')) {
+        //                 localStorage.removeItem(lockKey);
+        //                 setLockedState(false);
+        //                 batalkanValidasiBtn.classList.add('d-none');
+        //             }
+        //         });
+        //     }
 
-        });
+        // });
 
         // --- SIMPAN REKAPITULASI (MANUAL SAVE, BULK) ---
         document.getElementById('simpanRekapBtn').addEventListener('click', async function() {

@@ -169,7 +169,7 @@
                                             </td>
                                             <!-- <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <!-- <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
+                                                     <a href="{{ route('obat.show', $obat) }}" class="btn btn-info btn-sm"
                                                         title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </a> -->
@@ -188,7 +188,7 @@
                                                         </button> -->
                                                     <!-- </form> -->
                                                 <!-- </div> -->
-                                            <!-- </td> --> -->
+                                            <!-- </td> --> 
                                         </tr>
                                     @empty
                                         <tr>
