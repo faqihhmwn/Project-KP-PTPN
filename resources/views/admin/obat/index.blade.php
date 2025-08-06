@@ -132,7 +132,7 @@
                     <i class="fas fa-search"></i> Cari
                 </button>
                 @if (request('search'))
-                    <a href="{{ route('admin.obat.index') }}" class="btn btn-outline-danger">
+                    <a href="{{ route('admin.obat.index', ['unit_id' => request('unit_id')]) }}" class="btn btn-outline-danger">
                         <i class="fas fa-times"></i>
                     </a>
                 @endif
