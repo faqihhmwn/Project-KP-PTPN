@@ -93,9 +93,9 @@
                             <a href="{{ route('obat.rekapitulasi') }}" class="btn btn-warning btn-sm">
                                 <i class="fas fa-chart-bar"></i> Rekapitulasi
                             </a>
-                            <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
+                            {{-- <a href="{{ route('obat.create') }}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus"></i> Tambah Obat
-                            </a>
+                            </a> --}}
                         </div>
                     </div>
 
