@@ -12,6 +12,8 @@ use App\Imports\ObatImport;
 use App\Exports\ObatExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\Unit;
+use App\Models\RekapitulasiObat;
 
 class AdminObatController extends Controller
 {
@@ -49,48 +51,69 @@ class AdminObatController extends Controller
         return view('admin.obat.create');
     }
 
-    public function store(Request $request)
-    {
-        $messages = [
-            'expired_date.after_or_equal' => 'Tanggal kadaluarsa harus sama dengan atau setelah hari ini.',
-            'expired_date.date' => 'Format tanggal kadaluarsa tidak valid.'
-        ];
+  public function store(Request $request)
+{
+    $validated = $request->validate([
+        'nama_obat' => 'required|string|max:255',
+        'jenis_obat' => 'nullable|string|max:255',
+        'harga_satuan' => 'required|numeric|min:0',
+        'satuan' => 'required|string|max:50',
+        'stok_awal' => 'required|integer|min:0',
+        'keterangan' => 'nullable|string|max:500',
+    ]);
 
-        $validated = $request->validate([
-            'nama_obat' => 'required|string|max:255',
-            'jenis_obat' => 'nullable|string|max:255',
-            'harga_satuan' => 'required|numeric|min:0',
-            'satuan' => 'required|string|max:50',
-            'stok_awal' => 'required|integer|min:0',
-            'keterangan' => 'nullable|string',
-            'expired_date' => 'nullable|date|after_or_equal:today', // Validasi tanggal expired
+    // ✅ Tambahkan 1 entri obat untuk admin (unit_id = null)
+    $obatAdmin = Obat::create([
+        'nama_obat' => $validated['nama_obat'],
+        'jenis_obat' => $validated['jenis_obat'] ?? null,
+        'harga_satuan' => $validated['harga_satuan'],
+        'satuan' => $validated['satuan'],
+        'keterangan' => $validated['keterangan'] ?? null,
+        'unit_id' => null,
+        'stok_awal' => $validated['stok_awal'],
+    ]);
+
+    // Opsional: jika ingin juga rekap admin (biasanya tidak)
+    /*
+    RekapitulasiObat::create([
+        'obat_id' => $obatAdmin->id,
+        'unit_id' => null,
+        'tanggal' => now()->startOfMonth(),
+        'bulan' => now()->format('m'),
+        'tahun' => now()->format('Y'),
+        'jumlah_masuk' => $validated['stok_awal'],
+        'jumlah_keluar' => 0,
+        'keterangan' => 'Stok awal dari admin',
+    ]);
+    */
+
+    // ✅ Tambahkan ke semua unit
+    $units = Unit::all();
+    foreach ($units as $unit) {
+        $obat = Obat::create([
+            'nama_obat' => $validated['nama_obat'],
+            'jenis_obat' => $validated['jenis_obat'] ?? null,
+            'harga_satuan' => $validated['harga_satuan'],
+            'satuan' => $validated['satuan'],
+            'keterangan' => $validated['keterangan'] ?? null,
+            'unit_id' => $unit->id,
+            'stok_awal' => $validated['stok_awal'],
         ]);
 
-        // Format nama obat menjadi kapital semua
-        $validated['nama_obat'] = strtoupper($validated['nama_obat']);
-
-        // Cek apakah nama obat sudah ada (case-insensitive)
-        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
-            ->where('unit_id', Auth::guard('admin')->user()->unit_id)
-            ->exists();
-
-        if ($obatExists) {
-            return back()
-                ->withInput()
-                ->withErrors(['nama_obat' => 'Obat sudah ada!']);
-        }
-
-        // Tambahan data stok dan unit_id
-        $validated['stok_sisa'] = $validated['stok_awal'];
-        $validated['stok_masuk'] = 0;
-        $validated['stok_keluar'] = 0;
-        $validated['unit_id'] = Auth::guard('admin')->user()->unit_id;
-
-        Obat::create($validated);
-
-        return redirect()->route('admin.obat.index')
-            ->with('success', 'Obat berhasil ditambahkan.');
+        RekapitulasiObat::create([
+            'obat_id' => $obat->id,
+            'unit_id' => $unit->id,
+            'tanggal' => now()->startOfMonth(),
+            'bulan' => now()->format('m'),
+            'tahun' => now()->format('Y'),
+            'jumlah_masuk' => $validated['stok_awal'],
+            'jumlah_keluar' => 0,
+            'keterangan' => 'Stok awal dari admin',
+        ]);
     }
+
+    return redirect()->route('admin.obat.dashboard')->with('success', 'Obat berhasil ditambahkan ke semua unit dan admin.');
+}
 
 
     public function show(Obat $obat)
@@ -183,21 +206,30 @@ class AdminObatController extends Controller
 
 
     public function destroy(Obat $obat)
-    {
-        try {
-            // Hapus semua transaksi terkait terlebih dahulu
-            $obat->transaksiObats()->delete();
+{
+    try {
+        // Cari semua obat dengan nama yang sama
+        $allObatSama = Obat::where('nama_obat', $obat->nama_obat)->get();
+
+        foreach ($allObatSama as $item) {
+            // Hapus semua transaksi terkait
+            $item->transaksiObats()->delete();
+
+            // Hapus rekapitulasi terkait
+            $item->rekapitulasiObat()->delete();
 
             // Hapus obat
-            $obat->delete();
-
-            return redirect()->route('admin.obat.index')
-                ->with('success', 'Obat dan semua transaksi terkait berhasil dihapus.');
-        } catch (\Exception $e) {
-            return redirect()->route('admin.obat.index')
-                ->with('error', 'Gagal menghapus obat: ' . $e->getMessage());
+            $item->delete();
         }
+
+        return redirect()->route('admin.obat.index')
+            ->with('success', 'Obat dan semua data terkait berhasil dihapus dari semua unit.');
+    } catch (\Exception $e) {
+        return redirect()->route('admin.obat.index')
+            ->with('error', 'Gagal menghapus obat: ' . $e->getMessage());
     }
+}
+
 
     public function rekapitulasi(Request $request)
     {

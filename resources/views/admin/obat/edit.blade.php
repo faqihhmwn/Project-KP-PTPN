@@ -10,9 +10,9 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4>Edit Obat: {{ $obat->nama_obat }}</h4>
-                        <!-- <a href="{{ route('obat.index') }}" class="btn btn-secondary">
+                        <!-- <a href="{{ route('admin.obat.index') }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left"></i> Kembali -->
-                        <a href="{{ request()->get('return_url', route('admin.index')) }}" class="btn btn-secondary">
+                        <a href="{{ request()->get('return_url', route('admin.obat.index')) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali ke
                             {{ request()->has('return_url') ? 'Rekapitulasi' : 'Daftar Obat' }}
                         </a>
@@ -29,7 +29,7 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('admin.update', $obat) }}?return_url={{ request()->get('return_url') }}"
+                        <form action="{{ route('admin.obat.update', $obat) }}?return_url={{ request()->get('return_url') }}"
                             method="POST">
                             <input type="hidden" name="return_url" value="{{ request()->get('return_url') }}">
                             @csrf
