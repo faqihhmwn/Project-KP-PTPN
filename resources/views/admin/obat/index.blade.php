@@ -107,29 +107,52 @@
                             </div>
                         @endif
 
-                        <!-- Search -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <form method="GET" action="{{ route('admin.obat.index') }}">
-                                    <div class="input-group">
-                                        <input type="text" name="search" class="form-control"
-                                            placeholder="Cari nama obat atau jenis admin.obat..." value="{{ request('search') }}">
-                                        <button class="btn btn-outline-secondary" type="submit">
-                                            <i class="fas fa-search"></i> Cari
-                                        </button>
-                                        @if (request('search'))
-                                            <a href="{{ route('admin.obat.index') }}" class="btn btn-outline-danger">
-                                                <i class="fas fa-times"></i>
-                                            </a>
-                                        @endif
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span class="text-muted">Total: {{ $obats->total() }} obat</span>
-                            </div>
-                        </div>
+                        <!-- Filter & Search -->
+<form method="GET" action="{{ route('admin.obat.index') }}">
+    <div class="row mb-3">
+        <!-- Filter Unit -->
+        <div class="col-md-3">
+            <select name="unit_id" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Pilih Unit --</option>
+                @foreach ($units as $unit)
+                    <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
+                        {{ $unit->nama }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
 
+        <!-- Search -->
+        <div class="col-md-5">
+            <div class="input-group">
+                <input type="text" name="search" class="form-control"
+                    placeholder="Cari nama obat atau jenis..."
+                    value="{{ request('search') }}">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="fas fa-search"></i> Cari
+                </button>
+                @if (request('search'))
+                    <a href="{{ route('admin.obat.index') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-times"></i>
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        <div class="col-md-4 text-end">
+            @if ($unitId)
+                <span class="text-muted">Total: {{ $obats->total() }} obat</span>
+            @endif
+        </div>
+    </div>
+</form>
+
+
+                        @if (!$unitId)
+    <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle me-1"></i> Silakan pilih unit untuk menampilkan daftar obat.
+    </div>
+@else
                         <!-- Table -->
                         <div class="table-responsive">
                             <table class="table table-striped table-hover align-middle mb-0">
@@ -144,7 +167,7 @@
                                         <th class="text-center" style="width: 8%; min-width: 70px;">Satuan</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Awal</th>
                                         <th class="text-center" style="width: 5%; min-width: 80px;">Stok Sisa</th>
-                                        <!-- <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th> -->
+                                        <th class="text-center" style="width: 10%; min-width: 140px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="table-group-divider">
@@ -173,7 +196,7 @@
                                                         title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('admin.obat.edit', $obat) }}"
+                                                    <a href="{{ route('admin.obat.edit', ['obat' => $obat->id, 'return_url' => request()->fullUrl()]) }}"
                                                         class="btn btn-warning btn-sm" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
@@ -206,9 +229,10 @@
                                 </tbody>
                             </table>
                         </div>
+                        @endif
 
                         <!-- Pagination -->
-                        @if ($obats->hasPages())
+                        @if ($obats instanceof \Illuminate\Pagination\LengthAwarePaginator && $obats->hasPages())
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <div>
                                     Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}

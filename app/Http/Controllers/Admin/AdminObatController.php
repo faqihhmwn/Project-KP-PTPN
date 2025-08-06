@@ -18,32 +18,36 @@ use App\Models\RekapitulasiObat;
 class AdminObatController extends Controller
 {
     public function index(Request $request)
-    {
-        $user = Auth::guard('admin')->user(); // 🔁 Ubah ke guard admin
+{
+    $unitId = $request->input('unit_id');
+    $search = $request->input('search');
+    $bulan = now()->month;
+    $tahun = now()->year;
 
-        if (!$user) {
-            return redirect()->route('admin.login');
-        }
+    $query = Obat::with(['rekapitulasiObat' => function ($query) {
+        $query->orderBy('tanggal', 'desc');
+    }]);
 
-        $userUnitId = $user->unit_id;
+    if ($unitId) {
+        $query->where('unit_id', $unitId);
 
-        $query = Obat::with(['rekapitulasiObat' => function ($query) {
-            $query->orderBy('tanggal', 'desc');
-        }])->where('unit_id', $userUnitId);
-
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('nama_obat', 'like', "%{$request->search}%")
-                    ->orWhere('jenis_obat', 'like', "%{$request->search}%");
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_obat', 'like', "%$search%")
+                  ->orWhere('jenis_obat', 'like', "%$search%");
             });
         }
 
         $obats = $query->latest()->paginate(10);
-        $bulan = now()->month;
-        $tahun = now()->year;
-
-        return view('admin.obat.index', compact('obats', 'bulan', 'tahun'));
+    } else {
+        // Tidak ada unit dipilih
+        $obats = collect(); // bukan paginator
     }
+
+    $units = Unit::all();
+
+    return view('admin.obat.index', compact('obats', 'bulan', 'tahun', 'unitId', 'units'));
+}
 
 
     public function create()
@@ -182,27 +186,36 @@ class AdminObatController extends Controller
     }
 
     public function update(Request $request, Obat $obat)
-    {
-        $messages = [
-            'expired_date.after_or_equal' => 'Tanggal kadaluarsa harus sama dengan atau setelah hari ini.',
-            'expired_date.date' => 'Format tanggal kadaluarsa tidak valid.'
-        ];
+{
+    $messages = [
+        'expired_date.after_or_equal' => 'Tanggal kadaluarsa harus sama dengan atau setelah hari ini.',
+        'expired_date.date' => 'Format tanggal kadaluarsa tidak valid.'
+    ];
 
-        $validated = $request->validate([
-            'nama_obat' => 'required|string|max:255',
-            'jenis_obat' => 'nullable|string|max:255',
-            'harga_satuan' => 'required|numeric|min:0',
-            'satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string',
-            'expired_date' => 'nullable|date|after_or_equal:today', // Validasi tanggal expired
-        ], $messages);
+    $validated = $request->validate([
+        'jenis_obat' => 'nullable|string|max:255',
+        'harga_satuan' => 'required|numeric|min:0',
+        'satuan' => 'required|string|max:50',
+        'keterangan' => 'nullable|string',
+        'expired_date' => 'nullable|date|after_or_equal:today',
+    ], $messages);
 
-        $obat->update($validated);
-        // $this->updateStokObat($obat);
+    // Ambil semua entri obat dengan nama yang sama (termasuk admin dan unit)
+    $obats = Obat::where('nama_obat', $obat->nama_obat)->get();
 
-        return redirect()->to($request->query('return_url', route('admin.obat.index')))
-            ->with('success', 'Obat berhasil diperbarui');
+    foreach ($obats as $item) {
+        $item->update([
+            'jenis_obat' => $validated['jenis_obat'] ?? $item->jenis_obat,
+            'harga_satuan' => $validated['harga_satuan'],
+            'satuan' => $validated['satuan'],
+            'keterangan' => $validated['keterangan'] ?? $item->keterangan,
+            'expired_date' => $validated['expired_date'] ?? $item->expired_date,
+        ]);
     }
+
+    return redirect()->route('admin.obat.index', ['unit_id' => $obat->unit_id])
+    ->with('success', 'Obat berhasil diperbarui di semua unit.');
+}
 
 
     public function destroy(Obat $obat)
@@ -222,8 +235,8 @@ class AdminObatController extends Controller
             $item->delete();
         }
 
-        return redirect()->route('admin.obat.index')
-            ->with('success', 'Obat dan semua data terkait berhasil dihapus dari semua unit.');
+        return redirect()->route('admin.obat.index', ['unit_id' => $obat->unit_id])
+    ->with('success', 'Obat dan semua data terkait berhasil dihapus dari semua unit.');
     } catch (\Exception $e) {
         return redirect()->route('admin.obat.index')
             ->with('error', 'Gagal menghapus obat: ' . $e->getMessage());

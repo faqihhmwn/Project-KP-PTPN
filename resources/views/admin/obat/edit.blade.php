@@ -36,23 +36,16 @@
                             @method('PUT')
                             
                             <div class="mb-3">
-                                <label for="unit" class="form-label">Unit</label>
-                                <input type="text" class="form-control" id="unit" name="unit"
-                                    value="{{ $obat->unit->nama ?? 'Unit tidak ditemukan' }}" readonly>
-                            </div>
+    <!--<label for="unit" class="form-label">Unit</label>
+    <input type="text" class="form-control" value="{{ $obat->unit->nama ?? 'Admin' }}" disabled>
+</div>-->
                             
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="nama_obat" class="form-label">Nama Obat <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control @error('nama_obat') is-invalid @enderror"
-                                            id="nama_obat" name="nama_obat" value="{{ old('nama_obat', $obat->nama_obat) }}"
-                                            required>
-                                        @error('nama_obat')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
+    <label for="nama_obat" class="form-label">Nama Obat</label>
+    <input type="text" class="form-control" value="{{ $obat->nama_obat }}" disabled>
+</div>
                                 </div>
 
                                 <div class="col-md-6">

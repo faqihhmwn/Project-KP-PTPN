@@ -62,7 +62,7 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary">Rekapitulasi Obat Bulanan</h2>
-        <a href="/obat/dashboard" class="btn btn-secondary btn-sm">
+        <a href="/admin/obat/dashboard" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Kembali ke Farmasi
         </a>
     </div>
@@ -122,11 +122,11 @@
                 <meta name="csrf-token" content="{{ csrf_token() }}">
                 <tr>
                     <th rowspan="2">No</th>
+                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Nama Obat</th>
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
                     <th rowspan="2">Stok Awal</th>
-                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Bulan</th>
                     <th rowspan="2">Tahun</th>
                     <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
@@ -149,6 +149,7 @@
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
                         <td>{{ $index + 1 }}</td>
+                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>
@@ -178,7 +179,6 @@
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
                             {{ $obat->stokAwal($bulan, $tahun) }}
                         </td>
-                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
                         <td>{{ $tahun }}</td>
                         @php $totalBiaya = 0; @endphp
@@ -430,28 +430,13 @@
 
         // Inisialisasi update sisa stok saat halaman pertama kali dimuat dan setiap input berubah
         document.addEventListener('DOMContentLoaded', function() {
-        const filterForm = document.getElementById('filterForm');
-        const bulanSelect = document.getElementById('bulanSelect');
-        const tahunSelect = document.getElementById('tahunSelect');
-
-        if (filterForm) {
-            function resetDailyInputs() {
-                document.querySelectorAll('.daily-input').forEach(input => {
-                    input.value = '0';
-                });
-            }
-
-            bulanSelect.addEventListener('change', resetDailyInputs);
-            tahunSelect.addEventListener('change', resetDailyInputs);
-        }
-
             // Filter form handling
-            /*const filterForm = document.getElementById('filterForm');
+            const filterForm = document.getElementById('filterForm');
             const bulanSelect = document.getElementById('bulanSelect');
             const tahunSelect = document.getElementById('tahunSelect');
 
-            if (filterForm) {*/
-                /*bulanSelect.addEventListener('change', function() {
+            if (filterForm) {
+                bulanSelect.addEventListener('change', function() {
                     // Set semua input ke 0 sebelum submit form
                     document.querySelectorAll('.daily-input').forEach(input => {
                         input.value = '0';
@@ -465,7 +450,7 @@
                         input.value = '0';
                     });
                     filterForm.submit();
-                }); */
+                });
             }
 
             // Handle inputs for all rows

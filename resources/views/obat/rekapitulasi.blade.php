@@ -122,11 +122,11 @@
                 <meta name="csrf-token" content="{{ csrf_token() }}">
                 <tr>
                     <th rowspan="2">No</th>
+                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Nama Obat</th>
                     <th rowspan="2">Jenis</th>
                     <th rowspan="2">Harga Satuan</th>
                     <th rowspan="2">Stok Awal</th>
-                    <th rowspan="2">Unit</th>
                     <th rowspan="2">Bulan</th>
                     <th rowspan="2">Tahun</th>
                     <th colspan="{{ $daysInMonth }}">Penggunaan Harian (Tanggal)</th>
@@ -149,6 +149,7 @@
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
                         <td>{{ $index + 1 }}</td>
+                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
                         <td>
@@ -178,7 +179,6 @@
                         <td class="stok-awal" data-obat-id="{{ $obat->id }}">
                             {{ $obat->stokAwal($bulan, $tahun) }}
                         </td>
-                        <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ \Carbon\Carbon::createFromDate(null, $bulan, 1)->format('F') }}</td>
                         <td>{{ $tahun }}</td>
                         @php $totalBiaya = 0; @endphp
@@ -234,7 +234,7 @@
                                     class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Edit
                                 </a> --}}
-                                <form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
+                                <!--<form action="{{ route('obat.destroy', $obat) }}" method="POST" class="d-inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm"
@@ -242,7 +242,7 @@
                                         title="Hapus Permanen">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                </form>-->
                             </div>
                         </td>
                     </tr>
