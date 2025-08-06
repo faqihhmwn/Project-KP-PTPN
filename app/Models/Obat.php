@@ -53,7 +53,6 @@ class Obat extends Model
     public function rekapitulasiObat()
     {
         return $this->hasMany(\App\Models\RekapitulasiObat::class);
-        return $this->hasMany(RekapitulasiObat::class);
     }
 
     // Method untuk mendapatkan stok awal berdasarkan bulan dan tahun
