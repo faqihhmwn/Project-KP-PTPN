@@ -42,7 +42,8 @@ class ObatController extends Controller
             });
         }
 
-        $obats = $query->latest()->paginate(10);
+        // $obats = $query->latest()->paginate(10);
+        $obats = $query->latest()->paginate(10); 
         $bulan = now()->month;
         $tahun = now()->year;
 
@@ -232,7 +233,9 @@ class ObatController extends Controller
                 $query->whereMonth('tanggal', $bulan)
                     ->whereYear('tanggal', $tahun);
             }])
-            ->get();
+            
+        ->orderBy('nama_obat')
+        ->paginate(50); // ← ini penting!
 
         // Generate data untuk setiap hari dalam bulan
         $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;

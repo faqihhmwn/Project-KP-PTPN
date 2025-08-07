@@ -208,14 +208,26 @@
                         </div>
 
                         <!-- Pagination -->
-                        @if ($obats->hasPages())
+                        {{-- @if ($obats->hasPages())
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <div>
                                     Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}
                                     dari {{ $obats->total() }} data
                                 </div>
                                 <div>
-                                    {{ $obats->appends(request()->query())->links() }}
+                                    {{ $obats->appends(request()->query())->links() }} --}}
+                                
+                            @if ($obats->hasPages())
+                            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+                                <div class="mb-2">
+                                    Menampilkan {{ $obats->firstItem() }} - {{ $obats->lastItem() }} dari {{ $obats->total() }} data
+                                </div>
+                                <div class="mb-2">
+                                    <nav>
+                                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                                            {{ $obats->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                                        </ul>
+                                    </nav>
                                 </div>
                             </div>
                         @endif

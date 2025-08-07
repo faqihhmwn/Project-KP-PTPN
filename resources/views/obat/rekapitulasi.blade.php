@@ -144,11 +144,15 @@
 
             </thead>
             <tbody id="obatTableBody">
+                @php
+                $globalIndex = ($obats->currentPage() - 1) * $obats->perPage();
+                @endphp
                 @forelse($obats as $index => $obat)
                     <tr data-obat-name="{{ strtolower($obat->nama_obat ?? '') }}"
                         data-obat-jenis="{{ strtolower($obat->jenis_obat ?? '') }}" data-obat-row="{{ $obat->id }}"
                         data-harga="{{ $obat->harga_satuan ?? 0 }}">
-                        <td>{{ $index + 1 }}</td>
+                        {{-- <td>{{ $index + 1 }}</td> --}}
+                        <td>{{ $globalIndex + $index + 1 }}</td>
                         <td>{{ $obat->unit->nama ?? 'N/A' }}</td>
                         <td>{{ $obat->nama_obat }}</td>
                         <td>{{ $obat->jenis_obat ?? '-' }}</td>
@@ -256,7 +260,9 @@
                 @endforelse
             </tbody>
         </table>
-        
+
+        {{ $obats->links('pagination::bootstrap-5') }}
+
 
         {{-- ✅ Tempatkan include modal di sini (di luar div tombol) --}}
         @include('obat.modal-penerimaan-obat')
