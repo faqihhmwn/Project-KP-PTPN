@@ -192,13 +192,13 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center py-4">
+                                            <td colspan="9" class="text-center py-4">
                                                 <div class="text-muted">
                                                     <i class="fas fa-pills fa-3x mb-3"></i>
                                                     <p>Belum ada data obat.</p>
-                                                    <a href="{{ route('obat.create') }}" class="btn btn-primary">
+                                                    <!-- <a href="{{ route('obat.create') }}" class="btn btn-primary">
                                                         <i class="fas fa-plus"></i> Tambah Obat Pertama
-                                                    </a>
+                                                    </a> -->
                                                 </div>
                                             </td>
                                         </tr>
