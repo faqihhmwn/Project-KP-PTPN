@@ -44,7 +44,7 @@ class ObatController extends Controller
 
         // $obats = $query->latest()->paginate(10);
         // $obats = $query->latest()->paginate(10); 
-        $obats = $query->orderBy('nama_obat')->paginate(10);
+        $obats = $query->orderBy('nama_obat')->paginate(50);
         $bulan = now()->month;
         $tahun = now()->year;
 
