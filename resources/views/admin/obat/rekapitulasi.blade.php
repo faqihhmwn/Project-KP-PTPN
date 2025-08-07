@@ -648,8 +648,7 @@
             }
 
             // Kirim data ke backend
-            const response = await fetch('{{ route('
-                admin.obat.rekapitulasi - obat.input - harian ') }}', {
+            const response = await fetch('{{ route('admin.obat.rekapitulasi-obat.input-harian') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
