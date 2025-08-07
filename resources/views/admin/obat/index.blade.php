@@ -215,7 +215,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center py-4">
+                                            <td colspan="10" class="text-center py-4">
                                                 <div class="text-muted">
                                                     <i class="fas fa-pills fa-3x mb-3"></i>
                                                     <p>Belum ada data obat.</p>
