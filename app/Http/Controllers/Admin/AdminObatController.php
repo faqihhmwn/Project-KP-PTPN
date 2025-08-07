@@ -66,6 +66,20 @@ class AdminObatController extends Controller
         'keterangan' => 'nullable|string|max:500',
     ]);
 
+    // Format nama obat menjadi kapital semua
+        $validated['nama_obat'] = strtoupper($validated['nama_obat']);
+
+        // Cek apakah nama obat sudah ada (case-insensitive)
+        $obatExists = \App\Models\Obat::whereRaw('UPPER(nama_obat) = ?', [$validated['nama_obat']])
+            ->where('unit_id', Auth::user()->unit_id)
+            ->exists();
+
+        if ($obatExists) {
+            return back()
+                ->withInput()
+                ->withErrors(['nama_obat' => 'Obat sudah ada!']);
+        }
+
     // ✅ Tambahkan 1 entri obat untuk admin (unit_id = null)
     $obatAdmin = Obat::create([
         'nama_obat' => $validated['nama_obat'],
