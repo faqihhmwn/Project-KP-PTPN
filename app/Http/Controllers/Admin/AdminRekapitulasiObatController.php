@@ -17,16 +17,21 @@ class AdminRekapitulasiObatController extends Controller
 {
     public function index(Request $request)
     {
-        $unitId = Auth::guard('admin')->user()->unit_id;
-
+        $unitId = $request->input('unit_id');
         $bulan = $request->input('bulan', date('n'));
         $tahun = $request->input('tahun', date('Y'));
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
+        $units = Unit::all(); 
 
+        // Jika belum pilih unit, tampilkan halaman tanpa data
+        if (!$unitId) {
+            return view('admin.obat.rekapitulasi', compact('bulan', 'tahun', 'daysInMonth', 'units'));
+        }
+
+        // Jika sudah pilih unit, ambil data sesuai unit
         $obats = Obat::where('unit_id', $unitId)
             ->with(['rekapitulasiObatByUnit' => function ($query) use ($bulan, $tahun) {
-                $query->where('bulan', $bulan)
-                      ->where('tahun', $tahun);
+                $query->where('bulan', $bulan)->where('tahun', $tahun);
             }])
             ->get();
 
@@ -38,7 +43,16 @@ class AdminRekapitulasiObatController extends Controller
 
         $isLocked = Storage::exists('validasi/obat_validasi_' . $tahun . '_' . $bulan . '.lock');
 
-        return view('admin.rekapitulasi-obat', compact('obats', 'rekapitulasi', 'bulan', 'tahun', 'daysInMonth', 'isLocked'));
+        return view('admin.obat.rekapitulasi', compact(
+            'obats',
+            'rekapitulasi',
+            'bulan',
+            'tahun',
+            'daysInMonth',
+            'isLocked',
+            'units',      
+            'unitId'      
+        ));
     }
 
     public function storeOrUpdate(Request $request)
