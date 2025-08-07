@@ -57,10 +57,7 @@ class AdminRekapitulasiObatController extends Controller
 
     public function storeOrUpdate(Request $request)
     {
-        Log::info('Data diterima untuk storeOrUpdate:', $request->all());
-
-        $unitId = Auth::guard('admin')->user()->unit_id;
-        $userId = Auth::guard('admin')->id();
+        Log::info('Data diterima untuk storeOrUpdate oleh admin:', $request->all());
 
         if ($request->has('bulk')) {
             $bulk = $request->input('bulk');
@@ -85,6 +82,9 @@ class AdminRekapitulasiObatController extends Controller
                 $validated = $validator->validated();
 
                 try {
+                    $obat = Obat::find($validated['obat_id']);
+                    $unitId = $item['unit_id'] ?? ($obat->unit_id ?? null);
+
                     $penerimaan = \App\Models\PenerimaanObat::where('obat_id', $validated['obat_id'])
                         ->where('unit_id', $unitId)
                         ->whereDate('tanggal_masuk', $validated['tanggal'])
@@ -105,12 +105,11 @@ class AdminRekapitulasiObatController extends Controller
                             'unit_id' => $unitId,
                         ],
                         [
-                            'user_id' => $userId,
+                            'user_id' => User::where('unit_id', $unitId)->first()?->id,
                             'stok_awal' => $validated['stok_awal'],
                             'jumlah_keluar' => $validated['jumlah_keluar'],
                             'sisa_stok' => $sisaStok,
                             'total_biaya' => $totalBiaya,
-                            'harga_satuan' => $hargaSatuan,
                         ]
                     );
                     $saved++;
@@ -135,6 +134,7 @@ class AdminRekapitulasiObatController extends Controller
             ]);
         }
 
+        // Handle Single Save
         try {
             $validated = $request->validate([
                 'obat_id' => 'required|integer',
@@ -144,6 +144,9 @@ class AdminRekapitulasiObatController extends Controller
                 'bulan' => 'required|integer|min:1|max:12',
                 'tahun' => 'required|integer|min:2000|max:' . (date('Y') + 1),
             ]);
+
+            $obat = Obat::find($validated['obat_id']);
+            $unitId = $request->input('unit_id') ?? ($obat->unit_id ?? null);
 
             $penerimaan = \App\Models\PenerimaanObat::where('obat_id', $validated['obat_id'])
                 ->where('unit_id', $unitId)
@@ -162,24 +165,16 @@ class AdminRekapitulasiObatController extends Controller
                     'tanggal' => $validated['tanggal'],
                     'bulan' => $validated['bulan'],
                     'tahun' => $validated['tahun'],
-                    'unit_id' => $unitId,
+                    'unit_id' => Auth::guard('admin')->user()->unit_id,
                 ],
                 [
-                    'user_id' => $userId,
+                    'user_id' => User::where('unit_id', $obat->unit_id)->first()?->id,
                     'stok_awal' => $validated['stok_awal'],
                     'jumlah_keluar' => $validated['jumlah_keluar'],
                     'sisa_stok' => $sisaStok,
                     'total_biaya' => $totalBiaya,
-                    'harga_satuan' => $hargaSatuan,
                 ]
             );
-
-            Log::info('Menyimpan rekapitulasi dengan data:', [
-                'obat_id' => $validated['obat_id'],
-                'tanggal' => $validated['tanggal'],
-                'harga_satuan' => $hargaSatuan,
-                'rekap_id' => $rekap->id
-            ]);
 
             return response()->json(['success' => true, 'rekap' => $rekap, 'message' => 'Data rekapitulasi harian berhasil disimpan/diperbarui.']);
         } catch (\Illuminate\Validation\ValidationException $e) {
