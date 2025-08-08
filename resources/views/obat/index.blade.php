@@ -208,14 +208,14 @@
                         </div>
 
                         <!-- Pagination -->
-                        {{-- @if ($obats->hasPages())
-                            <div class="d-flex justify-content-between align-items-center mt-3">
+                        <!-- {{-- @if ($obats->hasPages())
+                              <div class="d-flex justify-content-between align-items-center mt-3">
                                 <div>
                                     Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}
                                     dari {{ $obats->total() }} data
                                 </div>
                                 <div>
-                                    {{ $obats->appends(request()->query())->links() }} --}}
+                                    {{ $obats->appends(request()->query())->links() }} --}} //komentar ya ini tidak jadi digunakan -->
                                 
                             @if ($obats->hasPages())
                             <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
