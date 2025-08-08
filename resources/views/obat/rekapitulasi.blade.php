@@ -270,23 +270,33 @@
         
 
     </div>
-
-    <div id="validasiInfo" class="alert alert-success mt-3 d-none">
-        <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
-            dinonaktifkan untuk menjaga integritas laporan.
-    </div>
     
     <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="fas fa-file-excel"></i> Export Excel
-            </button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
-                <i class="fas fa-plus"></i> Tambah Stok Obat
-            </button>
-            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
-                <i class="fas fa-save"></i> Simpan Rekapitulasi
-            </button>
+
+    {{-- Alert jika data sudah divalidasi --}}
+    @if ($isValidated)
+        <div class="alert alert-warning w-100">
+            <i class="fas fa-lock"></i> Data bulan {{ $bulan }} tahun {{ $tahun }} sudah divalidasi dan tidak dapat dimodifikasi.
         </div>
+    @endif
+
+    {{-- Tombol Export Excel (selalu aktif) --}}
+    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="fas fa-file-excel"></i> Export Excel
+    </button>
+
+    {{-- Tombol Tambah Stok (disabled jika sudah divalidasi) --}}
+    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok"
+        {{ $isValidated ? 'disabled' : '' }}>
+        <i class="fas fa-plus"></i> Tambah Stok Obat
+    </button>
+
+    {{-- Tombol Simpan Rekapitulasi (disabled jika sudah divalidasi) --}}
+    <button id="simpanRekapBtn" class="btn btn-primary ms-2" {{ $isValidated ? 'disabled' : '' }}>
+        <i class="fas fa-save"></i> Simpan Rekapitulasi
+    </button>
+</div>
+
 
     <!-- Export Modal -->
     <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">

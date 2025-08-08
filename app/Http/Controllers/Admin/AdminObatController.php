@@ -262,70 +262,72 @@ class AdminObatController extends Controller
 
 
     public function rekapitulasi(Request $request)
-    {
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
-        $unitId = $request->get('unit_id'); // Tambahkan unit_id dari filter
+{
+    $bulan = $request->get('bulan', Carbon::now()->month);
+    $tahun = $request->get('tahun', Carbon::now()->year);
+    $unitId = $request->get('unit_id');
 
-        $user = Auth::guard('admin')->user();
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
-        }
+    $user = Auth::guard('admin')->user();
+    if (!$user) {
+        return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
+    }
 
-        // Jika klik tombol export
-        if ($request->get('export') == '1') {
-            return $this->exportExcel($request);
-        }
+    // Jika klik tombol export
+    if ($request->get('export') == '1') {
+        return $this->exportExcel($request);
+    }
 
-        $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
-        $units = \App\Models\Unit::all(); // Ambil semua unit
+    $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
+    $units = \App\Models\Unit::all();
 
-        // Jika unit belum dipilih, kirim view tanpa data obat
-        if (!$unitId) {
-            $obats = Obat::whereRaw('1 = 0')->paginate(50);
-            // $obats = collect(); // ← tambahkan ini untuk mencegah error
-            $rekapitulasi = collect(); // jika di view juga menggunakan $rekapitulasi
-            $isLocked = false;
-
-            return view('admin.obat.rekapitulasi', compact(
-                'units',
-                'unitId',
-                'bulan',
-                'tahun',
-                'daysInMonth',
-                'obats',
-                'rekapitulasi',
-                'isLocked'
-            ));
-        }
-
-
-        // Jika unit dipilih, ambil data obat & rekap
-        $obats = Obat::where('unit_id', $unitId)
-            ->with(['rekapitulasiObatByUnit' => function ($query) use ($bulan, $tahun) {
-                $query->where('bulan', $bulan)->where('tahun', $tahun);
-            }])
-            ->get();
-
-        $rekapitulasi = RekapitulasiObat::with(['obat', 'user'])
-            ->where('unit_id', $unitId)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->get();
-
-        $isLocked = \Illuminate\Support\Facades\Storage::exists("validasi/obat_validasi_{$tahun}_{$bulan}.lock");
+    // Jika unit belum dipilih
+    if (!$unitId) {
+        $obats = collect();
+        $rekapitulasi = collect();
+        $isValidated = false;
 
         return view('admin.obat.rekapitulasi', compact(
-            'obats',
-            'rekapitulasi',
+            'units',
+            'unitId',
             'bulan',
             'tahun',
             'daysInMonth',
-            'unitId',
-            'units',
-            'isLocked'
+            'obats',
+            'rekapitulasi',
+            'isValidated'
         ));
     }
+
+    // Jika unit dipilih
+    $obats = Obat::where('unit_id', $unitId)
+        ->with(['rekapitulasiObatByUnit' => function ($query) use ($bulan, $tahun) {
+            $query->where('bulan', $bulan)->where('tahun', $tahun);
+        }])
+        ->get();
+
+    $rekapitulasi = RekapitulasiObat::with(['obat', 'user'])
+        ->where('unit_id', $unitId)
+        ->where('bulan', $bulan)
+        ->where('tahun', $tahun)
+        ->get();
+
+    // Gunakan sistem validasi global dari tabel
+    $isValidated = \App\Models\RekapitulasiValidasiGlobal::where('bulan', $bulan)
+        ->where('tahun', $tahun)
+        ->exists();
+
+    return view('admin.obat.rekapitulasi', compact(
+        'obats',
+        'rekapitulasi',
+        'bulan',
+        'tahun',
+        'daysInMonth',
+        'unitId',
+        'units',
+        'isValidated'
+    ));
+}
+
 
 
     public function dashboard()

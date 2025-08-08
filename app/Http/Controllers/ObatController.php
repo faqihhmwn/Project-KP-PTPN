@@ -11,6 +11,7 @@ use App\Imports\ObatImport;
 use App\Exports\ObatExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\RekapitulasiValidasiGlobal;
 
 class ObatController extends Controller
 {
@@ -207,42 +208,50 @@ class ObatController extends Controller
         }
     }
 
-    public function rekapitulasi(Request $request)
-    {
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
+    public function rekapitulasi(Request $request) 
+{
+    $bulan = $request->get('bulan', Carbon::now()->month);
+    $tahun = $request->get('tahun', Carbon::now()->year);
 
-        // Check if export is requested
-        $user = Auth::user();
+    $user = Auth::user();
 
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
-        }
-
-        $userUnitId = $user->unit_id;
-
-
-        if ($request->get('export') == '1') {
-            return $this->exportExcel($request);
-        }
-
-        $userUnitId = Auth::user()->unit_id;
-
-        $obats = Obat::query()
-            ->where('unit_id', $userUnitId)
-            ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
-                $query->whereMonth('tanggal', $bulan)
-                    ->whereYear('tanggal', $tahun);
-            }])
-            
-        ->orderBy('nama_obat')
-        ->paginate(50); // ← ini penting!
-
-        // Generate data untuk setiap hari dalam bulan
-        $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
-
-        return view('obat.rekapitulasi', compact('obats', 'bulan', 'tahun', 'daysInMonth'));
+    if (!$user) {
+        return redirect()->route('login')->with('error', 'Sesi login sudah habis. Silakan login kembali.');
     }
+
+    $userUnitId = $user->unit_id;
+
+    // Jika minta export
+    if ($request->get('export') == '1') {
+        return $this->exportExcel($request);
+    }
+
+    // Ambil data obat
+    $obats = Obat::query()
+        ->where('unit_id', $userUnitId)
+        ->with(['transaksiObats' => function ($query) use ($bulan, $tahun) {
+            $query->whereMonth('tanggal', $bulan)
+                  ->whereYear('tanggal', $tahun);
+        }])
+        ->orderBy('nama_obat')
+        ->paginate(50);
+
+    // Cek validasi global (berlaku untuk semua unit)
+    $isValidated = \App\Models\RekapitulasiValidasiGlobal::where('bulan', $bulan)
+        ->where('tahun', $tahun)
+        ->exists();
+
+    $daysInMonth = Carbon::createFromDate($tahun, (int)$bulan, 1)->daysInMonth;
+
+    return view('obat.rekapitulasi', compact(
+        'obats',
+        'bulan',
+        'tahun',
+        'daysInMonth',
+        'isValidated'
+    ));
+}
+
 
     public function dashboard()
     {

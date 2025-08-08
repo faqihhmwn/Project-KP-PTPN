@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Unit;
 use App\Models\Obat;
+use App\Models\RekapitulasiValidasiGlobal;
 
 class AdminRekapitulasiObatController extends Controller
 {
@@ -183,4 +184,36 @@ class AdminRekapitulasiObatController extends Controller
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server: ' . $e->getMessage()], 500);
         }
     }
+
+// Menyimpan validasi
+public function validasiGlobal(Request $request)
+{
+    $request->validate([
+        'bulan' => 'required|integer|min:1|max:12',
+        'tahun' => 'required|integer|min:2000|max:2100',
+    ]);
+
+    RekapitulasiValidasiGlobal::updateOrCreate(
+        ['bulan' => $request->bulan, 'tahun' => $request->tahun],
+        ['validated_at' => now(), 'validated_by' => auth('admin')->id()]
+    );
+
+    return back()->with('success', '✅ Data bulan ' . $request->bulan . ' tahun ' . $request->tahun . ' berhasil divalidasi.');
+}
+
+// Membatalkan validasi
+public function batalkanValidasiGlobal(Request $request)
+{
+    $request->validate([
+        'bulan' => 'required|integer|min:1|max:12',
+        'tahun' => 'required|integer|min:2000|max:2100',
+    ]);
+
+    RekapitulasiValidasiGlobal::where('bulan', $request->bulan)
+        ->where('tahun', $request->tahun)
+        ->delete();
+
+    return back()->with('success', '❎ Validasi bulan ' . $request->bulan . ' tahun ' . $request->tahun . ' telah dibatalkan.');
+}
+
 }

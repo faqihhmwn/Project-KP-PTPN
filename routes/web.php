@@ -343,7 +343,7 @@ Route::prefix('admin/obat')->name('admin.obat.')->middleware('auth:admin')->grou
     // Rekapitulasi
     Route::post('/rekapitulasi-obat/input-harian', [AdminRekapitulasiObatController::class, 'storeOrUpdate'])->name('rekapitulasi-obat.input-harian');
     Route::get('/rekapitulasi/bulanan', [AdminObatController::class, 'rekapitulasi'])->name('rekapitulasi');
-    Route::get('/export', [AdminRekapitulasiExportController::class, 'export'])->name('export');
+    Route::get('/obat/export', [AdminRekapitulasiExportController::class, 'export'])->name('export');
     Route::get('/{obat}/rekapitulasi', [AdminObatController::class, 'showRekapitulasi'])->name('rekapitulasi.detail');
 
     // Transaksi
@@ -354,9 +354,14 @@ Route::prefix('admin/obat')->name('admin.obat.')->middleware('auth:admin')->grou
     Route::post('/import', [AdminObatController::class, 'import'])->name('import');
 
     // Penerimaan Obat
-    Route::post('/penerimaan/store', [AdminPenerimaanObatController::class, 'store'])->name('penerimaan.store');
+    Route::post('/obat/penerimaan/store', [AdminPenerimaanObatController::class, 'store'])->name('penerimaan.store');
 
     // Analisis Obat
-    Route::get('/analisis-obat', [AdminAnalisisObatController::class, 'index'])->name('analisis.obat');
-    Route::get('/analisis-obat/export', [AdminAnalisisObatController::class, 'export'])->name('analisis.obat.export');
+    Route::get('/obat/analisis-obat', [AdminAnalisisObatController::class, 'index'])->name('analisis.obat');
+    Route::get('/obat/analisis-obat/export', [AdminAnalisisObatController::class, 'export'])->name('analisis.obat.export');
+
+    // Validasi Rekapitulasi
+    Route::post('/rekapitulasi-obat/validasi-global', [AdminRekapitulasiObatController::class, 'validasiGlobal'])->name('rekapitulasi-obat.validasi-global');
+    Route::post('/rekapitulasi-obat/batalkan-validasi-global', [AdminRekapitulasiObatController::class, 'batalkanValidasiGlobal'])->name('rekapitulasi-obat.batalkan-validasi-global');
+
 });

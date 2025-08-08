@@ -72,10 +72,10 @@
         <div class="card-body">
             <div class="row align-items-center">
                 <!-- Filter Bulan/Tahun -->
-                <div class="col-md-6">
+                <div class="col-md-7">
                     <form method="GET" class="d-flex gap-2 align-items-center" id="filterForm">
     <select name="unit_id" class="form-select" required>
-        <option value="">Pilih Unit</option>
+        <option value="">-- Pilih Unit --</option>
         @foreach ($units as $unitItem)
             <option value="{{ $unitItem->id }}" {{ request('unit_id') == $unitItem->id ? 'selected' : '' }}>
                 {{ $unitItem->nama }}
@@ -123,6 +123,9 @@
             </div>
         </div>
     </div>
+
+
+
 
     <!-- Table Container -->
 <div class="table-container">
@@ -249,23 +252,58 @@
 
     @include('obat.modal-penerimaan-obat')
 </div>
-
-<div id="validasiInfo" class="alert alert-success mt-3 d-none">
-        <i class="fas fa-lock"></i> Data bulan ini telah divalidasi dan dikunci. Semua input, edit, dan hapus
-            dinonaktifkan untuk menjaga integritas laporan.
-    </div>
     
-    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
-            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="fas fa-file-excel"></i> Export Excel
-            </button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
-                <i class="fas fa-plus"></i> Tambah Stok Obat
-            </button>
-            <button id="simpanRekapBtn" class="btn btn-primary ms-2">
-                <i class="fas fa-save"></i> Simpan Rekapitulasi
-            </button>
-        </div>
+<div class="d-flex justify-content-between align-items-center gap-3 mt-4">
+    {{-- KIRI: Validasi dan status --}}
+    <div class="d-flex align-items-center gap-3">
+        @if (request('bulan') && request('tahun'))
+            @php
+                $isValidated = \App\Models\RekapitulasiValidasiGlobal::where('bulan', request('bulan'))
+                    ->where('tahun', request('tahun'))
+                    ->exists();
+            @endphp
+
+            @if ($isValidated)
+                <div class="alert alert-success mb-0 py-2 px-3 fs-6">
+                    <i class="fas fa-lock me-1"></i>
+                    <strong>Data bulan {{ request('bulan') }} tahun {{ request('tahun') }} telah divalidasi.</strong>
+                </div>
+
+                <form action="{{ route('admin.obat.rekapitulasi-obat.batalkan-validasi-global') }}" method="POST" onsubmit="return confirm('Yakin ingin membatalkan validasi bulan {{ request('bulan') }} tahun {{ request('tahun') }}?')">
+                    @csrf
+                    <input type="hidden" name="bulan" value="{{ request('bulan') }}">
+                    <input type="hidden" name="tahun" value="{{ request('tahun') }}">
+                    <button class="btn btn-warning ms-2">
+                        <i class="fas fa-unlock"></i> Batalkan Validasi
+                    </button>
+                </form>
+            @else
+                <form action="{{ route('admin.obat.rekapitulasi-obat.validasi-global') }}" method="POST" onsubmit="return confirm('Validasi data bulan {{ request('bulan') }} tahun {{ request('tahun') }}?')">
+                    @csrf
+                    <input type="hidden" name="bulan" value="{{ request('bulan') }}">
+                    <input type="hidden" name="tahun" value="{{ request('tahun') }}">
+                    <button class="btn btn-danger ms-2">
+                        <i class="fas fa-lock"></i> Validasi Rekapitulasi
+                    </button>
+                </form>
+            @endif
+        @endif
+    </div>
+
+    {{-- KANAN: Tombol Export, Tambah Stok, Simpan --}}
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-success" id="btnExport" data-bs-toggle="modal" data-bs-target="#exportModal">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnTambahStok" data-bs-toggle="modal" data-bs-target="#modalTambahStok">
+            <i class="fas fa-plus"></i> Tambah Stok Obat
+        </button>
+        <button id="simpanRekapBtn" class="btn btn-primary ms-2">
+            <i class="fas fa-save"></i> Simpan Rekapitulasi
+        </button>
+    </div>
+</div>
+
 
 <script>
     function updateStokDanBiaya(obatId) {
@@ -311,6 +349,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ route('admin.obat.export') }}" method="GET" id="exportForm" target="_blank">
+                    <input type="hidden" name="unit_id" value="{{ request('unit_id') }}">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
@@ -903,6 +942,33 @@
             });
         });
     </script>
+
+    {{-- Menonaktifkan tombol export, tambah obat, dan simpan rekapitulasi jika belum memilih unit --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('unit_id');
+
+        const btnExport = document.getElementById('btnExport');
+        const btnTambahStok = document.getElementById('btnTambahStok');
+        const btnSimpan = document.getElementById('simpanRekapBtn');
+
+        const isUnitSelected = unitId && unitId !== '';
+
+        // Atur status tombol
+        btnExport.disabled = !isUnitSelected;
+        btnTambahStok.disabled = !isUnitSelected;
+        btnSimpan.disabled = !isUnitSelected;
+
+        // Opsional: Tambahkan title saat tombol disabled
+        if (!isUnitSelected) {
+            btnExport.title = 'Silakan pilih unit terlebih dahulu';
+            btnTambahStok.title = 'Silakan pilih unit terlebih dahulu';
+            btnSimpan.title = 'Silakan pilih unit terlebih dahulu';
+        }
+    });
+</script>
+
 
 
 @endsection
