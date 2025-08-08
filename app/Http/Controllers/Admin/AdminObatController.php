@@ -39,12 +39,12 @@ class AdminObatController extends Controller
             }
 
             // $obats = $query->latest()->paginate(10);
-            $obats = $query->orderBy('nama_obat')->paginate(10);
+            $obats = $query->orderBy('nama_obat')->paginate(50);
 
         } else {
             // Tidak ada unit dipilih
             // $obats = collect(); // bukan paginator
-            $obats = Obat::whereRaw('1 = 0')->paginate(10);
+            $obats = Obat::whereRaw('1 = 0')->paginate(50);
             
         }
 
@@ -282,7 +282,7 @@ class AdminObatController extends Controller
 
         // Jika unit belum dipilih, kirim view tanpa data obat
         if (!$unitId) {
-            $obats = Obat::whereRaw('1 = 0')->paginate(10);
+            $obats = Obat::whereRaw('1 = 0')->paginate(50);
             // $obats = collect(); // ← tambahkan ini untuk mencegah error
             $rekapitulasi = collect(); // jika di view juga menggunakan $rekapitulasi
             $isLocked = false;
