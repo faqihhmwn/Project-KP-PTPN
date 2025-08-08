@@ -43,7 +43,9 @@ class AdminObatController extends Controller
 
         } else {
             // Tidak ada unit dipilih
-            $obats = collect(); // bukan paginator
+            // $obats = collect(); // bukan paginator
+            $obats = Obat::whereRaw('1 = 0')->paginate(10);
+            
         }
 
         $units = Unit::all();
@@ -280,7 +282,8 @@ class AdminObatController extends Controller
 
         // Jika unit belum dipilih, kirim view tanpa data obat
         if (!$unitId) {
-            $obats = collect(); // ← tambahkan ini untuk mencegah error
+            $obats = Obat::whereRaw('1 = 0')->paginate(10);
+            // $obats = collect(); // ← tambahkan ini untuk mencegah error
             $rekapitulasi = collect(); // jika di view juga menggunakan $rekapitulasi
             $isLocked = false;
 

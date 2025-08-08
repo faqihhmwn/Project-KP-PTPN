@@ -245,6 +245,8 @@
         </tbody>
     </table>
 
+ {{ $obats->links('pagination::bootstrap-5') }}
+
     @include('obat.modal-penerimaan-obat')
 </div>
 
