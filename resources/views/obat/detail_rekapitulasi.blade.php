@@ -72,6 +72,10 @@
                     <div class="mt-2">
                         <table class="table table-borderless mb-0">
                             <tr>
+                                <td width="150" class="text-muted"><strong>Unit</strong></td>
+                                <td class="text-dark">: {{ $obat->unit->nama ?? '-' }}</td>
+                            </tr>
+                            <tr>
                                 <td width="150" class="text-muted"><strong>Nama Obat</strong></td>
                                 <td class="text-dark">: {{ $obat->nama_obat }}</td>
                             </tr>

@@ -26,9 +26,10 @@ class AdminPenerimaanObatController extends Controller
         }
 
         $validated = Validator::make($request->all(), [
-            'obat_id' => 'required|exists:obats,id',
-            'jumlah_masuk' => 'required|integer|min:1',
+            'obat_id'       => 'required|exists:obats,id',
+            'jumlah_masuk'  => 'required|integer|min:1',
             'tanggal_masuk' => 'required|date',
+            'unit_id'       => 'required|exists:units,id', // Pastikan unit_id ikut divalidasi
         ]);
 
         if ($validated->fails()) {
@@ -56,20 +57,20 @@ class AdminPenerimaanObatController extends Controller
 
             $penerimaan = PenerimaanObat::updateOrCreate(
                 [
-                    'obat_id' => $request->obat_id,
+                    'obat_id'       => $request->obat_id,
                     'tanggal_masuk' => $request->tanggal_masuk,
-                    'unit_id' => $admin->unit_id,
+                    'unit_id'       => $request->unit_id, // ✅ Pakai unit yang difilter, bukan unit admin
                 ],
                 [
-                    'jumlah_masuk' => $request->jumlah_masuk,
-                    'user_id' => $admin->id,
+                    'jumlah_masuk'  => $request->jumlah_masuk,
+                    'user_id'       => $admin->id, // Admin yang input
                 ]
             );
 
-            \Log::info('✅ Penerimaan berhasil disimpan [ADMIN]');
+            \Log::info('✅ Penerimaan berhasil disimpan [ADMIN]', $penerimaan->toArray());
             return response()->json([
                 'success' => true,
-                'message' => '✅ Penerimaan obat berhasil disimpan.'
+                'message' => '✅ Penerimaan obat berhasil disimpan untuk unit yang dipilih.'
             ]);
         } catch (\Exception $e) {
             \Log::error('❌ ERROR DB [ADMIN]: ' . $e->getMessage());

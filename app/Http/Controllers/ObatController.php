@@ -308,24 +308,27 @@ class ObatController extends Controller
     }
 
     public function showRekapitulasi(Request $request, Obat $obat)
-    {
-        // Get bulan & tahun from request or use current
-        $bulan = $request->get('bulan', Carbon::now()->month);
-        $tahun = $request->get('tahun', Carbon::now()->year);
+{
+    // Pastikan relasi unit dimuat
+    $obat->load('unit');
 
-        // Get rekap harian for selected month
-        $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->where('jumlah_keluar', '>', 0)  // Only show days with transactions
-            ->orderBy('tanggal', 'asc')
-            ->get();
+    // Get bulan & tahun dari request atau default ke bulan/tahun sekarang
+    $bulan = $request->get('bulan', Carbon::now()->month);
+    $tahun = $request->get('tahun', Carbon::now()->year);
 
-        return view('obat.detail_rekapitulasi', [
-            'obat' => $obat,
-            'rekapHarian' => $rekapHarian,
-            'bulan' => $bulan,
-            'tahun' => $tahun
-        ]);
-    }
+    // Ambil rekap harian untuk bulan & tahun yang dipilih
+    $rekapHarian = \App\Models\RekapitulasiObat::where('obat_id', $obat->id)
+        ->where('bulan', $bulan)
+        ->where('tahun', $tahun)
+        ->where('jumlah_keluar', '>', 0) // Hanya tampilkan hari yang ada transaksi
+        ->orderBy('tanggal', 'asc')
+        ->get();
+
+    return view('obat.detail_rekapitulasi', [
+        'obat' => $obat,
+        'rekapHarian' => $rekapHarian,
+        'bulan' => $bulan,
+        'tahun' => $tahun
+    ]);
+}
 }

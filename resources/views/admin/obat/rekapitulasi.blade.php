@@ -152,6 +152,9 @@
                     <th>{{ $day }}</th>
                 @endfor
             </tr>
+
+            <meta name="route-penerimaan-obat-store" content="{{ route('admin.obat.penerimaan.store') }}">
+            
         </thead>
         <tbody id="obatTableBody">
             @forelse($obats as $index => $obat)
@@ -872,62 +875,70 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const btnSimpan = document.getElementById('btnSimpanPenerimaan');
-            let isSubmitting = false;
+    const btnSimpan = document.getElementById('btnSimpanPenerimaan');
+    let isSubmitting = false;
 
-            // Prevent double binding
-            if (btnSimpan.dataset.bound === "true") return;
-            btnSimpan.dataset.bound = "true";
+    if (btnSimpan.dataset.bound === "true") return;
+    btnSimpan.dataset.bound = "true";
 
-            btnSimpan.addEventListener('click', function() {
-                if (isSubmitting) return;
-                isSubmitting = true;
+    btnSimpan.addEventListener('click', function() {
+        if (isSubmitting) return;
+        isSubmitting = true;
 
-                const obatId = document.getElementById('obat_id_penerimaan').value;
-                const jumlahMasuk = document.getElementById('jumlah_masuk').value;
-                const tanggalMasuk = document.getElementById('tanggal_masuk').value;
-                const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                const route = document.querySelector('meta[name="route-penerimaan-obat-store"]')
-                    .getAttribute('content');
+        const obatId = document.getElementById('obat_id_penerimaan').value;
+        const jumlahMasuk = document.getElementById('jumlah_masuk').value;
+        const tanggalMasuk = document.getElementById('tanggal_masuk').value;
 
-                if (!obatId || !jumlahMasuk || !tanggalMasuk) {
-                    alert('❗ Semua kolom wajib diisi.');
-                    isSubmitting = false;
-                    return;
-                }
+        // Ambil unit_id dari parameter URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const unitId = urlParams.get('unit_id');
 
-                fetch(route, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': token
-                        },
-                        body: JSON.stringify({
-                            obat_id: obatId,
-                            jumlah_masuk: jumlahMasuk,
-                            tanggal_masuk: tanggalMasuk
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        isSubmitting = false;
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const route = document.querySelector('meta[name="route-penerimaan-obat-store"]').getAttribute('content');
 
-                        // Pastikan `data.success` benar boolean true
-                        if (data.success === true) {
-                            alert(data.message || '✅ Stok berhasil ditambahkan.');
-                            location.reload();
-                        } else {
-                            alert('❌ Gagal menambahkan stok: ' + (data.message ||
-                                'Terjadi kesalahan.'));
-                        }
-                    })
-                    .catch(error => {
-                        isSubmitting = false;
-                        console.error('❌ Error:', error);
-                        alert('❌ Terjadi kesalahan saat mengirim data ke server.');
-                    });
-            });
+        if (!obatId || !jumlahMasuk || !tanggalMasuk) {
+            alert('❗ Semua kolom wajib diisi.');
+            isSubmitting = false;
+            return;
+        }
+
+        if (!unitId) {
+            alert('❗ Unit belum dipilih.');
+            isSubmitting = false;
+            return;
+        }
+
+        fetch(route, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token
+            },
+            body: JSON.stringify({
+                obat_id: obatId,
+                jumlah_masuk: jumlahMasuk,
+                tanggal_masuk: tanggalMasuk,
+                unit_id: unitId // ✅ Kirim unit_id ke backend
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            isSubmitting = false;
+            if (data.success === true) {
+                alert(data.message || '✅ Stok berhasil ditambahkan.');
+                location.reload();
+            } else {
+                alert('❌ Gagal menambahkan stok: ' + (data.message || 'Terjadi kesalahan.'));
+            }
+        })
+        .catch(error => {
+            isSubmitting = false;
+            console.error('❌ Error:', error);
+            alert('❌ Terjadi kesalahan saat mengirim data ke server.');
         });
+    });
+});
+
     </script>
 
     {{-- Mencegah nilai negaitf --}}
