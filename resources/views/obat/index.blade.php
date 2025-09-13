@@ -126,7 +126,7 @@
                                 </form>
                             </div>
                             <div class="col-md-6 text-end">
-                                <span class="text-muted">Total: {{ $obats->total() }} obat</span>
+                                <span class="text-muted">Total: {{ $obats->count() }} obat</span>
                             </div>
                         </div>
 
@@ -150,7 +150,7 @@
                                 <tbody class="table-group-divider">
                                     @forelse($obats as $index => $obat)
                                         <tr>
-                                            <td class="text-center fw-medium">{{ $obats->firstItem() + $index }}</td>
+                                            <td class="text-center fw-medium">{{ $index + 1 }}</td>
                                             <td class="text-center">{{ $obat->unit->nama ?? '-' }}</td>
                                             <td class="fw-medium">{{ $obat->nama_obat ?? '-' }}</td>
                                             <td class="text-center">{{ $obat->jenis_obat ?? '-' }}</td>
@@ -207,30 +207,7 @@
                             </table>
                         </div>
 
-                        <!-- Pagination -->
-                        <!-- {{-- @if ($obats->hasPages())
-                              <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div>
-                                    Menampilkan {{ $obats->firstItem() ?? 0 }} - {{ $obats->lastItem() ?? 0 }}
-                                    dari {{ $obats->total() }} data
-                                </div>
-                                <div>
-                                    {{ $obats->appends(request()->query())->links() }} --}} //komentar ya ini tidak jadi digunakan -->
-                                
-                            @if ($obats->hasPages())
-                            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-                                <div class="mb-2">
-                                    Menampilkan {{ $obats->firstItem() }} - {{ $obats->lastItem() }} dari {{ $obats->total() }} data
-                                </div>
-                                <div class="mb-2">
-                                    <nav>
-                                        <ul class="pagination pagination-sm justify-content-end mb-0">
-                                            {{ $obats->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
-                                        </ul>
-                                    </nav>
-                                </div>
-                            </div>
-                        @endif
+                        <!-- Pagination dihapus, tidak digunakan lagi -->
                     </div>
                 </div>
             </div>
