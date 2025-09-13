@@ -43,9 +43,7 @@ class ObatController extends Controller
             });
         }
 
-        // $obats = $query->latest()->paginate(10);
-        // $obats = $query->latest()->paginate(10); 
-        $obats = $query->orderBy('nama_obat')->paginate(50);
+        $obats = $query->orderBy('nama_obat')->get();
         $bulan = now()->month;
         $tahun = now()->year;
 
@@ -234,7 +232,7 @@ class ObatController extends Controller
                   ->whereYear('tanggal', $tahun);
         }])
         ->orderBy('nama_obat')
-        ->paginate(50);
+        ->get();
 
     // Cek validasi global (berlaku untuk semua unit)
     $isValidated = \App\Models\RekapitulasiValidasiGlobal::where('bulan', $bulan)

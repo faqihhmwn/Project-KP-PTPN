@@ -142,12 +142,12 @@ class ObatExport implements FromCollection, WithHeadings, WithMapping, WithStyle
         $lastColumn = $sheet->getHighestColumn();
         $lastRow = $sheet->getHighestRow();
 
-        for ($col = 1; $col <= 8; $col++) {
+        for ($col = 1; $col <= 9; $col++) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
             $sheet->mergeCells("{$colLetter}1:{$colLetter}2");
         }
 
-        $colIndex = 9;
+        $colIndex = 10;
         for ($day = 1; $day <= $this->daysInMonth; $day++) {
             $colLetter1 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
             $colLetter2 = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
