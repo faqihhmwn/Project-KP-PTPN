@@ -307,7 +307,10 @@
                 <form action="{{ route('obat.export') }}" method="GET" id="exportForm" target="_blank">
                     <div class="modal-body">
                         <div class="row">
-                            <div class="col-md-6">
+                        <input type="hidden" name="start_date" value="{{ \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}">
+                        <input type="hidden" name="end_date" value="{{ \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}">
+
+                            <!-- <div class="col-md-6">
                                 <label for="start_date" class="form-label">Tanggal Mulai</label>
                                 <input type="date" class="form-control" id="start_date" name="start_date"
                                     value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->startOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}"
@@ -318,7 +321,7 @@
                                 <input type="date" class="form-control" id="end_date" name="end_date"
                                     value="{{ request('tahun') && request('bulan') ? \Carbon\Carbon::create(request('tahun'), request('bulan'))->endOfMonth()->format('Y-m-d') : \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
                                     required>
-                            </div>
+                            </div> -->
                         </div>
                         <div class="row mt-3">
                             <div class="col-12">
@@ -727,23 +730,6 @@
                 includeDailyCheckbox.disabled = true;
             }
         });
-
-        // function searchObat() {
-        //     const searchInput = document.getElementById('searchObat');
-        //     const searchTerm = searchInput.value.toLowerCase();
-        //     const tableRows = document.querySelectorAll('#obatTableBody tr');
-
-        //     tableRows.forEach(row => {
-        //         const obatName = row.getAttribute('data-obat-name') || '';
-        //         const obatJenis = row.getAttribute('data-obat-jenis') || '';
-
-        //         if (obatName.includes(searchTerm) || obatJenis.includes(searchTerm)) {
-        //             row.style.display = '';
-        //         } else {
-        //             row.style.display = 'none';
-        //         }
-        //     });
-        // }
 
         function updateTransaksi(input) {
             const obatId = input.getAttribute('data-obat-id');
