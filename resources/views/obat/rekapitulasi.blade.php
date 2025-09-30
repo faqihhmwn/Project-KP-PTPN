@@ -485,6 +485,7 @@
                     input.addEventListener('input', function() {
                         updateSisaStok(obatId);
                         updateTotalBiaya(obatId);
+                        updateTransaksi(this); 
                     });
 
                     // Handle focus
@@ -732,79 +733,106 @@
         });
 
         function updateTransaksi(input) {
-            const obatId = input.getAttribute('data-obat-id');
-            const tanggal = input.getAttribute('data-tanggal');
-            const jumlahKeluar = parseInt(input.value) || 0;
-            const row = input.closest('tr[data-obat-row]');
-            const stokAwalCell = row.querySelector('.stok-awal');
-            let stokAwal = 0;
-            if (stokAwalCell) {
-                stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
-            }
-            let totalKeluar = 0;
-            row.querySelectorAll('.daily-input').forEach(inp => {
-                totalKeluar += parseInt(inp.value) || 0;
-            });
-            if (totalKeluar > stokAwal) {
-                alert('Input melebihi kapasitas stok awal!');
-                return;
-            }
-            // Hitung sisa stok dan total biaya
-            const sisaStok = stokAwal - totalKeluar;
-            const harga = parseInt(row.getAttribute('data-harga')) || 0;
-            let totalBiaya = 0;
-            row.querySelectorAll('.daily-input').forEach(inp => {
-                totalBiaya += (parseInt(inp.value) || 0) * harga;
-            });
-            // Kirim data ke endpoint rekapitulasi
-            fetch('/obat/rekapitulasi-obat/input-harian', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                    },
-                    body: JSON.stringify({
-                        obat_id: obatId,
-                        tanggal: tanggal,
-                        jumlah_keluar: jumlahKeluar,
-                        stok_awal: stokAwal,
-                        sisa_stok: sisaStok < 0 ? 0 : sisaStok,
-                        total_biaya: totalBiaya,
-                        bulan: {{ $bulan }},
-                        tahun: {{ $tahun }}
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Data tersimpan
-                })
-                .catch(error => {
-                    // Error
+                const obatId = input.getAttribute('data-obat-id');
+                const row = input.closest('tr[data-obat-row]');
+                const stokAwalCell = row.querySelector('.stok-awal');
+                let stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+
+                let totalKeluar = 0;
+                row.querySelectorAll('.daily-input').forEach(inp => {
+                    totalKeluar += parseInt(inp.value) || 0;
                 });
-        }
 
-        // Auto-save ketika user berhenti mengetik
-        let typingTimer;
-        const doneTypingInterval = 1000; // 1 detik
+                // Validasi: jangan melebihi stok awal
+                if (totalKeluar > stokAwal) {
+                    alert('⚠️ Input melebihi kapasitas stok awal!');
+                    input.value = 0; // reset nilai input jadi 0
+                }
 
-        document.querySelectorAll('.daily-input').forEach(input => {
-            input.addEventListener('keyup', function() {
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => {
-                    updateTransaksi(this);
-                    // Update total biaya juga saat auto-save
-                    const row = input.closest('tr[data-obat-row]');
-                    if (row) {
-                        const obatId = row.getAttribute('data-obat-row');
-                        updateTotalBiaya(obatId);
-                    }
-                }, doneTypingInterval);
-            });
+                // Hitung ulang tampilan stok & biaya
+                updateSisaStok(obatId);
+                updateTotalBiaya(obatId);
+            }
 
-            input.addEventListener('keydown', function() {
-                clearTimeout(typingTimer);
-            });
-        });
+        // function updateTransaksi(input) {
+        //     const obatId = input.getAttribute('data-obat-id');
+        //     const tanggal = input.getAttribute('data-tanggal');
+        //     const jumlahKeluar = parseInt(input.value) || 0;
+        //     const row = input.closest('tr[data-obat-row]');
+        //     const stokAwalCell = row.querySelector('.stok-awal');
+        //     let stokAwal = 0;
+        //     if (stokAwalCell) {
+        //         stokAwal = parseInt(stokAwalCell.textContent.replace(/[^\d]/g, '')) || 0;
+        //     }
+        //     let totalKeluar = 0;
+        //     row.querySelectorAll('.daily-input').forEach(inp => {
+        //         totalKeluar += parseInt(inp.value) || 0;
+        //     });
+         
+        //     if (totalKeluar > stokAwal) {
+        //         alert('⚠️ Input melebihi kapasitas stok awal!');
+        //         input.value = 0; // reset ke 0
+        //         updateSisaStok(obatId); // hitung ulang sisa stok
+        //         updateTotalBiaya(obatId); // hitung ulang biaya
+        //         return;
+        //     }
+
+        //     // Hitung sisa stok dan total biaya
+        //     const sisaStok = stokAwal - totalKeluar;
+        //     const harga = parseInt(row.getAttribute('data-harga')) || 0;
+        //     let totalBiaya = 0;
+        //     row.querySelectorAll('.daily-input').forEach(inp => {
+        //         totalBiaya += (parseInt(inp.value) || 0) * harga;
+        //     });
+        //     // Kirim data ke endpoint rekapitulasi
+        //     fetch('/obat/rekapitulasi-obat/input-harian', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        //             },
+        //             body: JSON.stringify({
+        //                 obat_id: obatId,
+        //                 tanggal: tanggal,
+        //                 jumlah_keluar: jumlahKeluar,
+        //                 stok_awal: stokAwal,
+        //                 sisa_stok: sisaStok < 0 ? 0 : sisaStok,
+        //                 total_biaya: totalBiaya,
+        //                 bulan: {{ $bulan }},
+        //                 tahun: {{ $tahun }}
+        //             })
+        //         })
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             // Data tersimpan
+        //         })
+        //         .catch(error => {
+        //             // Error
+        //         });
+        // }
+
+        // // Auto-save ketika user berhenti mengetik
+        // let typingTimer;
+        // const doneTypingInterval = 1000; // 1 detik
+
+        // document.querySelectorAll('.daily-input').forEach(input => {
+        //     input.addEventListener('keyup', function() {
+        //         clearTimeout(typingTimer);
+        //         typingTimer = setTimeout(() => {
+        //             updateTransaksi(this);
+        //             // Update total biaya juga saat auto-save
+        //             const row = input.closest('tr[data-obat-row]');
+        //             if (row) {
+        //                 const obatId = row.getAttribute('data-obat-row');
+        //                 updateTotalBiaya(obatId);
+        //             }
+        //         }, doneTypingInterval);
+        //     });
+
+        //     input.addEventListener('keydown', function() {
+        //         clearTimeout(typingTimer);
+        //     });
+        // });
         // Hapus auto-save, hanya simpan manual lewat tombol
     </script>
 
